@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Learning OS · 个人博客",
-  description: "记录学习、构建与复盘的个人博客。",
+  title: "embedded.log · Embedded Systems & Electronics",
+  description: "记录嵌入式开发、电子设计与技术实践。",
 };
 
 export default function RootLayout({

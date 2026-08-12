@@ -1,7 +1,6 @@
-# learning-os
- # Learning OS · 个人博客
+# embedded.log
 
-这是一个记录学习、构建与复盘的个人博客，使用 Next.js 构建，并通过 GitHub Pages 部署。
+面向电子信息工程与嵌入式开发的个人技术博客，记录 STM32、ESP32、Embedded Linux、FreeRTOS、PCB、FPGA 与通信协议相关的技术实践。
 
 ## 本地运行
 
@@ -12,16 +11,13 @@ npm run dev
 
 打开 <http://localhost:3000> 查看博客首页。
 
-## 内容结构
+## 项目结构
 
-- `app/page.tsx`：博客首页内容与文章卡片
-- `app/globals.css`：响应式视觉样式
-- `.openai/hosting.json`：Sites 项目绑定配置
+- `app/page.tsx`：博客首页、文章、项目与关于内容
+- `app/globals.css`：深色主题、响应式布局与文档阅读样式
+- `.github/workflows/deploy-pages.yml`：GitHub Pages 自动部署
 
-远程仓库：<https://github.com/wuhuyixia/learning-os>
+## 在线访问
 
-线上地址：<https://wuhuyixia.github.io/learning-os/>
-
-## 开启 GitHub Pages
-
-仓库的 GitHub Actions 会在 `main` 分支更新后自动构建并发布。首次使用时，在仓库设置中将 Pages 的构建来源设置为 **GitHub Actions**。
+- GitHub：<https://github.com/wuhuyixia/learning-os>
+- GitHub Pages：<https://wuhuyixia.github.io/learning-os/>

@@ -1,129 +1,64 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+type IconName = "chip" | "terminal" | "wave" | "search" | "sun" | "moon" | "arrow" | "copy" | "github" | "menu";
+
+const tags = ["STM32", "ESP32", "Embedded Linux", "FreeRTOS", "PCB", "FPGA", "UART", "SPI", "I2C", "CAN"];
+
 const posts = [
-  {
-    date: "2026.08.12",
-    category: "系统搭建",
-    title: "把知识变成可以持续运行的系统",
-    excerpt:
-      "从一页空白 README 开始，搭建自己的学习操作系统：记录、复盘、发布，再把每一次迭代沉淀下来。",
-    readTime: "6 分钟阅读",
-    accent: "coral",
-  },
-  {
-    date: "2026.08.08",
-    category: "学习方法",
-    title: "深度学习之前，先建立一个低摩擦入口",
-    excerpt:
-      "真正让人坚持下来的，往往不是更宏大的目标，而是一个随时都能开始、开始后有反馈的日常入口。",
-    readTime: "4 分钟阅读",
-    accent: "violet",
-  },
-  {
-    date: "2026.08.02",
-    category: "构建记录",
-    title: "我为什么给每个项目都留一份复盘",
-    excerpt:
-      "项目结束不是知识结束。把决策、失误和下一步写下来，下一次遇到相似问题时，经验才会真正出现。",
-    readTime: "5 分钟阅读",
-    accent: "mint",
-  },
+  { title: "STM32 DMA + UART 使用记录", description: "记录 STM32 DMA 接收串口数据时遇到的问题和解决方法。", date: "2026-08-12", readTime: "6 min", tags: ["STM32", "DMA", "UART"], category: "Embedded / STM32", featured: true },
+  { title: "FreeRTOS 任务调度的几个关键点", description: "从优先级、时间片到临界区，梳理 RTOS 应用中最容易忽略的调度细节。", date: "2026-08-08", readTime: "8 min", tags: ["FreeRTOS", "RTOS"], category: "Embedded / RTOS", featured: false },
+  { title: "Linux 下的串口调试工具箱", description: "整理 stty、minicom、screen 和 hexdump，在开发板上快速定位通信问题。", date: "2026-08-02", readTime: "5 min", tags: ["Linux", "UART", "Debug"], category: "Linux / Tools", featured: false },
+  { title: "从原理图到 PCB：一次电源模块复盘", description: "关于布局、回流路径、去耦和调试测量的一些工程化记录。", date: "2026-07-26", readTime: "10 min", tags: ["PCB", "Power", "Hardware"], category: "Hardware / PCB", featured: false },
 ];
 
-const topics = ["学习系统", "编程实践", "产品思考", "阅读笔记"];
+const projects = [
+  { name: "STM32 环境监测系统", description: "低功耗采集温湿度与光照数据，支持 OLED 本地显示和串口配置。", stack: "STM32F4 · FreeRTOS · SHT30 · OLED", status: "Completed", tone: "green", icon: "chip" as IconName },
+  { name: "ESP32 局域网控制台", description: "面向实验室设备的轻量 Web 控制台，提供 GPIO、继电器和传感器状态管理。", stack: "ESP32 · C++ · Wi-Fi · WebSocket", status: "In progress", tone: "yellow", icon: "terminal" as IconName },
+  { name: "FPGA UART Logic Analyzer", description: "用 FPGA 实现的串口协议采集与触发模块，用于验证嵌入式通信时序。", stack: "Verilog · FPGA · UART · GTKWave", status: "Research", tone: "blue", icon: "wave" as IconName },
+];
 
-function Arrow() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+  if (name === "chip") return <svg {...common}><rect x="6" y="6" width="12" height="12" rx="1" /><path d="M9 9h6v6H9zM9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" /></svg>;
+  if (name === "terminal") return <svg {...common}><path d="m4 5 6 7-6 7M13 19h7" /></svg>;
+  if (name === "wave") return <svg {...common}><path d="M2 12h3l2-6 4 12 3-8 2 5h6" /></svg>;
+  if (name === "search") return <svg {...common}><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 5 5" /></svg>;
+  if (name === "sun") return <svg {...common}><circle cx="12" cy="12" r="3.2" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>;
+  if (name === "moon") return <svg {...common}><path d="M20.5 15.2A8.5 8.5 0 0 1 8.8 3.5 8.6 8.6 0 1 0 20.5 15.2Z" /></svg>;
+  if (name === "arrow") return <svg {...common}><path d="M5 12h13M13 6l6 6-6 6" /></svg>;
+  if (name === "copy") return <svg {...common}><rect x="8" y="8" width="11" height="12" rx="1" /><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h3" /></svg>;
+  if (name === "github") return <svg {...common}><path d="M15 22v-3.5c.1-1-.3-1.8-1-2.5 3.2-.4 6.5-1.6 6.5-7A5.4 5.4 0 0 0 19 5.2 5 5 0 0 0 18.9 1S17.7.6 15 2.4a13.4 13.4 0 0 0-6 0C6.3.6 5.1 1 5.1 1A5 5 0 0 0 5 5.2 5.4 5.4 0 0 0 3.5 9c0 5.4 3.3 6.6 6.5 7-.7.7-1 1.3-1 2.5V22" /><path d="M8 19c-3 .8-3-1.5-4-2" /></svg>;
+  return <svg {...common}><path d="M4 7h16M4 12h16M4 17h16" /></svg>;
 }
 
-function Spark() {
-  return (
-    <svg viewBox="0 0 32 32" aria-hidden="true">
-      <path d="m16 2 2.3 11.7L30 16l-11.7 2.3L16 30l-2.3-11.7L2 16l11.7-2.3L16 2Z" fill="currentColor" />
-    </svg>
-  );
+function Logo() {
+  return <a href="#top" className="logo"><span className="logo-mark"><Icon name="chip" size={21} /></span><span>embedded<span className="logo-accent">.</span>log</span></a>;
+}
+
+function CodeBlock() {
+  const [copied, setCopied] = useState(false);
+  const code = `HAL_UART_Receive_DMA(&huart2, rx_buf, RX_BUF_SIZE);\n\nvoid HAL_UARTEx_RxEventCallback(\n    UART_HandleTypeDef *huart,\n    uint16_t Size\n) {\n    if (huart->Instance == USART2) {\n        ring_buffer_write(rx_buf, Size);\n        HAL_UARTEx_ReceiveToIdle_DMA(\n            &huart2, rx_buf, RX_BUF_SIZE\n        );\n    }\n}`;
+  return <div className="code-block"><div className="code-top"><span><i className="dot red" /><i className="dot yellow" /><i className="dot green" /></span><span>uart_dma.c</span><button onClick={() => { navigator.clipboard?.writeText(code); setCopied(true); window.setTimeout(() => setCopied(false), 1400); }}><Icon name="copy" size={14} /> {copied ? "Copied" : "Copy"}</button></div><pre><code>{code.split("\n").map((line, index) => <span key={`${line}-${index}`} className="code-line"><b>{String(index + 1).padStart(2, "0")}</b><span>{line || " "}</span></span>)}</code></pre></div>;
 }
 
 export default function Home() {
-  return (
+  const [dark, setDark] = useState(true);
+  const [query, setQuery] = useState("");
+  const [mobileNav, setMobileNav] = useState(false);
+  const filteredPosts = useMemo(() => posts.filter((post) => `${post.title} ${post.description} ${post.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase())), [query]);
+
+  return <div className={dark ? "site dark" : "site light"} id="top">
+    <header className="topbar"><div className="shell nav-inner"><Logo /><button className="mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-label="打开导航"><Icon name="menu" /></button><nav className={mobileNav ? "nav-links open" : "nav-links"}><a className="active" href="#top" onClick={() => setMobileNav(false)}>首页</a><a href="#articles" onClick={() => setMobileNav(false)}>文章</a><a href="#projects" onClick={() => setMobileNav(false)}>项目</a><a href="#about" onClick={() => setMobileNav(false)}>关于</a><a href="https://github.com/wuhuyixia/learning-os" target="_blank" rel="noreferrer">GitHub</a></nav><div className="nav-tools"><label className="search-box"><Icon name="search" size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文章..." aria-label="搜索文章" /></label><button className="theme-toggle" onClick={() => setDark(!dark)} aria-label="切换主题"><Icon name={dark ? "sun" : "moon"} size={16} /></button></div></div></header>
     <main>
-      <nav className="nav shell">
-        <a className="brand" href="#top" aria-label="Learning OS 首页">
-          <span className="brand-mark"><Spark /></span>
-          <span>learning<span className="brand-dot">.</span>os</span>
-        </a>
-        <div className="nav-links">
-          <a href="#notes">文章</a>
-          <a href="#about">关于我</a>
-          <a className="nav-github" href="https://github.com/wuhuyixia/learning-os" target="_blank" rel="noreferrer">GitHub <Arrow /></a>
-        </div>
-      </nav>
-
-      <section className="hero shell" id="top">
-        <div className="hero-copy">
-          <p className="eyebrow"><span className="eyebrow-line" /> PERSONAL KNOWLEDGE LOG</p>
-          <h1>把好奇心，<br /><em>变成长期主义。</em></h1>
-          <p className="hero-intro">你好，我是 Wuhuyixia。这里记录我如何学习、构建和复盘，把零散的灵感整理成可以复用的系统。</p>
-          <a className="primary-link" href="#notes">从最新文章开始 <Arrow /></a>
-        </div>
-        <div className="hero-art" aria-label="抽象的学习系统插图">
-          <div className="orbit orbit-one" />
-          <div className="orbit orbit-two" />
-          <div className="orbit orbit-three" />
-          <div className="hero-card card-one"><span>01</span><strong>Observe</strong><small>观察问题</small></div>
-          <div className="hero-card card-two"><span>02</span><strong>Build</strong><small>动手构建</small></div>
-          <div className="hero-card card-three"><span>03</span><strong>Reflect</strong><small>持续复盘</small></div>
-          <div className="hero-center"><Spark /><span>keep<br />going</span></div>
-        </div>
-      </section>
-
-      <section className="signal-bar">
-        <div className="shell signal-inner">
-          <span>现在正在思考</span>
-          <p>如何让一个人的学习，也拥有产品迭代般的节奏感</p>
-          <span className="signal-arrow">↗</span>
-        </div>
-      </section>
-
-      <section className="notes shell" id="notes">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow"><span className="eyebrow-line" /> SELECTED NOTES</p>
-            <h2>最近的记录</h2>
-          </div>
-          <a className="text-link" href="#notes">查看全部 <Arrow /></a>
-        </div>
-        <div className="post-grid">
-          {posts.map((post) => (
-            <article className={`post-card ${post.accent}`} key={post.title}>
-              <div className="post-topline"><span>{post.category}</span><span>{post.date}</span></div>
-              <div className="post-body">
-                <h3>{post.title}</h3>
-                <p>{post.excerpt}</p>
-              </div>
-              <div className="post-footer"><span>{post.readTime}</span><a href="#about" aria-label={`阅读：${post.title}`}><Arrow /></a></div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="about shell" id="about">
-        <div className="about-note"><span className="quote-mark">“</span><p>把每一次输入，<br />变成下一次行动的起点。</p></div>
-        <div className="about-copy">
-          <p className="eyebrow"><span className="eyebrow-line" /> A LITTLE ABOUT ME</p>
-          <h2>保持好奇，<br /><em>也保持清醒。</em></h2>
-          <p>我相信好的学习不是信息囤积，而是持续把问题变小、把实践做深。这个博客是我的公开实验室。</p>
-          <div className="topic-list">{topics.map((topic) => <span key={topic}># {topic}</span>)}</div>
-        </div>
-      </section>
-
-      <footer className="footer shell">
-        <a className="brand" href="#top"><span className="brand-mark"><Spark /></span><span>learning<span className="brand-dot">.</span>os</span></a>
-        <span>© 2026 · Built with curiosity.</span>
-        <a href="https://github.com/wuhuyixia/learning-os" target="_blank" rel="noreferrer">在 GitHub 上查看 <Arrow /></a>
-      </footer>
+      <section className="hero shell"><div className="hero-copy"><div className="kicker"><span className="status-dot" /> SYSTEM ONLINE <span className="kicker-sep">/</span> ENGINEERING NOTES</div><h1>Embedded Systems<br /><span>&amp; Electronics</span></h1><p className="hero-subtitle">记录嵌入式开发、电子设计与技术实践</p><p className="hero-description">专注于 STM32、ESP32、Linux、FreeRTOS、PCB、通信协议等技术内容。</p><div className="hero-actions"><a className="button primary" href="#articles">阅读文章 <Icon name="arrow" size={16} /></a><a className="button" href="#projects">查看项目 <Icon name="arrow" size={16} /></a><a className="icon-button" href="https://github.com/wuhuyixia/learning-os" target="_blank" rel="noreferrer" aria-label="GitHub"><Icon name="github" size={19} /></a></div><div className="hero-tags">{tags.map((tag) => <span key={tag}>{tag}</span>)}</div></div><div className="hero-visual"><div className="visual-grid" /><div className="board"><div className="board-top"><span>MCU / STM32</span><span className="board-leds"><i /><i /><i /></span></div><div className="board-chip"><span>STM</span><strong>32</strong><small>ARM Cortex-M</small></div><div className="board-lines"><i /><i /><i /><i /><i /></div><div className="board-pin pin-a" /><div className="board-pin pin-b" /><div className="board-pin pin-c" /><div className="board-footer"><span>SYS_CLK 168MHz</span><span>3V3 / GND</span></div></div><div className="waveform"><span>UART2 / RX</span><svg viewBox="0 0 260 50" preserveAspectRatio="none"><path d="M0 34h28V13h18v21h23V13h18v21h33V34h13V13h17v21h21V13h18v21h35" /></svg></div><div className="terminal-card"><div className="terminal-head"><span><i className="dot red" /><i className="dot yellow" /><i className="dot green" /></span><span>serial-monitor</span></div><code><span>$ make flash</span><span className="terminal-green">✓ firmware built</span><span>Connecting /dev/ttyUSB0</span><span className="terminal-green">✓ device online</span><span className="cursor">_</span></code></div></div></section>
+      <section className="signal-strip"><div className="shell signal-inner"><div><span className="signal-icon"><Icon name="wave" size={18} /></span><span>Latest signal</span></div><p>DMA + UART: 从接收中断到环形缓冲区</p><a href="#article">阅读记录 <Icon name="arrow" size={15} /></a></div></section>
+      <section className="content-section shell" id="articles"><div className="section-head"><div><span className="section-label">01 / NOTES</span><h2>最新文章</h2></div><a className="view-all" href="#articles">查看全部 <Icon name="arrow" size={15} /></a></div><div className="article-layout"><div className="featured-article"><div className="article-meta"><span className="label-dot" /> {posts[0].category}<span>·</span><span>{posts[0].date}</span></div><h3>{posts[0].title}</h3><p>{posts[0].description}</p><div className="article-code-preview"><span className="preview-label">RX_BUFFER</span><div className="mini-wave"><i /><i /><i /><i /><i /></div><span className="preview-value">0x7E 0x01 0x3A</span></div><div className="article-bottom"><div className="tag-row">{posts[0].tags.map((tag) => <span key={tag}>{tag}</span>)}</div><a href="#article" className="read-link">阅读全文 <Icon name="arrow" size={16} /></a></div></div><div className="article-list">{filteredPosts.slice(1).map((post) => <article className="article-row" key={post.title}><div className="article-row-top"><span>{post.category}</span><span>{post.date}</span></div><h3>{post.title}</h3><p>{post.description}</p><div className="article-row-bottom"><div className="tag-row">{post.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><span>{post.readTime}</span></div></article>)}{filteredPosts.length === 0 && <p className="empty-state">没有匹配的文章。试试 STM32、UART 或 Linux。</p>}</div></div></section>
+      <section className="project-section" id="projects"><div className="shell"><div className="section-head"><div><span className="section-label">02 / BUILDS</span><h2>项目实验室</h2></div><span className="muted-note">hardware / firmware / tools</span></div><div className="project-grid">{projects.map((project) => <article className="project-card" key={project.name}><div className="project-icon"><Icon name={project.icon} size={21} /></div><div className="project-status"><span className={`status-tag ${project.tone}`}><i />{project.status}</span><a href="https://github.com/wuhuyixia/learning-os" target="_blank" rel="noreferrer" aria-label={`${project.name} GitHub`}><Icon name="github" size={17} /></a></div><h3>{project.name}</h3><p>{project.description}</p><div className="project-stack">{project.stack}</div></article>)}</div></div></section>
+      <section className="article-doc shell" id="article"><div className="doc-main"><div className="doc-breadcrumb">Articles <span>/</span> Embedded / STM32</div><div className="doc-meta"><span className="section-label">2026-08-12</span><span>·</span><span>6 min read</span></div><h2>STM32 DMA + UART<br /><span>使用记录</span></h2><p className="doc-lead">在嵌入式项目中，串口是最常用也最容易被低估的通信接口。本文记录一次从中断接收切换到 DMA + IDLE 方式的过程。</p><div className="callout warning"><strong>WARNING</strong><p>使用 DMA 和 Cache 时需要注意数据一致性。开启 D-Cache 的 Cortex-M7 需要在 DMA 前后进行 Cache 维护。</p></div><h3>为什么选择 DMA + IDLE</h3><p>普通的字节中断适合低速、短报文场景，但当串口数据持续到达时，中断频率会显著增加。DMA 负责搬运数据，IDLE 线检测负责告诉我们一帧数据已经结束，两者结合可以减少 CPU 介入。</p><CodeBlock /><div className="callout note"><strong>NOTE</strong><p>在 STM32 HAL 中，<code>HAL_UARTEx_ReceiveToIdle_DMA</code> 是处理不定长串口数据的一个实用入口。</p></div><h3>调试时优先确认三件事</h3><ol className="debug-list"><li>DMA Stream / Channel 是否与芯片手册和 CubeMX 配置一致。</li><li>回调中的 Size 是否代表本次接收的有效长度。</li><li>重新启动 DMA 前，是否已经处理完当前 buffer 中的数据。</li></ol><div className="callout debug"><strong>DEBUG</strong><p>如果回调只触发一次，先检查是否在回调末尾重新调用接收函数。DMA 不会自动为下一帧数据重新 armado。</p></div></div><aside className="toc"><span>ON THIS PAGE</span><a className="selected" href="#article">概览</a><a href="#article">为什么选择 DMA + IDLE</a><a href="#article">代码实现</a><a href="#article">调试检查清单</a><div className="toc-line" /><span>RELATED TAGS</span><div className="tag-row"><span>STM32</span><span>DMA</span><span>UART</span></div></aside></section>
+      <section className="about-section shell" id="about"><div className="about-terminal"><div className="terminal-head"><span><i className="dot red" /><i className="dot yellow" /><i className="dot green" /></span><span>about_me.sh</span></div><pre><code><span className="terminal-green">$ whoami</span>{"\n"}<span>embedded-engineer</span>{"\n\n"}<span className="terminal-green">$ cat focus.txt</span>{"\n"}<span>make hardware useful,</span>{"\n"}<span>make firmware reliable.</span>{"\n\n"}<span className="terminal-green">$ uptime</span>{"\n"}<span>learning since 2020</span></code></pre></div><div className="about-copy"><span className="section-label">03 / ABOUT</span><h2>在硬件与<br /><span>代码之间工作。</span></h2><p>我是 Wuhuyixia，一名专注于嵌入式系统和电子设计的工程师。这个博客记录那些从示波器、编译器和数据手册里得到的答案。</p><div className="about-links"><a href="https://github.com/wuhuyixia/learning-os" target="_blank" rel="noreferrer"><Icon name="github" size={17} /> GitHub</a><a href="mailto:2470794599@qq.com"><Icon name="arrow" size={16} /> Email me</a></div></div></section>
     </main>
-  );
+    <footer className="footer"><div className="shell footer-inner"><Logo /><span>© 2026 embedded.log · Built with curiosity &amp; datasheets.</span><span className="footer-status"><i className="status-dot" /> all systems normal</span></div></footer>
+  </div>;
 }
