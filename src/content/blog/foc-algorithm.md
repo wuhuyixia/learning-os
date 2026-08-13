@@ -31,104 +31,255 @@ FOC 是 Field Oriented Control 的缩写，中文一般称为：
 
 无刷电机跟有刷电机的区别, 顾名思义就是无刷电机没有了有刷电机里的电刷。因此它不能够如同有刷电机那样采用机械结构就可以进行电流的换向， 而是必须通过采用如MOS这样的器件实现电子换向，MOS本质上就是可以理解为一种开关，可以像水龙头控制水流通断一样控制电流通断。
 
+对电机的控制实际上就是对MOS管开关规律的控制。而MOS管的开关规律是需要用到单片机程序进行控制的，因此这就引出了我们的FOC控制算法，FOC控制就是一种对电机运动模型进行抽象化和简化，进而有规律控制各个MOS管开关和通断的过程。
 
 ## 3. Clarke 变换
-
-<!-- TODO: 写出 abc 坐标系到 αβ 静止坐标系的变换公式。 -->
 
 ```text
 ia, ib, ic  →  iα, iβ
 ```
+所谓克拉克变换，实际上就是降维解耦的过程，把难以辨明和控制的三相相位差120°电机波形降维为两维矢量。
+
+  它的思路其实特别的简单，第一就是把三相随时间变换的，相位差为120°的电流波形抽象化为三个间隔120°的矢量。
+
+  第二就是利用三角函数对矢量进行降维，降维到两个坐标轴，从此复杂的三相变化问题就降解为了α-β坐标轴的坐标上的数值变化问题。
+
+
+Clarke 变换用于将三相电流
+
+$$
+i_a,\quad i_b,\quad i_c
+$$
+
+转换到二维静止坐标系：
+
+$$
+i_\alpha,\quad i_\beta
+$$
+
+
+将三相电流投影到 $\alpha$ 轴：
+
+$$
+i_\alpha
+=
+\frac{2}{3}
+\left(
+i_a\cos0^\circ
++i_b\cos120^\circ
++i_c\cos240^\circ
+\right)
+$$
+
+因此：
+
+$$
+\boxed{
+i_\alpha
+=
+\frac{2}{3}
+\left(
+i_a-\frac{1}{2}i_b-\frac{1}{2}i_c
+\right)
+}
+$$
+
+
+同理，将三相电流投影到 $\beta$ 轴：
+
+$$
+i_\beta
+=
+\frac{2}{3}
+\left(
+i_a\sin0^\circ
++i_b\sin120^\circ
++i_c\sin240^\circ
+\right)
+$$
+
+
+因此：
+
+$$
+i_\beta
+=
+\frac{2}{3}
+\left(
+\frac{\sqrt{3}}{2}i_b
+-
+\frac{\sqrt{3}}{2}i_c
+\right)
+$$
+
+整理得到：
+
+$$
+\boxed{
+i_\beta
+=
+\frac{1}{\sqrt{3}}
+(i_b-i_c)
+}
+$$
+
+对于对称三相电机：
+
+$$
+\boxed{
+i_a+i_b+i_c=0
+}
+$$
+
+因此：
+
+$$
+i_c=-i_a-i_b
+$$
+
+代入 $i_\alpha$：
+
+$$
+i_\alpha
+=
+\frac{2}{3}
+\left[
+i_a-\frac{1}{2}i_b
+-\frac{1}{2}(-i_a-i_b)
+\right]
+$$
+
+
+因此：
+
+$$
+\boxed{i_\alpha=i_a}
+$$
+
+---
+
+再代入 $i_\beta$：
+
+$$
+i_\beta
+=
+\frac{1}{\sqrt{3}}
+\left[
+i_b-(-i_a-i_b)
+\right]
+$$
+
+得到：
+
+$$
+\boxed{
+i_\beta
+=
+\frac{i_a+2i_b}{\sqrt{3}}
+}
+$$
+
+
+FOC 中常用的 Clarke 变换最终可以写成：
+
+$$
+\begin{bmatrix}
+i_{\alpha} \\
+i_{\beta}
+\end{bmatrix}
+=
+\frac{2}{3}
+\begin{bmatrix}
+1 & -\frac{1}{2} & -\frac{1}{2} \\
+0 & \frac{\sqrt{3}}{2} & -\frac{\sqrt{3}}{2}
+\end{bmatrix}
+\begin{bmatrix}
+i_a \\
+i_b \\
+i_c
+\end{bmatrix}
+$$
+
+Clarke 的逆变换
+$$
+\begin{bmatrix}
+i_a \\
+i_b \\
+i_c
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 & 0 \\
+-\frac{1}{2} & \frac{\sqrt{3}}{2} \\
+-\frac{1}{2} & -\frac{\sqrt{3}}{2}
+\end{bmatrix}
+\begin{bmatrix}
+i_{\alpha} \\
+i_{\beta}
+\end{bmatrix}
+$$
+
+
+
+
+
+
+
 
 ## 4. Park 变换
-
-<!-- TODO: 写出 αβ 坐标系到 dq 旋转坐标系的变换公式，并说明转子角度的作用。 -->
 
 ```text
 iα, iβ  →  id, iq
 ```
 
-## 5. 电流环 PI 控制
+经过 Clarke 变换，我们已经把三相电流：
 
-<!-- TODO: 说明 d 轴、q 轴电流环的控制目标、PI 参数和解耦项。 -->
+$$
+i_a,\quad i_b,\quad i_c
+$$
 
-### 5.1 d 轴电流环
+转换到了二维静止坐标系：
 
-<!-- TODO: 通常的 id_ref 设置、误差计算和输出限幅。 -->
+$$
+i_\alpha,\quad i_\beta
+$$
 
-### 5.2 q 轴电流环
+但是 $\alpha-\beta$ 坐标系本身是固定不动的，而电机转子磁场会随着转子不断旋转，因此：
 
-<!-- TODO: iq_ref 与目标转矩之间的关系。 -->
+$$
+i_\alpha,\quad i_\beta
+$$
 
-```c
-// TODO: 添加 d/q 轴电流环代码
-```
+仍然是随时间变化的量。
 
-## 6. SVPWM
+Park 变换的作用，就是把静止的 $\alpha-\beta$ 坐标系旋转到和转子磁场同步的 $d-q$ 坐标系中。
 
-<!-- TODO: 介绍空间电压矢量、扇区判断、作用时间计算和占空比生成。 -->
+$$
+\begin{bmatrix} i_d \\ i_q \end{bmatrix}
+=
+\begin{bmatrix}
+\cos\theta & \sin\theta \\
+-\sin\theta & \cos\theta
+\end{bmatrix}
+\begin{bmatrix}
+i_\alpha \\
+i_\beta
+\end{bmatrix}
+$$
 
-### 6.1 扇区判断
 
-<!-- TODO: 补充扇区判断方法。 -->
+Clarke 变换和 Park 变换连起来就是：
 
-### 6.2 占空比计算
+$$
+\boxed{
+abc
+\overset{\text{Clarke}}{\longrightarrow}
+\alpha\beta
+\overset{\text{Park}}{\longrightarrow}
+dq
+}
+$$
 
-<!-- TODO: 补充 Ta、Tb、Tc 的计算与中心对齐 PWM 配置。 -->
+简单理解：
 
-## 7. FOC 控制流程
-
-```mermaid
-flowchart LR
-    A[采样三相电流] --> B[Clarke 变换]
-    B --> C[Park 变换]
-    C --> D[d/q 电流 PI]
-    D --> E[反 Park 变换]
-    E --> F[SVPWM]
-    F --> G[三相逆变器]
-    G --> H[电机]
-    H --> A
-```
-
-<!-- TODO: 根据实际工程补充位置环、速度环和电流环的完整控制周期。 -->
-
-## 8. 代码实现
-
-<!-- TODO: 添加 MCU、PWM 频率、ADC 触发点和控制周期等工程配置。 -->
-
-```c
-// TODO: 添加 FOC 主控制函数
-```
-
-## 9. 启动与转子对齐
-
-<!-- TODO: 记录转子预定位、开环启动、切换闭环的实现方法。 -->
-
-## 10. 调试记录
-
-<!-- TODO: 添加示波器、逻辑分析仪和串口日志截图。 -->
-
-| 检查项目 | 现象 | 原因 | 解决方法 |
-| --- | --- | --- | --- |
-| ADC 采样 | 待补充 | 待补充 | 待补充 |
-| 电流方向 | 待补充 | 待补充 | 待补充 |
-| 电角度 | 待补充 | 待补充 | 待补充 |
-| PWM 占空比 | 待补充 | 待补充 | 待补充 |
-
-## 11. 常见问题
-
-### 电机抖动或无法启动
-
-<!-- TODO: 记录采样偏置、相序、编码器方向、零点角度和 PI 参数检查方法。 -->
-
-### 电流波形畸变
-
-<!-- TODO: 记录死区、采样时刻、母线电压和电流重构相关问题。 -->
-
-### 高速运行不稳定
-
-<!-- TODO: 记录反电动势、弱磁控制、解耦和电压饱和问题。 -->
-
-## 12. 总结
-
-<!-- TODO: 总结本次 FOC 学习或项目实践中的关键结论。 -->
+> Clarke 变换负责把三相问题变成二维问题，Park 变换再把静止二维坐标系变成跟随转子旋转的坐标系，从而把交流量变成更容易控制的直流量。
