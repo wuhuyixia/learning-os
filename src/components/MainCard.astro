@@ -1,6 +1,5 @@
 ---
-import { Image } from "astro:assets";
-import { t } from "@config";
+import { BASE_PATH, t } from "@config";
 import type { PostData } from "@interfaces/data";
 import { Icon } from "astro-icon/components";
 import Card from "@/components/temple/Card.astro";
@@ -29,6 +28,7 @@ const {
 // Create a more descriptive label for the button
 const accessibleHelpText = `${helpText}: ${title}`;
 const dropdownId = `info-dropdown-${Math.random().toString(36).substring(2, 10)}`;
+const imageSrc = image?.startsWith("/") ? `${BASE_PATH}${image}` : image;
 ---
 
 <Card class={`overflow-hidden ${extraClasses}`}>
@@ -37,12 +37,11 @@ const dropdownId = `info-dropdown-${Math.random().toString(36).substring(2, 10)}
       // With image - show image with overlay title
       <div class="relative">
         <div class="aspect-video w-full overflow-hidden">
-          <Image
-            src={image}
+          <img
+            src={imageSrc}
             alt={title}
             width={1200}
             height={630}
-            format="webp"
             loading="eager"
             class="w-full h-full object-cover"
           />
