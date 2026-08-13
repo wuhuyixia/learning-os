@@ -1,6 +1,6 @@
 ---
 import BaseCard from "@components/BaseCard.astro";
-import { t } from "@config";
+import { BASE_PATH, t } from "@config";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import { Icon } from "astro-icon/components";
 ---
@@ -28,7 +28,7 @@ import { Icon } from "astro-icon/components";
   </BaseCard>
 </BaseLayout>
 
-<script>
+<script define:vars={{ BASE_PATH }}>
   document.addEventListener("astro:page-load", initSearch);
 
   function initSearch() {
@@ -49,6 +49,7 @@ import { Icon } from "astro-icon/components";
         const search = new PagefindUI({
           element: "#pagefind-search",
           showImages: false,
+          bundlePath: `${BASE_PATH}/pagefind/`,
           processTerm: function (term: string): string {
             params.set("q", term);
             history.replaceState(history.state, "", "?" + params.toString());
