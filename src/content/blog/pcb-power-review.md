@@ -2,7 +2,7 @@
 title: 从原理图到 PCB：一次电源模块复盘
 description: 关于布局、回流路径、去耦和调试测量的一些工程化记录。
 pubDate: 2026-07-26
-image: /image/image4.webp
+image: /image/pcb-power-review.png
 categories:
   - Hardware
   - PCB

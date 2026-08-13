@@ -2,7 +2,7 @@
 title: STM32 DMA + UART 使用记录
 description: 记录 STM32 DMA 接收串口数据时遇到的问题和解决方法。
 pubDate: 2026-08-12
-image: /image/image1.webp
+image: /image/stm32-dma-uart.png
 categories:
   - Embedded Systems
   - STM32
