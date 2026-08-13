@@ -15,6 +15,7 @@ npm run dev
 
 - `app/page.tsx`：博客首页、文章、项目与关于内容
 - `app/globals.css`：深色主题、响应式布局与文档阅读样式
+- `public/avatar.jpg`：作者头像
 - `.github/workflows/deploy-pages.yml`：GitHub Pages 自动部署
 
 ## 在线访问
