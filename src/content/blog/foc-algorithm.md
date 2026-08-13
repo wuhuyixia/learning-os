@@ -1,7 +1,7 @@
 ---
 title: FOC 算法原理与实现记录
 description: 记录磁场定向控制（FOC）的基本原理、坐标变换、SVPWM 与电流环调试过程。
-pubDate: 2026-08-13
+pubDate: 2025-06-13
 categories:
   - Motor Control
   - FOC
@@ -12,7 +12,7 @@ tags:
   - Park Transform
   - SVPWM
   - Current Loop
-draft: true
+draft: false
 ---
 
 # FOC 算法原理与实现记录
