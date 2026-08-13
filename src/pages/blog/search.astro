@@ -23,17 +23,18 @@ import { Icon } from "astro-icon/components";
 
   <BaseCard>
     <div id="search-container" class="w-full">
-      <div id="pagefind-search"></div>
+      <div id="pagefind-search" data-base-path={BASE_PATH}></div>
     </div>
   </BaseCard>
 </BaseLayout>
 
-<script define:vars={{ BASE_PATH }}>
+<script>
   document.addEventListener("astro:page-load", initSearch);
 
   function initSearch() {
     const pageFindSearch = document.querySelector("#pagefind-search");
     if (!pageFindSearch) return;
+    const basePath = pageFindSearch.getAttribute("data-base-path") || "";
 
     const params = new URLSearchParams(window.location.search);
 
@@ -49,7 +50,7 @@ import { Icon } from "astro-icon/components";
         const search = new PagefindUI({
           element: "#pagefind-search",
           showImages: false,
-          bundlePath: `${BASE_PATH}/pagefind/`,
+          bundlePath: `${basePath}/pagefind/`,
           processTerm: function (term: string): string {
             params.set("q", term);
             history.replaceState(history.state, "", "?" + params.toString());
