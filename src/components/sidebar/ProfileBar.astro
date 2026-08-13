@@ -1,7 +1,7 @@
 ---
-import { Image } from "astro:assets";
 import { Icon } from "astro-icon/components";
 import {
+  BASE_PATH,
   SITE_MENU,
   USER_AVATAR,
   USER_NAME,
@@ -16,12 +16,11 @@ const currentPath = Astro.url.pathname;
 <Card>
   <div class="relative p-4 flex flex-col">
     <div class="p-2 flex justify-center">
-      <Image
+      <img
         class="mask mask-circle"
-        format="webp"
         width={250}
         height={250}
-        src={USER_AVATAR}
+        src={`${BASE_PATH}${USER_AVATAR}`}
         alt={`${USER_NAME} avatar`}
         loading="eager"
       />
