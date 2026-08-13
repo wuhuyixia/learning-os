@@ -1,0 +1,18 @@
+---
+import { Icon } from "astro-icon/components";
+import MainCard from "@/components/MainCard.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="关于">
+  <MainCard title="关于 Wuhuyixia" description="在硬件与代码之间工作。" textOverlay="ABOUT" infoIcon="lucide:user">
+    <div class="space-y-10 mb-8">
+      <section class="flex flex-col md:flex-row gap-8 items-center md:items-start">
+        <div class="avatar"><div class="w-32 h-32 md:w-40 md:h-40 rounded-xl ring ring-primary ring-offset-base-100 ring-offset-2 overflow-hidden"><img src="/learning-os/avatar.jpg" alt="Wuhuyixia" width="160" height="160" loading="eager" /></div></div>
+        <div class="flex-1 text-center md:text-left"><h2 class="text-3xl md:text-4xl font-bold mb-2">Wuhuyixia</h2><p class="text-xl text-base-content/80 mb-4">电子信息工程 / 嵌入式开发</p><div class="flex flex-wrap gap-3 justify-center md:justify-start mb-6"><a href="https://github.com/wuhuyixia/learning-os" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline gap-2"><Icon name="lucide:github" class="w-4 h-4" /> GitHub</a><a href="mailto:2470794599@qq.com" class="btn btn-sm btn-outline gap-2"><Icon name="lucide:mail" class="w-4 h-4" /> Email</a></div><p class="text-base-content/80">我专注于嵌入式系统、电子设计和工程化调试。这个博客记录从示波器、编译器和数据手册里得到的答案，内容尽量简单、可复现，并留下下一次调试时真正有用的线索。</p></div>
+      </section>
+      <section><h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><Icon name="lucide:cpu" class="w-6 h-6 text-primary" /><span>技术栈</span></h2><div class="flex flex-wrap gap-3">{["STM32", "ESP32", "C / C++", "FreeRTOS", "Embedded Linux", "PCB", "FPGA", "UART / SPI / I2C / CAN", "Python", "Git"].map((item) => <span class="badge badge-lg badge-outline">{item}</span>)}</div></section>
+      <section><h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><Icon name="lucide:activity" class="w-6 h-6 text-primary" /><span>记录方式</span></h2><div class="grid md:grid-cols-3 gap-5"><div class="card bg-base-200 p-5"><h3 class="font-bold mb-2">先测量</h3><p class="text-base-content/70">先看电源、波形、时序和日志，再修改代码。</p></div><div class="card bg-base-200 p-5"><h3 class="font-bold mb-2">可复现</h3><p class="text-base-content/70">把触发条件、配置项和验证结果写清楚。</p></div><div class="card bg-base-200 p-5"><h3 class="font-bold mb-2">能复盘</h3><p class="text-base-content/70">记录为什么有效，也记录哪些尝试没有效果。</p></div></div></section>
+    </div>
+  </MainCard>
+</BaseLayout>

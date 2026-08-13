@@ -1,0 +1,64 @@
+---
+import { Code } from "astro-expressive-code/components";
+import { Icon } from "astro-icon/components";
+import MainCard from "@/components/MainCard.astro";
+import FeatureCard from "@/components/mdx/FeatureCard.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="首页">
+  <MainCard
+    title="Embedded Systems & Electronics"
+    description="记录嵌入式开发、电子设计与技术实践。"
+    textOverlay="EMBEDDED"
+    infoIcon="lucide:info"
+  >
+    <div class="space-y-8">
+      <section class="py-6">
+        <div class="flex flex-col items-center text-center">
+          <span class="badge badge-primary badge-outline mb-5 gap-2"><span class="status status-success" /> SYSTEM ONLINE</span>
+          <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent leading-tight">
+            把硬件做成可靠的系统
+          </h2>
+          <p class="text-xl text-base-content/80 max-w-3xl mb-8">
+            专注 STM32、ESP32、Embedded Linux、FreeRTOS、PCB 与通信协议，分享从示波器到代码仓库的工程实践。
+          </p>
+          <div class="flex flex-wrap gap-4 justify-center">
+            <a href="/learning-os/blog" class="btn btn-primary gap-2 btn-shine-effect"><Icon name="lucide:book-open" class="w-5 h-5" /> 浏览文章</a>
+            <a href="/learning-os/project" class="btn btn-outline gap-2"><Icon name="lucide:folder-code" class="w-5 h-5" /> 查看项目</a>
+            <a href="https://github.com/wuhuyixia/learning-os" target="_blank" rel="noopener noreferrer" class="btn btn-ghost gap-2"><Icon name="lucide:github" class="w-5 h-5" /> GitHub</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="py-6">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><Icon name="lucide:cpu" class="w-6 h-6 text-primary" /><span>技术方向</span></h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FeatureCard title="MCU Firmware" description="STM32、ESP32、HAL、寄存器和可靠的固件架构。" icon="lucide:cpu" color="oklch(0.6 0.2 160)" />
+          <FeatureCard title="RTOS & Scheduling" description="FreeRTOS 任务、队列、临界区与实时性分析。" icon="lucide:layers-3" color="oklch(0.65 0.2 280)" />
+          <FeatureCard title="Embedded Linux" description="串口、Shell、设备树、驱动和开发板调试。" icon="lucide:terminal" color="oklch(0.6 0.2 200)" />
+          <FeatureCard title="Communication" description="UART、SPI、I2C、CAN 和协议抓包记录。" icon="lucide:radio-tower" color="oklch(0.7 0.2 30)" />
+          <FeatureCard title="PCB & Hardware" description="从原理图、布局布线到回流焊和测量复盘。" icon="lucide:waypoints" color="oklch(0.8 0.2 80)" />
+          <FeatureCard title="FPGA & Logic" description="Verilog、时序约束和 UART 逻辑分析实验。" icon="lucide:activity" color="oklch(0.6 0.2 240)" />
+        </div>
+      </section>
+
+      <section class="py-6">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><Icon name="lucide:rocket" class="w-6 h-6 text-primary" /><span>调试工作流</span></h2>
+        <div class="card bg-base-200 p-6">
+          <h3 class="text-xl font-bold mb-4">三步定位一次串口问题</h3>
+          <ol class="space-y-6 mb-6">
+            <li class="flex gap-4 items-start"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-content flex-shrink-0">1</div><div><h4 class="font-bold">确认硬件链路</h4><p class="text-base-content/70 mt-1">检查供电、GND、TX/RX 和电平是否正确。</p></div></li>
+            <li class="flex gap-4 items-start"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-content flex-shrink-0">2</div><div><h4 class="font-bold">确认串口配置</h4><p class="text-base-content/70 mt-1">核对波特率、数据位、停止位和 DMA 通道。</p></div></li>
+            <li class="flex gap-4 items-start"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-content flex-shrink-0">3</div><div><h4 class="font-bold">抓取并复现</h4><p class="text-base-content/70 mt-1">用逻辑分析仪确认时序，再回到代码定位边界。</p></div></li>
+          </ol>
+          <Code code={'$ stty -F /dev/ttyUSB0 115200 raw -echo\n$ hexdump -C capture.bin\n$ make flash && monitor'} lang="sh" />
+        </div>
+      </section>
+
+      <section class="py-6">
+        <div class="alert bg-primary/10 text-primary"><Icon name="lucide:lightbulb" class="w-6 h-6" /><span>从 <a href="/learning-os/blog" class="underline">文章列表</a> 开始，查看可复现的嵌入式调试记录。</span></div>
+      </section>
+    </div>
+  </MainCard>
+</BaseLayout>

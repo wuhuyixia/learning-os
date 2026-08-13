@@ -1,0 +1,15 @@
+---
+import { Icon } from "astro-icon/components";
+import MainCard from "@/components/MainCard.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="项目">
+  <MainCard title="项目实验室" description="硬件、固件与工具的实践项目。" textOverlay="PROJECTS" infoIcon="lucide:code-2">
+    <div class="space-y-8">
+      <section class="py-4"><h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><Icon name="lucide:star" class="w-6 h-6 text-primary" /><span>Featured Projects</span></h2><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="card bg-base-200 p-6"><div class="flex justify-between items-start"><Icon name="lucide:cpu" class="w-9 h-9 text-primary" /><span class="badge badge-success badge-outline">Completed</span></div><h3 class="text-xl font-bold mt-5">STM32 环境监测系统</h3><p class="text-base-content/70 mt-2">低功耗采集温湿度与光照数据，支持 OLED 本地显示和串口配置。</p><div class="divider my-3" /><code class="text-sm">STM32F4 · FreeRTOS · SHT30 · OLED</code></div><div class="card bg-base-200 p-6"><div class="flex justify-between items-start"><Icon name="lucide:terminal" class="w-9 h-9 text-primary" /><span class="badge badge-warning badge-outline">In progress</span></div><h3 class="text-xl font-bold mt-5">ESP32 局域网控制台</h3><p class="text-base-content/70 mt-2">面向实验室设备的轻量 Web 控制台，管理 GPIO、继电器和传感器状态。</p><div class="divider my-3" /><code class="text-sm">ESP32 · C++ · Wi-Fi · WebSocket</code></div></div></section>
+      <section class="py-4"><h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><Icon name="lucide:folder-code" class="w-6 h-6 text-primary" /><span>更多实验</span></h2><div class="card bg-base-200 p-6"><ul class="space-y-5"><li class="flex gap-4"><Icon name="lucide:activity" class="w-6 h-6 text-primary flex-shrink-0" /><div><h3 class="font-bold">FPGA UART Logic Analyzer</h3><p class="text-base-content/70">用 Verilog 实现串口协议采集与触发模块，验证嵌入式通信时序。</p></div></li><li class="flex gap-4"><Icon name="lucide:waypoints" class="w-6 h-6 text-primary flex-shrink-0" /><div><h3 class="font-bold">电源模块 PCB 复盘</h3><p class="text-base-content/70">从布局、回流路径、去耦到示波器测量，整理一次完整硬件调试过程。</p></div></li></ul></div></section>
+      <div class="flex justify-center"><a href="https://github.com/wuhuyixia/learning-os" target="_blank" rel="noopener noreferrer" class="btn btn-outline gap-2"><Icon name="lucide:github" class="w-5 h-5" /> 查看 GitHub 仓库</a></div>
+    </div>
+  </MainCard>
+</BaseLayout>

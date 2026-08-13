@@ -1,5 +1,6 @@
 node_modules/
-.next/
-out/
+dist/
+.astro/
+public/pagefind/
 .DS_Store
 *.log

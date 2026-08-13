@@ -1,22 +1,26 @@
 # embedded.log
 
-面向电子信息工程与嵌入式开发的个人技术博客，记录 STM32、ESP32、Embedded Linux、FreeRTOS、PCB、FPGA 与通信协议相关的技术实践。
+基于 [Frosti](https://github.com/EveSunMaple/Frosti) 官方模板和 Astro 构建的嵌入式技术博客，记录 STM32、ESP32、Embedded Linux、FreeRTOS、PCB、FPGA 与通信协议相关的实践。
+
+## 特性
+
+- 使用 Frosti v4 的布局、主题切换、文章归档、标签、搜索、TOC 和 Mermaid/数学公式支持
+- 内容聚焦电子信息工程与嵌入式开发
+- 使用 `public/avatar.jpg` 作为头像
+- 通过 GitHub Actions 自动构建并部署到 GitHub Pages
 
 ## 本地运行
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
-打开 <http://localhost:3000> 查看博客首页。
+生产构建：
 
-## 项目结构
-
-- `app/page.tsx`：博客首页、文章、项目与关于内容
-- `app/globals.css`：深色主题、响应式布局与文档阅读样式
-- `public/avatar.jpg`：作者头像
-- `.github/workflows/deploy-pages.yml`：GitHub Pages 自动部署
+```bash
+pnpm run build
+```
 
 ## 在线访问
 

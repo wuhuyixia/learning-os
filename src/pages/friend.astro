@@ -1,0 +1,46 @@
+---
+import { Icon } from "astro-icon/components";
+import LinkCard from "@components/mdx/LinkCard.astro";
+import MainCard from "@components/MainCard.astro";
+import CardGroup from "@components/temple/CardGroup.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="资源">
+  <CardGroup cols="1">
+    <MainCard
+      title="嵌入式资源"
+      description="常用芯片、操作系统、协议和工具的官方资料入口。"
+      textOverlay="TOOLS"
+      infoIcon="lucide:bookmark"
+    >
+      <div class="space-y-8">
+        <section>
+          <h2 class="text-2xl font-bold mb-5 flex items-center gap-2">
+            <Icon name="lucide:cpu" class="w-6 h-6 text-primary" />
+            <span>芯片与系统</span>
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <LinkCard title="STMicroelectronics" desc="STM32 芯片、HAL、CubeMX 与参考手册。" url="https://www.st.com/" icon="lucide:microchip" categories={["STM32", "Datasheet"]} />
+            <LinkCard title="Espressif Documentation" desc="ESP32 系列芯片、ESP-IDF 和无线连接开发资料。" url="https://docs.espressif.com/" icon="simple-icons:espressif" categories={["ESP32", "IDF"]} />
+            <LinkCard title="FreeRTOS Kernel" desc="任务、队列、信号量和内存管理的官方文档。" url="https://www.freertos.org/Documentation/01-getting-started/" icon="lucide:timer" categories={["RTOS", "Scheduling"]} />
+            <LinkCard title="Linux Kernel Documentation" desc="驱动、设备树、内核接口与嵌入式 Linux 资料。" url="https://docs.kernel.org/" icon="simple-icons:linux" categories={["Linux", "Driver"]} />
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-5 flex items-center gap-2">
+            <Icon name="lucide:radio-tower" class="w-6 h-6 text-primary" />
+            <span>工具与协议</span>
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <LinkCard title="Zephyr Project" desc="面向现代 MCU 的开源实时操作系统与设备驱动框架。" url="https://docs.zephyrproject.org/" icon="lucide:layers-3" categories={["RTOS", "IoT"]} />
+            <LinkCard title="KiCad Documentation" desc="原理图、PCB 布局、规则检查和生产文件工作流。" url="https://docs.kicad.org/" icon="lucide:route" categories={["PCB", "EDA"]} />
+            <LinkCard title="Saleae Logic" desc="逻辑分析仪与 UART、SPI、I2C、CAN 抓包分析。" url="https://support.saleae.com/" icon="lucide:activity" categories={["Debug", "Protocol"]} />
+            <LinkCard title="OpenOCD User Guide" desc="通过 JTAG/SWD 连接目标板并完成下载与调试。" url="https://openocd.org/doc-release/html/" icon="lucide:bug" categories={["JTAG", "Debug"]} />
+          </div>
+        </section>
+      </div>
+    </MainCard>
+  </CardGroup>
+</BaseLayout>

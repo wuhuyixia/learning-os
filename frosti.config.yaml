@@ -1,0 +1,89 @@
+site:
+  tab: embedded.log
+  title: Embedded Systems & Electronics
+  description: 记录嵌入式开发、电子设计与技术实践。
+  language: zh
+  favicon: /favicon.ico
+  theme:
+    light: winter
+    dark: dracula
+    code: github-dark
+  date_format: ddd MMM DD YYYY
+  blog:
+    pageSize: 8
+  menu:
+    - id: home
+      text: 首页
+      href: /learning-os/
+      svg: "material-symbols:home-outline-rounded"
+      target: _self
+    - id: about
+      text: 关于
+      href: /learning-os/about
+      svg: "material-symbols:info-outline-rounded"
+      target: _self
+    - id: blog
+      text: 文章
+      href: /learning-os/blog
+      svg: "material-symbols:book-2-outline-rounded"
+      target: _self
+      subItems:
+        - id: all
+          text: 全部文章
+          href: /learning-os/blog
+          svg: "material-symbols:ink-pen-outline-rounded"
+          target: _self
+        - id: archives
+          text: 文章归档
+          href: /learning-os/blog/archives
+          svg: "material-symbols:calendar-month-outline-rounded"
+          target: _self
+        - id: tags
+          text: 技术标签
+          href: /learning-os/blog/tags
+          svg: "material-symbols:label-outline-rounded"
+          target: _self
+    - id: project
+      text: 项目
+      href: /learning-os/project
+      svg: "material-symbols:code-blocks-outline"
+      target: _self
+    - id: friend
+      text: 资源
+      href: /learning-os/friend
+      svg: "material-symbols:link-rounded"
+      target: _self
+    - id: contact
+      text: 联系
+      href: "mailto:2470794599@qq.com"
+      target: _self
+      svg: "material-symbols:attach-email-outline-rounded"
+
+user:
+  name: Wuhuyixia
+  site: "https://wuhuyixia.github.io/learning-os/"
+  avatar: /avatar.jpg
+  sidebar:
+    social:
+      - href: "https://github.com/wuhuyixia/learning-os"
+        ariaLabel: GitHub
+        title: GitHub
+        svg: "ri:github-line"
+      - href: "mailto:2470794599@qq.com"
+        ariaLabel: Email
+        title: Email
+        svg: "ri:mail-line"
+      - href: "https://github.com/wuhuyixia"
+        ariaLabel: GitHub Profile
+        title: GitHub Profile
+        svg: "ri:user-line"
+  footer:
+    social:
+      - href: "https://github.com/wuhuyixia/learning-os"
+        ariaLabel: GitHub
+        title: GitHub
+        svg: "ri:github-line"
+      - href: "mailto:2470794599@qq.com"
+        ariaLabel: Email
+        title: Email
+        svg: "ri:mail-line"
