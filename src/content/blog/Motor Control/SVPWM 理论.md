@@ -5,7 +5,7 @@ pubDate: 2025-06-20
 categories:
   - Motor Control
   - FOC
-image: /image/svpwm/image.png
+image: /image/svpwm/image%203.png
 tags:
   - FOC
   - PMSM
