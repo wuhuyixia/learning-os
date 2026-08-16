@@ -1,9 +1,8 @@
 ---
 title: I2C
 description: I2C是一种广泛使用的同步串行通信协议，常用于嵌入式系统中连接低速外设
-pubDate: 2026-08-02
-updated: 2026-08-14
-image: /image/STM32/I2C-Bus-Topology.jpg
+pubDate: 2025-08-02
+image: /image/STM32/I2C-Bus-Topology.png
 categories:
   - 通信协议
 tags:
@@ -257,7 +256,7 @@ typedef struct
 ## I2C外设收发流程
 
 
-![I2C外设收发与时钟控制框图](/learning-os/image/STM32/I2C-Peripheral-Transfer-Flow.jpg)
+![I2C外设收发与时钟控制框图](/learning-os/image/STM32/I2C-Peripheral-Transfer-Flow.png)
 
 
 
