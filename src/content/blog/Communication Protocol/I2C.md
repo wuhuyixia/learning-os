@@ -3,7 +3,7 @@ title: I2C
 description: I2C是一种广泛使用的同步串行通信协议，常用于嵌入式系统中连接低速外设
 pubDate: 2026-08-02
 updated: 2026-08-14
-image: /image/STM32/I2C-Bus-Topology.png
+image: /image/STM32/I2C-Bus-Topology.jpg
 categories:
   - 通信协议
 tags:
@@ -29,9 +29,27 @@ I2C 总线上通常包含一个主机和多个从机。
 
 ## 上拉电阻
 
-I2C 的 SDA 和 SCL 通常采用：`Open-Drain，开漏输出`
+I2C 的 SDA 和 SCL 通常采用 **Open-Drain（开漏）** 输出方式。
 
-设备只能主动把总线拉低，而不能主动输出高电平。因此需要通过上拉电阻将总线拉到高电平：
+设备只能主动将总线**拉低**，不能主动输出高电平。当设备释放总线时，需要通过**上拉电阻**将 SDA 和 SCL 拉到高电平。
+
+这种结构可以实现 **线与（Wired-AND）** 逻辑：
+
+$$
+Y = X_1 \& X_2 \& X_3 \& \cdots \& X_n
+=
+\begin{cases}
+0, & \text{只要 } X_1 \sim X_n \text{ 里任意一个等于 } 0, \\[6pt]
+1, & \text{当 } X_1 \sim X_n \text{ 全部都等于 } 1.
+\end{cases}
+$$
+
+因此：
+
+* **有一个设备输出低电平 → 总线为低电平**
+* **所有设备都释放总线 → 上拉电阻使总线为高电平**
+
+这也是 I2C 能够实现**多设备共享总线、ACK 应答以及总线仲裁**的基础。
 
 ## 寄存器读写时序
 
@@ -70,4 +88,6 @@ I2C 的 SDA 和 SCL 通常采用：`Open-Drain，开漏输出`
   </div>
 
 </div>
+
+
 
