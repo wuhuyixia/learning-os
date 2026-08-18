@@ -94,7 +94,8 @@ code {
   }
 }
 
-// I2C timing cards used in communication-protocol articles
+// Protocol timing cards used in communication-protocol articles
+.protocol-card,
 .i2c-card {
   @apply my-8 rounded-2xl border p-5 shadow-sm;
   background: oklch(var(--b2) / 0.72);
@@ -102,77 +103,91 @@ code {
   color: oklch(var(--bc));
 }
 
+.protocol-title,
 .i2c-title {
   @apply mb-3 mt-1 text-sm font-bold tracking-wide;
 }
 
+.protocol-title + .protocol-flow,
 .i2c-title + .i2c-flow {
   @apply mb-6;
 }
 
+.protocol-flow,
 .i2c-flow {
   @apply flex flex-wrap items-center gap-2;
 }
 
+.protocol-flow .sig,
 .i2c-flow .sig {
   @apply inline-flex min-h-8 items-center justify-center rounded-lg border px-3 py-1 text-xs font-bold tracking-wide shadow-sm;
   white-space: nowrap;
 }
 
+.protocol-flow .sig.green,
 .i2c-flow .sig.green {
   background: #dcfce7;
   border-color: #86efac;
   color: #166534;
 }
 
+.protocol-flow .sig.blue,
 .i2c-flow .sig.blue {
   background: #dbeafe;
   border-color: #93c5fd;
   color: #1d4ed8;
 }
 
+.protocol-flow .sig.yellow,
 .i2c-flow .sig.yellow {
   background: #fef3c7;
   border-color: #fcd34d;
   color: #92400e;
 }
 
+.protocol-flow .sig.gray,
 .i2c-flow .sig.gray {
   background: #e2e8f0;
   border-color: #cbd5e1;
   color: #475569;
 }
 
+.protocol-flow .sig.red,
 .i2c-flow .sig.red {
   background: #fee2e2;
   border-color: #fca5a5;
   color: #b91c1c;
 }
 
+[data-theme-type="dark"] .protocol-card .sig.green,
 [data-theme-type="dark"] .i2c-card .sig.green {
   background: #14532d;
   border-color: #22c55e;
   color: #bbf7d0;
 }
 
+[data-theme-type="dark"] .protocol-card .sig.blue,
 [data-theme-type="dark"] .i2c-card .sig.blue {
   background: #1e3a8a;
   border-color: #60a5fa;
   color: #bfdbfe;
 }
 
+[data-theme-type="dark"] .protocol-card .sig.yellow,
 [data-theme-type="dark"] .i2c-card .sig.yellow {
   background: #713f12;
   border-color: #f59e0b;
   color: #fef3c7;
 }
 
+[data-theme-type="dark"] .protocol-card .sig.gray,
 [data-theme-type="dark"] .i2c-card .sig.gray {
   background: #334155;
   border-color: #64748b;
   color: #e2e8f0;
 }
 
+[data-theme-type="dark"] .protocol-card .sig.red,
 [data-theme-type="dark"] .i2c-card .sig.red {
   background: #7f1d1d;
   border-color: #f87171;
@@ -180,14 +195,17 @@ code {
 }
 
 @media (max-width: 640px) {
+  .protocol-card,
   .i2c-card {
     @apply p-4;
   }
 
+  .protocol-flow,
   .i2c-flow {
     @apply gap-1.5;
   }
 
+  .protocol-flow .sig,
   .i2c-flow .sig {
     @apply px-2.5 text-[0.7rem];
   }
