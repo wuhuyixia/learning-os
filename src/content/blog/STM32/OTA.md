@@ -27,19 +27,14 @@ YMODEM 是一种基于块传输的串口文件传输协议，使用 1K 数据块
   <div class="protocol-flow">
     <span class="sig blue">数据包开始信号 SOH/STX</span>
     <span class="sig gray">1 Byte</span>
-
     <span class="sig blue">发送序号</span>
     <span class="sig gray">1 Byte</span>
-
     <span class="sig blue">发送序号反码</span>
     <span class="sig gray">1 Byte</span>
-
     <span class="sig blue">数据区</span>
     <span class="sig gray">128 / 1024 Byte</span>
-
     <span class="sig blue">CRC 高字节</span>
     <span class="sig gray">1 Byte</span>
-
     <span class="sig blue">CRC 低字节</span>
     <span class="sig gray">1 Byte</span>
   </div>
