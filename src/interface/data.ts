@@ -22,6 +22,7 @@ export interface PostData {
   title: string;
   description?: string;
   image?: string;
+  imageFit?: "cover" | "contain";
   pubDate?: Date;
   badge?: string;
   categories?: string[];

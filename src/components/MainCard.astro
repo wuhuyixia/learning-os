@@ -17,6 +17,7 @@ const {
   title,
   description,
   image,
+  imageFit = "cover",
   infoIcon = "lucide:help-circle",
   helpText = t("label.learnMore"),
   textOverlay,
@@ -43,7 +44,7 @@ const imageSrc = image?.startsWith("/") ? `${BASE_PATH}${image}` : image;
             width={1200}
             height={630}
             loading="eager"
-            class="w-full h-full object-cover"
+            class:list={["w-full h-full", imageFit === "contain" ? "object-contain bg-base-200" : "object-cover"]}
           />
         </div>
 

@@ -11,6 +11,7 @@ import PostInfo from "./widgets/PostInfo.astro";
 const {
   title,
   image,
+  imageFit = "cover",
   pubDate,
   description,
   badge,
@@ -54,7 +55,10 @@ const imageSrc = image?.startsWith("/") ? `${BASE_PATH}${image}` : image;
             width={800}
             height={400}
             loading={priority ? "eager" : "lazy"}
-            class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            class:list={[
+              "w-full h-full transition-transform duration-700 group-hover:scale-110",
+              imageFit === "contain" ? "object-contain bg-base-200" : "object-cover",
+            ]}
           />
         </a>
       )

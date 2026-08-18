@@ -4,6 +4,7 @@ description: 在 Linux C/C++ 开发中，GCC（GNU Compiler Collection）是无�
 pubDate: 2025-11-25
 updated: 2026-08-14
 image: /image/Linux/gcc.png
+imageFit: contain
 categories:
   - Embedded Linux
   - Tools
