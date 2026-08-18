@@ -44,7 +44,13 @@ const url = new URL(`/learning-os/blog/${blog.id}`, Astro.site ?? Astro.url.orig
   ogType="article"
   pubDate={blog.data.pubDate}
 >
-  <MainCard title={blog.data.title} description={blog.data.description} image={blog.data.image} infoIcon="lucide:info">
+  <MainCard
+    title={blog.data.title}
+    description={blog.data.description}
+    image={blog.data.image}
+    imageFit={blog.data.imageFit}
+    infoIcon="lucide:info"
+  >
     <PostInfo
       pubDate={displayDate}
       badge={blog.data.badge}
