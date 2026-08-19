@@ -24,7 +24,31 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
         </div>
       </section>
       <section><h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><Icon name="lucide:cpu" class="w-6 h-6 text-primary" /><span>技术栈</span></h2><div class="flex flex-wrap gap-3">{["STM32", "ESP32", "C / C++", "FreeRTOS", "Embedded Linux", "PCB", "FPGA", "UART / SPI / I2C / CAN", "Python", "Git"].map((item) => <span class="badge badge-lg badge-outline">{item}</span>)}</div></section>
-      <section><h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><Icon name="lucide:activity" class="w-6 h-6 text-primary" /><span>记录方式</span></h2><div class="grid md:grid-cols-3 gap-5"><div class="card bg-base-200 p-5"><h3 class="font-bold mb-2">先测量</h3><p class="text-base-content/70">先看电源、波形、时序和日志，再修改代码。</p></div><div class="card bg-base-200 p-5"><h3 class="font-bold mb-2">可复现</h3><p class="text-base-content/70">把触发条件、配置项和验证结果写清楚。</p></div><div class="card bg-base-200 p-5"><h3 class="font-bold mb-2">能复盘</h3><p class="text-base-content/70">记录为什么有效，也记录哪些尝试没有效果。</p></div></div></section>
+      <section>
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+          <Icon name="lucide:activity" class="w-6 h-6 text-primary" />
+          <span>保持学习</span>
+        </h2>
+        <div class="grid md:grid-cols-3 gap-5">
+          <a
+            href="https://github.com/ryanhanwu/How-To-Ask-Questions-The-Smart-Way/blob/main/README-zh_CN.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="card bg-base-200 p-5 transition hover:-translate-y-1 hover:shadow-lg"
+          >
+            <h3 class="font-bold mb-2">How To Ask Questions The Smart Way</h3>
+            <p class="text-base-content/70">学习如何清晰、有效地提出技术问题。</p>
+          </a>
+          <div class="card bg-base-200 p-5">
+            <h3 class="font-bold mb-2">可复现</h3>
+            <p class="text-base-content/70">把触发条件、配置项和验证结果写清楚。</p>
+          </div>
+          <div class="card bg-base-200 p-5">
+            <h3 class="font-bold mb-2">能复盘</h3>
+            <p class="text-base-content/70">记录为什么有效，也记录哪些尝试没有效果。</p>
+          </div>
+        </div>
+      </section>
     </div>
   </MainCard>
 </BaseLayout>
