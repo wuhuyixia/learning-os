@@ -1,5 +1,4 @@
 ---
-import { Code } from "astro-expressive-code/components";
 import { Icon } from "astro-icon/components";
 import MainCard from "@/components/MainCard.astro";
 import FeatureCard from "@/components/mdx/FeatureCard.astro";
@@ -40,19 +39,6 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
           <FeatureCard title="Communication" description="UART、SPI、I2C、CAN 和协议抓包记录。" icon="lucide:radio-tower" color="oklch(0.7 0.2 30)" />
           <FeatureCard title="PCB & Hardware" description="从原理图、布局布线到回流焊和测量复盘。" icon="lucide:waypoints" color="oklch(0.8 0.2 80)" />
           <FeatureCard title="FPGA & Logic" description="Verilog、时序约束和 UART 逻辑分析实验。" icon="lucide:activity" color="oklch(0.6 0.2 240)" />
-        </div>
-      </section>
-
-      <section class="py-6">
-        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><Icon name="lucide:rocket" class="w-6 h-6 text-primary" /><span>调试工作流</span></h2>
-        <div class="card bg-base-200 p-6">
-          <h3 class="text-xl font-bold mb-4">三步定位一次串口问题</h3>
-          <ol class="space-y-6 mb-6">
-            <li class="flex gap-4 items-start"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-content flex-shrink-0">1</div><div><h4 class="font-bold">确认硬件链路</h4><p class="text-base-content/70 mt-1">检查供电、GND、TX/RX 和电平是否正确。</p></div></li>
-            <li class="flex gap-4 items-start"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-content flex-shrink-0">2</div><div><h4 class="font-bold">确认串口配置</h4><p class="text-base-content/70 mt-1">核对波特率、数据位、停止位和 DMA 通道。</p></div></li>
-            <li class="flex gap-4 items-start"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-content flex-shrink-0">3</div><div><h4 class="font-bold">抓取并复现</h4><p class="text-base-content/70 mt-1">用逻辑分析仪确认时序，再回到代码定位边界。</p></div></li>
-          </ol>
-          <Code code={'$ stty -F /dev/ttyUSB0 115200 raw -echo\n$ hexdump -C capture.bin\n$ make flash && monitor'} lang="sh" />
         </div>
       </section>
 
