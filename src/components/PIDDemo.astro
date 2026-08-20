@@ -5,9 +5,16 @@
   <div class="pid-demo__header">
     <div>
       <h3>PID 参数交互演示</h3>
-      <p>拖动 Kp、Ki、Kd，观察闭环阶跃响应如何变化。</p>
+      <p>选择 P / PI / PD / PID，或直接拖动参数，观察闭环阶跃响应。</p>
     </div>
     <button type="button" class="pid-demo__reset" data-reset>重置参数</button>
+  </div>
+
+  <div class="pid-demo__modes" aria-label="PID 控制模式">
+    <button type="button" data-mode="P">P</button>
+    <button type="button" data-mode="PI">PI</button>
+    <button type="button" data-mode="PD">PD</button>
+    <button type="button" data-mode="PID" aria-pressed="true">PID</button>
   </div>
 
   <div class="pid-demo__controls">
@@ -19,8 +26,8 @@
 
     <label>
       <span><strong>Ki</strong> 积分 Integral</span>
-      <output data-value="ki">0.35</output>
-      <input data-param="ki" type="range" min="0" max="2" step="0.01" value="0.35" />
+      <output data-value="ki">0.70</output>
+      <input data-param="ki" type="range" min="0" max="2" step="0.01" value="0.7" />
     </label>
 
     <label>
@@ -37,7 +44,7 @@
   </div>
 
   <div class="pid-demo__chart-wrap">
-    <svg class="pid-demo__chart" viewBox="0 0 760 360" role="img" aria-label="PID 闭环阶跃响应曲线" data-chart>
+    <svg class="pid-demo__chart" viewBox="0 0 760 360" role="img" aria-label="PID 闭环阶跃响应曲线">
       <g class="pid-demo__grid" data-grid></g>
       <g class="pid-demo__axes" data-axes></g>
       <path class="pid-demo__setpoint" data-setpoint-path></path>
@@ -58,7 +65,7 @@
   </div>
 
   <p class="pid-demo__note">
-    仿真对象采用简化二阶机械系统，并使用离散 PID 控制器。该图用于理解参数趋势，不代表具体电机的精确模型。
+    仿真对象采用带恢复项的简化二阶系统 J·y'' + B·y' + C·y = K·u，并加入输出限幅与积分抗饱和。该演示用于理解 PID 参数趋势，不代表具体电机的精确模型。
   </p>
 </div>
 
@@ -79,7 +86,7 @@
     gap: 1rem;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
   }
 
   .pid-demo__header h3 {
@@ -93,18 +100,38 @@
     font-size: 0.9rem;
   }
 
-  .pid-demo__reset {
-    flex: 0 0 auto;
+  .pid-demo button {
     border: 1px solid var(--pid-border);
     border-radius: 0.7rem;
-    padding: 0.45rem 0.75rem;
+    padding: 0.42rem 0.72rem;
     background: transparent;
     color: inherit;
     cursor: pointer;
   }
 
-  .pid-demo__reset:hover {
-    background: color-mix(in srgb, currentColor 7%, transparent);
+  .pid-demo button:hover,
+  .pid-demo button[aria-pressed="true"] {
+    background: color-mix(in srgb, currentColor 9%, transparent);
+  }
+
+  .pid-demo button[aria-pressed="true"] {
+    border-color: color-mix(in srgb, currentColor 38%, transparent);
+    font-weight: 600;
+  }
+
+  .pid-demo__reset {
+    flex: 0 0 auto;
+  }
+
+  .pid-demo__modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .pid-demo__modes button {
+    min-width: 3.2rem;
   }
 
   .pid-demo__controls {
@@ -129,10 +156,6 @@
     grid-column: 1 / -1;
     width: 100%;
     accent-color: currentColor;
-  }
-
-  .pid-demo__chart-wrap {
-    position: relative;
   }
 
   .pid-demo__chart {
@@ -195,13 +218,8 @@
     height: 0;
   }
 
-  .pid-demo__legend-setpoint {
-    border-top: 2px dashed #2563eb;
-  }
-
-  .pid-demo__legend-response {
-    border-top: 3px solid #dc2626;
-  }
+  .pid-demo__legend-setpoint { border-top: 2px dashed #2563eb; }
+  .pid-demo__legend-response { border-top: 3px solid #dc2626; }
 
   .pid-demo__metrics {
     display: grid;
@@ -237,63 +255,144 @@
   }
 
   @media (max-width: 700px) {
-    .pid-demo {
-      padding: 1rem;
-    }
-
-    .pid-demo__header {
-      flex-direction: column;
-    }
-
+    .pid-demo { padding: 1rem; }
+    .pid-demo__header { flex-direction: column; }
     .pid-demo__controls,
-    .pid-demo__metrics {
-      grid-template-columns: 1fr;
-    }
+    .pid-demo__metrics { grid-template-columns: 1fr; }
   }
 </style>
 
 <script>
-  function initPIDDemo(root) {
+  type PIDPoint = { t: number; y: number };
+  type PIDMode = "P" | "PI" | "PD" | "PID";
+  type RenderOptions = { animate?: boolean };
+  type SvgAttrs = Record<string, string | number>;
+
+  function initPIDDemo(root: HTMLElement): void {
     if (root.dataset.initialized === "true") return;
     root.dataset.initialized = "true";
 
-    const inputs = Object.fromEntries(
-      Array.from(root.querySelectorAll("[data-param]")).map((input) => [input.dataset.param, input]),
-    );
-    const values = Object.fromEntries(
-      Array.from(root.querySelectorAll("[data-value]")).map((output) => [output.dataset.value, output]),
-    );
+    const getRequired = <T extends Element>(selector: string): T => {
+      const element = root.querySelector<T>(selector);
+      if (!element) throw new Error(`PID demo element not found: ${selector}`);
+      return element;
+    };
 
-    const responsePath = root.querySelector("[data-response-path]");
-    const setpointPath = root.querySelector("[data-setpoint-path]");
-    const grid = root.querySelector("[data-grid]");
-    const axes = root.querySelector("[data-axes]");
-    const labels = root.querySelector("[data-labels]");
-    const metrics = Object.fromEntries(
-      Array.from(root.querySelectorAll("[data-metric]")).map((el) => [el.dataset.metric, el]),
-    );
+    const inputs = {
+      kp: getRequired<HTMLInputElement>('[data-param="kp"]'),
+      ki: getRequired<HTMLInputElement>('[data-param="ki"]'),
+      kd: getRequired<HTMLInputElement>('[data-param="kd"]'),
+      setpoint: getRequired<HTMLInputElement>('[data-param="setpoint"]'),
+    };
+
+    const values = {
+      kp: getRequired<HTMLOutputElement>('[data-value="kp"]'),
+      ki: getRequired<HTMLOutputElement>('[data-value="ki"]'),
+      kd: getRequired<HTMLOutputElement>('[data-value="kd"]'),
+      setpoint: getRequired<HTMLOutputElement>('[data-value="setpoint"]'),
+    };
+
+    const responsePath = getRequired<SVGPathElement>("[data-response-path]");
+    const setpointPath = getRequired<SVGPathElement>("[data-setpoint-path]");
+    const grid = getRequired<SVGGElement>("[data-grid]");
+    const axes = getRequired<SVGGElement>("[data-axes]");
+    const labels = getRequired<SVGGElement>("[data-labels]");
+    const resetButton = getRequired<HTMLButtonElement>("[data-reset]");
+
+    const metrics = {
+      overshoot: getRequired<HTMLElement>('[data-metric="overshoot"]'),
+      rise: getRequired<HTMLElement>('[data-metric="rise"]'),
+      settling: getRequired<HTMLElement>('[data-metric="settling"]'),
+      error: getRequired<HTMLElement>('[data-metric="error"]'),
+    };
+
+    const modeButtons = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-mode]"));
 
     const width = 760;
     const height = 360;
-    const margin = { left: 56, right: 20, top: 18, bottom: 44 };
+    const margin = { left: 62, right: 20, top: 18, bottom: 44 };
     const plotW = width - margin.left - margin.right;
     const plotH = height - margin.top - margin.bottom;
     const duration = 12;
-    const yMax = 120;
 
-    const svgEl = (tag, attrs = {}) => {
-      const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
-      for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, String(value));
-      return el;
+    const svgEl = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: SvgAttrs = {}): SVGElementTagNameMap[K] => {
+      const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, String(value));
+      return element;
     };
 
-    const xScale = (t) => margin.left + (t / duration) * plotW;
-    const yScale = (y) => margin.top + plotH - (y / yMax) * plotH;
+    const xScale = (t: number): number => margin.left + (t / duration) * plotW;
 
-    function drawAxes() {
+    function simulate(): { points: PIDPoint[]; setpoint: number } {
+      const kp = Number(inputs.kp.value);
+      const ki = Number(inputs.ki.value);
+      const kd = Number(inputs.kd.value);
+      const setpoint = Number(inputs.setpoint.value);
+
+      values.kp.value = kp.toFixed(2);
+      values.ki.value = ki.toFixed(2);
+      values.kd.value = kd.toFixed(2);
+      values.setpoint.value = setpoint.toFixed(0);
+
+      const dt = 0.01;
+      const count = Math.floor(duration / dt) + 1;
+      const points: PIDPoint[] = [];
+
+      // 带恢复项的简化二阶对象：J*y'' + B*y' + C*y = K*u
+      // P 控制会留下明显稳态误差，加入 I 后可直观看到误差被消除。
+      const J = 0.22;
+      const B = 0.72;
+      const C = 0.55;
+      const K = 1.0;
+      const outputLimit = 120;
+      const integralLimit = 120;
+
+      let y = 0;
+      let velocity = 0;
+      let integral = 0;
+      let prevError = setpoint;
+
+      for (let i = 0; i < count; i += 1) {
+        const t = i * dt;
+        const error = setpoint - y;
+        const derivative = (error - prevError) / dt;
+        const rawOutput = kp * error + ki * integral + kd * derivative;
+        const output = Math.max(-outputLimit, Math.min(outputLimit, rawOutput));
+
+        // Conditional integration anti-windup：饱和时仅允许误差将控制量拉回线性区。
+        const canIntegrate =
+          Math.abs(rawOutput) < outputLimit ||
+          (rawOutput >= outputLimit && error < 0) ||
+          (rawOutput <= -outputLimit && error > 0);
+        if (canIntegrate) {
+          integral = Math.max(-integralLimit, Math.min(integralLimit, integral + error * dt));
+        }
+
+        const acceleration = (K * output - B * velocity - C * y) / J;
+        velocity += acceleration * dt;
+        y += velocity * dt;
+        prevError = error;
+        points.push({ t, y });
+      }
+
+      return { points, setpoint };
+    }
+
+    function getYBounds(points: PIDPoint[], setpoint: number): { min: number; max: number } {
+      const valuesY = points.map((point) => point.y);
+      const rawMin = Math.min(0, setpoint, ...valuesY);
+      const rawMax = Math.max(0, setpoint, ...valuesY);
+      const span = Math.max(rawMax - rawMin, Math.abs(setpoint) * 0.4, 20);
+      const padding = span * 0.12;
+      return { min: rawMin - padding, max: rawMax + padding };
+    }
+
+    function drawAxes(yMin: number, yMax: number): (y: number) => number {
       grid.replaceChildren();
       axes.replaceChildren();
       labels.replaceChildren();
+
+      const yScale = (y: number): number => margin.top + plotH - ((y - yMin) / (yMax - yMin)) * plotH;
 
       for (let t = 0; t <= duration; t += 2) {
         const x = xScale(t);
@@ -303,11 +402,13 @@
         labels.append(text);
       }
 
-      for (let y = 0; y <= yMax; y += 20) {
-        const yy = yScale(y);
-        grid.append(svgEl("line", { x1: margin.left, y1: yy, x2: margin.left + plotW, y2: yy }));
-        const text = svgEl("text", { x: margin.left - 10, y: yy + 4, "text-anchor": "end" });
-        text.textContent = String(y);
+      const yTicks = 5;
+      for (let index = 0; index <= yTicks; index += 1) {
+        const yValue = yMin + ((yMax - yMin) * index) / yTicks;
+        const y = yScale(yValue);
+        grid.append(svgEl("line", { x1: margin.left, y1: y, x2: margin.left + plotW, y2: y }));
+        const text = svgEl("text", { x: margin.left - 10, y: y + 4, "text-anchor": "end" });
+        text.textContent = yValue.toFixed(Math.abs(yMax - yMin) < 40 ? 1 : 0);
         labels.append(text);
       }
 
@@ -327,99 +428,77 @@
       const xLabel = svgEl("text", { x: margin.left + plotW, y: height - 15, "text-anchor": "end" });
       xLabel.textContent = "t / s";
       labels.append(xLabel);
+      return yScale;
     }
 
-    function simulate() {
-      const kp = Number(inputs.kp.value);
-      const ki = Number(inputs.ki.value);
-      const kd = Number(inputs.kd.value);
-      const setpoint = Number(inputs.setpoint.value);
+    function getMetrics(points: PIDPoint[], setpoint: number): {
+      overshoot: number;
+      rise: number | null;
+      settling: number | null;
+      steadyError: number;
+    } {
+      const maxY = Math.max(...points.map((point) => point.y));
+      const overshoot = Math.max(0, ((maxY - setpoint) / Math.max(Math.abs(setpoint), 1)) * 100);
 
-      values.kp.value = kp.toFixed(2);
-      values.ki.value = ki.toFixed(2);
-      values.kd.value = kd.toFixed(2);
-      values.setpoint.value = setpoint.toFixed(0);
-
-      const dt = 0.01;
-      const count = Math.floor(duration / dt) + 1;
-      const points = [];
-
-      // 简化机械对象：J*y'' + B*y' = K*u
-      // 通过输出限幅和积分限幅，使教学演示保持稳定且更接近实际执行器。
-      const J = 0.22;
-      const B = 0.72;
-      const K = 1.0;
-      const outputLimit = 120;
-      const integralLimit = 90;
-
-      let y = 0;
-      let velocity = 0;
-      let integral = 0;
-      let prevError = setpoint;
-
-      for (let i = 0; i < count; i += 1) {
-        const t = i * dt;
-        const error = setpoint - y;
-        integral = Math.max(-integralLimit, Math.min(integralLimit, integral + error * dt));
-        const derivative = (error - prevError) / dt;
-        let u = kp * error + ki * integral + kd * derivative;
-        u = Math.max(-outputLimit, Math.min(outputLimit, u));
-
-        const acceleration = (K * u - B * velocity) / J;
-        velocity += acceleration * dt;
-        y += velocity * dt;
-        prevError = error;
-
-        points.push({ t, y });
-      }
-
-      return { points, setpoint };
-    }
-
-    function getMetrics(points, setpoint) {
-      const maxY = Math.max(...points.map((p) => p.y));
-      const overshoot = Math.max(0, ((maxY - setpoint) / setpoint) * 100);
-
-      const low = setpoint * 0.1;
-      const high = setpoint * 0.9;
-      const t10 = points.find((p) => p.y >= low)?.t;
-      const t90 = points.find((p) => p.y >= high)?.t;
+      const t10 = points.find((point) => point.y >= setpoint * 0.1)?.t;
+      const t90 = points.find((point) => point.y >= setpoint * 0.9)?.t;
       const rise = t10 !== undefined && t90 !== undefined ? t90 - t10 : null;
 
       const band = Math.max(0.02 * Math.abs(setpoint), 0.5);
-      let settling = null;
+      let settling: number | null = null;
       for (let i = points.length - 1; i >= 0; i -= 1) {
         if (Math.abs(points[i].y - setpoint) > band) {
           if (i < points.length - 1) settling = points[i + 1].t;
           break;
         }
       }
-      if (settling === null && Math.abs(points[0].y - setpoint) <= band) settling = 0;
 
-      const finalY = points[points.length - 1].y;
-      const steadyError = setpoint - finalY;
-
+      const steadyError = setpoint - points[points.length - 1].y;
       return { overshoot, rise, settling, steadyError };
+    }
+
+    function setMode(mode: PIDMode): void {
+      const presets: Record<PIDMode, { kp: string; ki: string; kd: string }> = {
+        P: { kp: "1.2", ki: "0", kd: "0" },
+        PI: { kp: "1.2", ki: "0.7", kd: "0" },
+        PD: { kp: "1.2", ki: "0", kd: "0.18" },
+        PID: { kp: "1.2", ki: "0.7", kd: "0.18" },
+      };
+      const preset = presets[mode];
+      inputs.kp.value = preset.kp;
+      inputs.ki.value = preset.ki;
+      inputs.kd.value = preset.kd;
+      for (const button of modeButtons) {
+        button.setAttribute("aria-pressed", button.dataset.mode === mode ? "true" : "false");
+      }
+      render({ animate: true });
+    }
+
+    function markCustomMode(): void {
+      for (const button of modeButtons) button.setAttribute("aria-pressed", "false");
     }
 
     let animationFrame = 0;
 
-    function render({ animate = true } = {}) {
+    function render({ animate = true }: RenderOptions = {}): void {
       cancelAnimationFrame(animationFrame);
       const { points, setpoint } = simulate();
+      const bounds = getYBounds(points, setpoint);
+      const yScale = drawAxes(bounds.min, bounds.max);
+
       const responseD = points
-        .map((p, index) => `${index === 0 ? "M" : "L"}${xScale(p.t).toFixed(2)},${yScale(Math.max(0, Math.min(yMax, p.y))).toFixed(2)}`)
+        .map((point, index) => `${index === 0 ? "M" : "L"}${xScale(point.t).toFixed(2)},${yScale(point.y).toFixed(2)}`)
         .join(" ");
       const setpointD = `M${xScale(0)},${yScale(setpoint)} L${xScale(duration)},${yScale(setpoint)}`;
 
       setpointPath.setAttribute("d", setpointD);
       responsePath.setAttribute("d", responseD);
 
-      const m = getMetrics(points, setpoint);
-      metrics.overshoot.textContent = `${m.overshoot.toFixed(1)} %`;
-      metrics.rise.textContent = m.rise === null ? "未达到" : `${m.rise.toFixed(2)} s`;
-      metrics.settling.textContent = m.settling === null ? `> ${duration} s` : `${m.settling.toFixed(2)} s`;
-      metrics.error.textContent = m.steadyError.toFixed(2);
+      const result = getMetrics(points, setpoint);
+      metrics.overshoot.textContent = `${result.overshoot.toFixed(1)} %`;
+      metrics.rise.textContent = result.rise === null ? "未达到" : `${result.rise.toFixed(2)} s`;
+      metrics.settling.textContent = result.settling === null ? `> ${duration} s` : `${result.settling.toFixed(2)} s`;
+      metrics.error.textContent = result.steadyError.toFixed(2);
 
       if (!animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         responsePath.style.strokeDasharray = "none";
@@ -433,12 +512,13 @@
       const start = performance.now();
       const animationDuration = 360;
 
-      const tick = (now) => {
+      const tick = (now: number): void => {
         const progress = Math.min(1, (now - start) / animationDuration);
-        const eased = 1 - Math.pow(1 - progress, 3);
+        const eased = 1 - (1 - progress) ** 3;
         responsePath.style.strokeDashoffset = String(length * (1 - eased));
-        if (progress < 1) animationFrame = requestAnimationFrame(tick);
-        else {
+        if (progress < 1) {
+          animationFrame = requestAnimationFrame(tick);
+        } else {
           responsePath.style.strokeDasharray = "none";
           responsePath.style.strokeDashoffset = "0";
         }
@@ -446,26 +526,31 @@
       animationFrame = requestAnimationFrame(tick);
     }
 
-    drawAxes();
-
     for (const input of Object.values(inputs)) {
-      input.addEventListener("input", () => render({ animate: false }));
+      input.addEventListener("input", () => {
+        markCustomMode();
+        render({ animate: false });
+      });
       input.addEventListener("change", () => render({ animate: true }));
     }
 
-    root.querySelector("[data-reset]").addEventListener("click", () => {
-      inputs.kp.value = "1.2";
-      inputs.ki.value = "0.35";
-      inputs.kd.value = "0.18";
+    for (const button of modeButtons) {
+      button.addEventListener("click", () => {
+        const mode = button.dataset.mode as PIDMode | undefined;
+        if (mode) setMode(mode);
+      });
+    }
+
+    resetButton.addEventListener("click", () => {
       inputs.setpoint.value = "60";
-      render({ animate: true });
+      setMode("PID");
     });
 
     render({ animate: true });
   }
 
-  document.querySelectorAll("[data-pid-demo]").forEach(initPIDDemo);
+  document.querySelectorAll<HTMLElement>("[data-pid-demo]").forEach(initPIDDemo);
   document.addEventListener("astro:page-load", () => {
-    document.querySelectorAll("[data-pid-demo]").forEach(initPIDDemo);
+    document.querySelectorAll<HTMLElement>("[data-pid-demo]").forEach(initPIDDemo);
   });
 </script>
