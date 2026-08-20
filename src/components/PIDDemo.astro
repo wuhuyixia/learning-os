@@ -1,0 +1,471 @@
+---
+---
+
+<div class="pid-demo" data-pid-demo>
+  <div class="pid-demo__header">
+    <div>
+      <h3>PID 参数交互演示</h3>
+      <p>拖动 Kp、Ki、Kd，观察闭环阶跃响应如何变化。</p>
+    </div>
+    <button type="button" class="pid-demo__reset" data-reset>重置参数</button>
+  </div>
+
+  <div class="pid-demo__controls">
+    <label>
+      <span><strong>Kp</strong> 比例 Proportional</span>
+      <output data-value="kp">1.20</output>
+      <input data-param="kp" type="range" min="0" max="5" step="0.05" value="1.2" />
+    </label>
+
+    <label>
+      <span><strong>Ki</strong> 积分 Integral</span>
+      <output data-value="ki">0.35</output>
+      <input data-param="ki" type="range" min="0" max="2" step="0.01" value="0.35" />
+    </label>
+
+    <label>
+      <span><strong>Kd</strong> 微分 Derivative</span>
+      <output data-value="kd">0.18</output>
+      <input data-param="kd" type="range" min="0" max="2" step="0.01" value="0.18" />
+    </label>
+
+    <label>
+      <span><strong>Setpoint</strong> 设定值</span>
+      <output data-value="setpoint">60</output>
+      <input data-param="setpoint" type="range" min="20" max="100" step="1" value="60" />
+    </label>
+  </div>
+
+  <div class="pid-demo__chart-wrap">
+    <svg class="pid-demo__chart" viewBox="0 0 760 360" role="img" aria-label="PID 闭环阶跃响应曲线" data-chart>
+      <g class="pid-demo__grid" data-grid></g>
+      <g class="pid-demo__axes" data-axes></g>
+      <path class="pid-demo__setpoint" data-setpoint-path></path>
+      <path class="pid-demo__response" data-response-path></path>
+      <g class="pid-demo__labels" data-labels></g>
+    </svg>
+    <div class="pid-demo__legend" aria-hidden="true">
+      <span><i class="pid-demo__legend-setpoint"></i>设定值 Setpoint</span>
+      <span><i class="pid-demo__legend-response"></i>实际响应 Response</span>
+    </div>
+  </div>
+
+  <div class="pid-demo__metrics" aria-live="polite">
+    <div><span>超调量 Overshoot</span><strong data-metric="overshoot">—</strong></div>
+    <div><span>上升时间 Rise Time</span><strong data-metric="rise">—</strong></div>
+    <div><span>稳定时间 Settling Time</span><strong data-metric="settling">—</strong></div>
+    <div><span>稳态误差 Steady-state Error</span><strong data-metric="error">—</strong></div>
+  </div>
+
+  <p class="pid-demo__note">
+    仿真对象采用简化二阶机械系统，并使用离散 PID 控制器。该图用于理解参数趋势，不代表具体电机的精确模型。
+  </p>
+</div>
+
+<style>
+  .pid-demo {
+    --pid-border: color-mix(in srgb, currentColor 18%, transparent);
+    --pid-muted: color-mix(in srgb, currentColor 62%, transparent);
+    --pid-grid: color-mix(in srgb, currentColor 10%, transparent);
+    margin: 1.5rem 0 2rem;
+    padding: 1.25rem;
+    border: 1px solid var(--pid-border);
+    border-radius: 1rem;
+    background: color-mix(in srgb, currentColor 3%, transparent);
+  }
+
+  .pid-demo__header {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  .pid-demo__header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  .pid-demo__header p {
+    margin: 0.3rem 0 0;
+    color: var(--pid-muted);
+    font-size: 0.9rem;
+  }
+
+  .pid-demo__reset {
+    flex: 0 0 auto;
+    border: 1px solid var(--pid-border);
+    border-radius: 0.7rem;
+    padding: 0.45rem 0.75rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .pid-demo__reset:hover {
+    background: color-mix(in srgb, currentColor 7%, transparent);
+  }
+
+  .pid-demo__controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem 1.2rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .pid-demo__controls label {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.35rem 0.8rem;
+    font-size: 0.88rem;
+  }
+
+  .pid-demo__controls output {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pid-demo__controls input[type="range"] {
+    grid-column: 1 / -1;
+    width: 100%;
+    accent-color: currentColor;
+  }
+
+  .pid-demo__chart-wrap {
+    position: relative;
+  }
+
+  .pid-demo__chart {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .pid-demo__grid line {
+    stroke: var(--pid-grid);
+    stroke-width: 1;
+  }
+
+  .pid-demo__axes line {
+    stroke: var(--pid-muted);
+    stroke-width: 1.2;
+  }
+
+  .pid-demo__labels text {
+    fill: var(--pid-muted);
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .pid-demo__setpoint {
+    fill: none;
+    stroke: #2563eb;
+    stroke-width: 2.2;
+    stroke-dasharray: 9 7;
+  }
+
+  .pid-demo__response {
+    fill: none;
+    stroke: #dc2626;
+    stroke-width: 2.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .pid-demo__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem 1.2rem;
+    justify-content: center;
+    margin-top: 0.25rem;
+    font-size: 0.82rem;
+    color: var(--pid-muted);
+  }
+
+  .pid-demo__legend span {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .pid-demo__legend i {
+    display: inline-block;
+    width: 1.7rem;
+    height: 0;
+  }
+
+  .pid-demo__legend-setpoint {
+    border-top: 2px dashed #2563eb;
+  }
+
+  .pid-demo__legend-response {
+    border-top: 3px solid #dc2626;
+  }
+
+  .pid-demo__metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .pid-demo__metrics div {
+    padding: 0.75rem;
+    border: 1px solid var(--pid-border);
+    border-radius: 0.75rem;
+  }
+
+  .pid-demo__metrics span {
+    display: block;
+    color: var(--pid-muted);
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .pid-demo__metrics strong {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pid-demo__note {
+    margin: 0.9rem 0 0;
+    color: var(--pid-muted);
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 700px) {
+    .pid-demo {
+      padding: 1rem;
+    }
+
+    .pid-demo__header {
+      flex-direction: column;
+    }
+
+    .pid-demo__controls,
+    .pid-demo__metrics {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  function initPIDDemo(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const inputs = Object.fromEntries(
+      Array.from(root.querySelectorAll("[data-param]")).map((input) => [input.dataset.param, input]),
+    );
+    const values = Object.fromEntries(
+      Array.from(root.querySelectorAll("[data-value]")).map((output) => [output.dataset.value, output]),
+    );
+
+    const responsePath = root.querySelector("[data-response-path]");
+    const setpointPath = root.querySelector("[data-setpoint-path]");
+    const grid = root.querySelector("[data-grid]");
+    const axes = root.querySelector("[data-axes]");
+    const labels = root.querySelector("[data-labels]");
+    const metrics = Object.fromEntries(
+      Array.from(root.querySelectorAll("[data-metric]")).map((el) => [el.dataset.metric, el]),
+    );
+
+    const width = 760;
+    const height = 360;
+    const margin = { left: 56, right: 20, top: 18, bottom: 44 };
+    const plotW = width - margin.left - margin.right;
+    const plotH = height - margin.top - margin.bottom;
+    const duration = 12;
+    const yMax = 120;
+
+    const svgEl = (tag, attrs = {}) => {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, String(value));
+      return el;
+    };
+
+    const xScale = (t) => margin.left + (t / duration) * plotW;
+    const yScale = (y) => margin.top + plotH - (y / yMax) * plotH;
+
+    function drawAxes() {
+      grid.replaceChildren();
+      axes.replaceChildren();
+      labels.replaceChildren();
+
+      for (let t = 0; t <= duration; t += 2) {
+        const x = xScale(t);
+        grid.append(svgEl("line", { x1: x, y1: margin.top, x2: x, y2: margin.top + plotH }));
+        const text = svgEl("text", { x, y: height - 15, "text-anchor": "middle" });
+        text.textContent = String(t);
+        labels.append(text);
+      }
+
+      for (let y = 0; y <= yMax; y += 20) {
+        const yy = yScale(y);
+        grid.append(svgEl("line", { x1: margin.left, y1: yy, x2: margin.left + plotW, y2: yy }));
+        const text = svgEl("text", { x: margin.left - 10, y: yy + 4, "text-anchor": "end" });
+        text.textContent = String(y);
+        labels.append(text);
+      }
+
+      axes.append(svgEl("line", {
+        x1: margin.left,
+        y1: margin.top + plotH,
+        x2: margin.left + plotW,
+        y2: margin.top + plotH,
+      }));
+      axes.append(svgEl("line", {
+        x1: margin.left,
+        y1: margin.top,
+        x2: margin.left,
+        y2: margin.top + plotH,
+      }));
+
+      const xLabel = svgEl("text", { x: margin.left + plotW, y: height - 15, "text-anchor": "end" });
+      xLabel.textContent = "t / s";
+      labels.append(xLabel);
+    }
+
+    function simulate() {
+      const kp = Number(inputs.kp.value);
+      const ki = Number(inputs.ki.value);
+      const kd = Number(inputs.kd.value);
+      const setpoint = Number(inputs.setpoint.value);
+
+      values.kp.value = kp.toFixed(2);
+      values.ki.value = ki.toFixed(2);
+      values.kd.value = kd.toFixed(2);
+      values.setpoint.value = setpoint.toFixed(0);
+
+      const dt = 0.01;
+      const count = Math.floor(duration / dt) + 1;
+      const points = [];
+
+      // 简化机械对象：J*y'' + B*y' = K*u
+      // 通过输出限幅和积分限幅，使教学演示保持稳定且更接近实际执行器。
+      const J = 0.22;
+      const B = 0.72;
+      const K = 1.0;
+      const outputLimit = 120;
+      const integralLimit = 90;
+
+      let y = 0;
+      let velocity = 0;
+      let integral = 0;
+      let prevError = setpoint;
+
+      for (let i = 0; i < count; i += 1) {
+        const t = i * dt;
+        const error = setpoint - y;
+        integral = Math.max(-integralLimit, Math.min(integralLimit, integral + error * dt));
+        const derivative = (error - prevError) / dt;
+        let u = kp * error + ki * integral + kd * derivative;
+        u = Math.max(-outputLimit, Math.min(outputLimit, u));
+
+        const acceleration = (K * u - B * velocity) / J;
+        velocity += acceleration * dt;
+        y += velocity * dt;
+        prevError = error;
+
+        points.push({ t, y });
+      }
+
+      return { points, setpoint };
+    }
+
+    function getMetrics(points, setpoint) {
+      const maxY = Math.max(...points.map((p) => p.y));
+      const overshoot = Math.max(0, ((maxY - setpoint) / setpoint) * 100);
+
+      const low = setpoint * 0.1;
+      const high = setpoint * 0.9;
+      const t10 = points.find((p) => p.y >= low)?.t;
+      const t90 = points.find((p) => p.y >= high)?.t;
+      const rise = t10 !== undefined && t90 !== undefined ? t90 - t10 : null;
+
+      const band = Math.max(0.02 * Math.abs(setpoint), 0.5);
+      let settling = null;
+      for (let i = points.length - 1; i >= 0; i -= 1) {
+        if (Math.abs(points[i].y - setpoint) > band) {
+          if (i < points.length - 1) settling = points[i + 1].t;
+          break;
+        }
+      }
+      if (settling === null && Math.abs(points[0].y - setpoint) <= band) settling = 0;
+
+      const finalY = points[points.length - 1].y;
+      const steadyError = setpoint - finalY;
+
+      return { overshoot, rise, settling, steadyError };
+    }
+
+    let animationFrame = 0;
+
+    function render({ animate = true } = {}) {
+      cancelAnimationFrame(animationFrame);
+      const { points, setpoint } = simulate();
+      const responseD = points
+        .map((p, index) => `${index === 0 ? "M" : "L"}${xScale(p.t).toFixed(2)},${yScale(Math.max(0, Math.min(yMax, p.y))).toFixed(2)}`)
+        .join(" ");
+      const setpointD = `M${xScale(0)},${yScale(setpoint)} L${xScale(duration)},${yScale(setpoint)}`;
+
+      setpointPath.setAttribute("d", setpointD);
+      responsePath.setAttribute("d", responseD);
+
+      const m = getMetrics(points, setpoint);
+      metrics.overshoot.textContent = `${m.overshoot.toFixed(1)} %`;
+      metrics.rise.textContent = m.rise === null ? "未达到" : `${m.rise.toFixed(2)} s`;
+      metrics.settling.textContent = m.settling === null ? `> ${duration} s` : `${m.settling.toFixed(2)} s`;
+      metrics.error.textContent = m.steadyError.toFixed(2);
+
+      if (!animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        responsePath.style.strokeDasharray = "none";
+        responsePath.style.strokeDashoffset = "0";
+        return;
+      }
+
+      const length = responsePath.getTotalLength();
+      responsePath.style.strokeDasharray = String(length);
+      responsePath.style.strokeDashoffset = String(length);
+      const start = performance.now();
+      const animationDuration = 360;
+
+      const tick = (now) => {
+        const progress = Math.min(1, (now - start) / animationDuration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        responsePath.style.strokeDashoffset = String(length * (1 - eased));
+        if (progress < 1) animationFrame = requestAnimationFrame(tick);
+        else {
+          responsePath.style.strokeDasharray = "none";
+          responsePath.style.strokeDashoffset = "0";
+        }
+      };
+      animationFrame = requestAnimationFrame(tick);
+    }
+
+    drawAxes();
+
+    for (const input of Object.values(inputs)) {
+      input.addEventListener("input", () => render({ animate: false }));
+      input.addEventListener("change", () => render({ animate: true }));
+    }
+
+    root.querySelector("[data-reset]").addEventListener("click", () => {
+      inputs.kp.value = "1.2";
+      inputs.ki.value = "0.35";
+      inputs.kd.value = "0.18";
+      inputs.setpoint.value = "60";
+      render({ animate: true });
+    });
+
+    render({ animate: true });
+  }
+
+  document.querySelectorAll("[data-pid-demo]").forEach(initPIDDemo);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll("[data-pid-demo]").forEach(initPIDDemo);
+  });
+</script>
