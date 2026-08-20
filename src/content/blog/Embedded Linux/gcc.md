@@ -1,6 +1,6 @@
 ---
 title: GCC编译器
-description: 在 Linux C/C++ 开发中，GCC（GNU Compiler Collection）是无可替代的编译器工具。无论是简单的 Hello World 程序，还是复杂的大型项目，GCC 都能完成从源代码到可执行文件的转换。但很多开发者只停留在gcc hello.c -o hello的基础用法，对其编译流程、链接原理和进阶选项了解甚少。本文结合核心知识点，从 GCC 的编译四阶段、核心选项、静态 / 动态链接，到优化与调试配置，全方位拆解 GCC 的使用技巧，帮你从 “会用” 升级到 “精通”。
+description: 在 Linux C/C++ 开发中，GCC（GNU Compiler Collection）是无可替代的编译器工具。无论是简单的 Hello World 程序，还是复杂的大型项目，GCC 都能完成从源代码到可执行文件的转换。
 pubDate: 2025-11-25
 updated: 2026-08-14
 image: /image/Linux/gcc.png

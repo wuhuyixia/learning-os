@@ -14,8 +14,8 @@ tags:
 
 
 # Modbus 
-## Modbus RTU 简介
-Modbus 协议由 Modicon 公司于 1979 年开发，最初用于其 PLC 产品，目前已广泛应用于工业控制领域。通常由一个主设备控制多个从设备。RTU （Remote Terminal Unit）使用 RS‑485 或 RS‑232 作为物理层，一般通过芯片的串口进行数据帧的发送与接收，通信数据帧采用二进制数据格式。
+## Modbus RTU 简介 
+Modbus 协议由 Modicon 公司于 1979 年开发，最初用于其 PLC 产品，目前已广泛应用于工业控制领域。通常由一个主设备控制多个从设备。RTU （Remote Terminal Unit）使用 RS‑485 或 RS‑232 作为物理层，一般通过芯片的串口进行数据帧的发送与接收，通信数据帧采用二进制数据格式。  
 
 ##  帧格式
 

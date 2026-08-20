@@ -27,14 +27,19 @@ YMODEM 是一种基于块传输的串口文件传输协议，使用 1K 数据块
   <div class="protocol-flow">
     <span class="sig blue">数据包开始信号 SOH/STX</span>
     <span class="sig gray">1 Byte</span>
+
     <span class="sig blue">发送序号</span>
     <span class="sig gray">1 Byte</span>
+
     <span class="sig blue">发送序号反码</span>
     <span class="sig gray">1 Byte</span>
+
     <span class="sig blue">数据区</span>
     <span class="sig gray">128 / 1024 Byte</span>
+
     <span class="sig blue">CRC 高字节</span>
     <span class="sig gray">1 Byte</span>
+
     <span class="sig blue">CRC 低字节</span>
     <span class="sig gray">1 Byte</span>
   </div>
@@ -520,3 +525,35 @@ Token的组成
 - QoS：QoS 0消息仅发送一次，无确认机制，可能丢失。
 - QoS 1消息可能发送多次，确保消息至少送达一次，可能重复。
 - QoS 2 onenet目前不支持QoS 2。
+
+然后启动调试
+
+![属性上报](/learning-os/image/STM32/OTA/OTA8.png)
+
+![上报接受](/learning-os/image/STM32/OTA/OTA8.png)
+
+```
+{
+	"id": "123",
+	"version": "1.0",
+	"params": {
+		"RGB_Light": {
+			"value": {
+        "red": 55,
+        "green": 66,
+        "blue": 77
+        }
+		},
+		"Switch": {
+			"value": true
+		}
+	}
+}
+```
+#### 设备属性设置
+
+添加设备属性上报响应订阅，在onenet设备开关（Switch） bool进行属性设置，mqttx上接受到
+
+
+![收到属性设置](/learning-os/image/STM32/OTA/OTA10.png)
+

@@ -3,8 +3,8 @@ title: FreeRTOS 任务调度的几个关键点
 description: 从优先级、时间片到临界区，梳理 RTOS 应用中最容易忽略的调度细节。
 pubDate: 2026-08-08
 image: /image/freertos-scheduling.png
+draft: true
 categories:
-  - Embedded Systems
   - FreeRTOS
 tags:
   - FreeRTOS

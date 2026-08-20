@@ -4,7 +4,6 @@ description: 系统梳理 FreeRTOS heap_1 到 heap_5、动态与静态内存、�
 pubDate: 2026-08-13
 image: /image/freertos-scheduling.png
 categories:
-  - Embedded Systems
   - FreeRTOS
 tags:
   - FreeRTOS
