@@ -248,4 +248,3 @@ void App_SPI_MasterTransmitReceive(SPI_TypeDef *SPIx,
 
 
 
-
