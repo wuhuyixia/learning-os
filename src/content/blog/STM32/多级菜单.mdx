@@ -1,0 +1,134 @@
+---
+title: 多级菜单与滚动链表实现
+description: 总结嵌入式系统中多级菜单的常见实现方式，包括滚动链表、双向链表、状态机驱动、触摸事件处理、动态菜单加载与层级管理
+pubDate: 2026-08-21
+categories:
+  - STM32
+tags:
+  - 链表
+  - 菜单
+  - UI
+---
+
+import MenuLinkedListDemo from '../../../components/MenuLinkedListDemo.astro';
+
+## 1. 多级菜单设计
+
+在嵌入式人机交互系统中，如果菜单数量较多，将所有菜单项一次性显示在屏幕上会导致界面拥挤。常见做法是采用横向滚动菜单：当前菜单位于中央，两侧保留相邻菜单，通过按键、编码器、触摸或滚轮完成切换。
+
+这种结构非常适合抽象成双向循环链表：每个菜单节点都拥有 `prev` 与 `next` 指针，子菜单则通过 `child` 与 `parent` 建立层级关系。
+
+## 2. 交互式演示
+
+下面的演示直接模拟嵌入式设备上的横向多级菜单。你可以使用左右按键、鼠标滚轮、触摸滑动，也可以点击菜单项进行切换。
+
+<MenuLinkedListDemo />
+
+演示支持：
+
+- `← / →` 切换菜单；
+- 鼠标滚轮横向浏览；
+- 手机或触控板左右滑动；
+- 点击两侧菜单直接切换；
+- 点击中央菜单或按 `Enter` 进入子菜单；
+- 按 `Esc / Backspace` 返回上一级。
+
+## 3. 双向循环链表结构
+
+假设当前节点为 `设置`，则链表关系可以理解为：
+
+```text
+控制 ← 设置 → 时间
+ ↑              ↓
+ └──────────────┘
+```
+
+在 STM32 工程中，可以使用如下结构体描述菜单节点：
+
+```c
+typedef struct MenuNode
+{
+    const char *name;
+
+    struct MenuNode *prev;
+    struct MenuNode *next;
+
+    struct MenuNode *parent;
+    struct MenuNode *child;
+
+    void (*callback)(void);
+
+} MenuNode_t;
+```
+
+其中：
+
+- `prev` 指向前一个菜单；
+- `next` 指向后一个菜单；
+- `child` 指向下一级菜单；
+- `parent` 用于返回上一级；
+- `callback` 指向当前菜单对应的功能函数。
+
+## 4. 菜单滚动
+
+向右切换时，只需要移动当前指针：
+
+```c
+current_menu = current_menu->next;
+```
+
+向左切换：
+
+```c
+current_menu = current_menu->prev;
+```
+
+进入下一级：
+
+```c
+if (current_menu->child != NULL)
+{
+    current_menu = current_menu->child;
+}
+```
+
+返回上一级：
+
+```c
+if (current_menu->parent != NULL)
+{
+    current_menu = current_menu->parent;
+}
+```
+
+因此菜单显示逻辑与菜单数据结构可以完全解耦。显示层只需要读取 `current_menu` 以及其前后节点，而按键、旋钮或触摸事件只负责修改当前节点。
+
+## 5. 为什么使用双向循环链表
+
+相比普通数组，双向循环链表更适合层级菜单和动态菜单：
+
+1. 左右切换不需要计算边界，尾节点的 `next` 可以直接指回头节点；
+2. 菜单项可以动态插入或删除；
+3. 父子菜单天然适合指针关系管理；
+4. UI 层无需关心菜单总数量；
+5. 可以方便地为每个节点绑定独立回调函数。
+
+## 6. 与状态机结合
+
+实际嵌入式项目中，菜单系统通常还会与有限状态机结合。例如可以定义：
+
+```c
+typedef enum
+{
+    MENU_IDLE,
+    MENU_MOVE_LEFT,
+    MENU_MOVE_RIGHT,
+    MENU_ENTER,
+    MENU_BACK,
+    MENU_EXECUTE
+} MenuState_t;
+```
+
+按键扫描、编码器或触摸驱动只负责产生事件，菜单状态机根据事件修改 `current_menu`，最后由 OLED、LCD 或 TFT 显示函数统一刷新界面。
+
+这种设计可以将输入层、菜单逻辑层与显示层拆开，使后续增加新的输入设备或新的屏幕驱动时不需要重写整个菜单系统。

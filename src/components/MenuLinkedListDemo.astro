@@ -1,0 +1,561 @@
+---
+---
+
+<section class="menu-demo not-prose" data-menu-demo>
+  <div class="menu-demo__title">
+    <span aria-hidden="true">▣</span>
+    <strong>多级菜单与滚动链表演示</strong>
+  </div>
+
+  <div class="menu-screen">
+    <div class="menu-screen__top">
+      <span data-path>主菜单</span>
+      <span class="menu-screen__hint">← → / 滚轮 / Enter</span>
+    </div>
+
+    <div class="menu-viewport" data-viewport tabindex="0" aria-label="横向菜单交互区域">
+      <div class="menu-track" data-track></div>
+    </div>
+
+    <div class="menu-current" data-screen-current>设置</div>
+  </div>
+
+  <div class="menu-controls">
+    <button type="button" data-prev aria-label="上一个菜单">‹</button>
+    <div class="menu-status">当前：<strong data-current>设置</strong></div>
+    <button type="button" data-next aria-label="下一个菜单">›</button>
+  </div>
+
+  <div class="menu-actions">
+    <button type="button" data-back>↩ 返回上级</button>
+    <button type="button" data-enter>进入菜单 ↵</button>
+  </div>
+
+  <div class="linked-list-state">
+    <div class="linked-list-state__title">双向循环链表状态</div>
+    <div class="linked-list-state__nodes" aria-live="polite">
+      <span data-prev-name></span>
+      <b aria-hidden="true">←</b>
+      <strong data-node-name></strong>
+      <b aria-hidden="true">→</b>
+      <span data-next-name></span>
+    </div>
+  </div>
+
+  <p class="menu-demo__tip">支持鼠标滚轮、左右方向键、触摸滑动；Enter 进入子菜单，Esc / Backspace 返回上级。</p>
+</section>
+
+<style is:global>
+  .menu-demo {
+    --menu-border: color-mix(in srgb, currentColor 16%, transparent);
+    --menu-muted: color-mix(in srgb, currentColor 58%, transparent);
+    margin: 1.8rem 0;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .menu-demo__title {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.75rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.55rem;
+    color: #fff;
+    background: linear-gradient(90deg, #9436da, #ec3c86);
+  }
+
+  .menu-screen {
+    position: relative;
+    overflow: hidden;
+    min-height: 270px;
+    padding: 1rem;
+    border-radius: 0.9rem;
+    color: #fff;
+    background: #050505;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .menu-screen::before {
+    content: "";
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    width: 58px;
+    height: 3px;
+    border-radius: 999px;
+    background: #555;
+    transform: translateX(-50%);
+  }
+
+  .menu-screen__top {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1.2rem;
+    color: #aaa;
+    font-size: 0.75rem;
+  }
+
+  .menu-screen__hint { opacity: 0.65; }
+
+  .menu-viewport {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    height: 150px;
+    outline: none;
+    touch-action: pan-y;
+    user-select: none;
+  }
+
+  .menu-viewport:focus-visible {
+    border-radius: 0.7rem;
+    box-shadow: inset 0 0 0 2px rgba(147, 197, 253, 0.7);
+  }
+
+  .menu-track {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(70px, 1fr));
+    align-items: center;
+    width: calc(100% + 90px);
+    margin-left: -45px;
+  }
+
+  .menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0.4;
+    transform: scale(0.76);
+    transition: transform 180ms ease, opacity 180ms ease, filter 180ms ease;
+  }
+
+  .menu-item[data-offset="-1"],
+  .menu-item[data-offset="1"] {
+    opacity: 0.82;
+    transform: scale(0.9);
+  }
+
+  .menu-item[data-offset="0"] {
+    opacity: 1;
+    transform: scale(1.12);
+    filter: saturate(1.08);
+  }
+
+  .menu-item__icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 9px;
+    font-size: 23px;
+    line-height: 1;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 6px 18px rgba(0, 0, 0, 0.3);
+    transition: width 180ms ease, height 180ms ease, box-shadow 180ms ease;
+  }
+
+  .menu-item[data-offset="0"] .menu-item__icon {
+    width: 56px;
+    height: 56px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 9px 24px rgba(0, 0, 0, 0.42);
+  }
+
+  .menu-item__text {
+    min-height: 1.2rem;
+    color: #eee;
+    font-size: 0.72rem;
+  }
+
+  .menu-item:not([data-offset="0"]) .menu-item__text { opacity: 0; }
+
+  .menu-current {
+    margin-top: -0.25rem;
+    text-align: center;
+    color: #f2f2f2;
+    font-size: 0.84rem;
+  }
+
+  .menu-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-top: 1rem;
+  }
+
+  .menu-controls button {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: inherit;
+    background: color-mix(in srgb, currentColor 7%, transparent);
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: transform 120ms ease, background 120ms ease;
+  }
+
+  .menu-controls button:hover {
+    background: color-mix(in srgb, currentColor 13%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .menu-status {
+    min-width: 104px;
+    text-align: center;
+    color: var(--menu-muted);
+    font-size: 0.8rem;
+  }
+
+  .menu-status strong { color: inherit; }
+
+  .menu-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.7rem;
+    margin-top: 0.8rem;
+  }
+
+  .menu-actions button {
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--menu-border);
+    border-radius: 0.55rem;
+    color: inherit;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .menu-actions button:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+
+  .linked-list-state {
+    margin-top: 1rem;
+    padding: 0.9rem;
+    border: 1px solid var(--menu-border);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, currentColor 3%, transparent);
+  }
+
+  .linked-list-state__title {
+    margin-bottom: 0.6rem;
+    color: var(--menu-muted);
+    font-size: 0.78rem;
+  }
+
+  .linked-list-state__nodes {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .linked-list-state__nodes span,
+  .linked-list-state__nodes strong {
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--menu-border);
+    border-radius: 0.45rem;
+  }
+
+  .linked-list-state__nodes strong {
+    border-width: 2px;
+    background: color-mix(in srgb, currentColor 5%, transparent);
+  }
+
+  .menu-demo__tip {
+    margin: 0.7rem 0 0;
+    color: var(--menu-muted);
+    font-size: 0.78rem;
+    text-align: center;
+  }
+
+  @media (max-width: 640px) {
+    .menu-screen { min-height: 240px; padding-inline: 0.5rem; }
+    .menu-track { grid-template-columns: repeat(5, minmax(62px, 1fr)); }
+    .menu-screen__hint { display: none; }
+    .linked-list-state__nodes { gap: 0.35rem; font-size: 0.72rem; }
+    .linked-list-state__nodes span,
+    .linked-list-state__nodes strong { padding-inline: 0.45rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu-item,
+    .menu-item__icon,
+    .menu-controls button { transition: none; }
+  }
+</style>
+
+<script>
+  type MenuItem = {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+    children?: MenuItem[];
+  };
+
+  class MenuNode {
+    item: MenuItem;
+    prev!: MenuNode;
+    next!: MenuNode;
+
+    constructor(item: MenuItem) {
+      this.item = item;
+    }
+  }
+
+  type MenuLevel = { title: string; current: MenuNode };
+
+  const menuData: MenuItem[] = [
+    {
+      id: "status",
+      name: "状态",
+      icon: "◉",
+      color: "#9a5800",
+      children: [
+        { id: "cpu", name: "CPU", icon: "▣", color: "#6366f1" },
+        { id: "memory", name: "内存", icon: "▤", color: "#0ea5e9" },
+        { id: "battery", name: "电量", icon: "▰", color: "#16a34a" },
+      ],
+    },
+    {
+      id: "control",
+      name: "控制",
+      icon: "🎮",
+      color: "#d946b8",
+      children: [
+        { id: "manual", name: "手动", icon: "M", color: "#db2777" },
+        { id: "auto", name: "自动", icon: "A", color: "#2563eb" },
+        { id: "pid", name: "PID", icon: "P", color: "#7c3aed" },
+      ],
+    },
+    {
+      id: "settings",
+      name: "设置",
+      icon: "⚙",
+      color: "#64748b",
+      children: [
+        { id: "display", name: "显示", icon: "☀", color: "#f59e0b" },
+        {
+          id: "communication",
+          name: "通信",
+          icon: "⌁",
+          color: "#0ea5e9",
+          children: [
+            { id: "uart", name: "UART", icon: "U", color: "#2563eb" },
+            { id: "can", name: "CAN", icon: "C", color: "#16a34a" },
+            { id: "i2c", name: "I²C", icon: "I", color: "#7c3aed" },
+          ],
+        },
+        { id: "system", name: "系统", icon: "⚙", color: "#475569" },
+      ],
+    },
+    {
+      id: "clock",
+      name: "时间",
+      icon: "◷",
+      color: "#0ea5e9",
+      children: [
+        { id: "time", name: "时间", icon: "◷", color: "#0284c7" },
+        { id: "alarm", name: "闹钟", icon: "⏰", color: "#e11d48" },
+      ],
+    },
+    {
+      id: "sensor",
+      name: "传感器",
+      icon: "◉",
+      color: "#064e3b",
+      children: [
+        { id: "imu", name: "IMU", icon: "◈", color: "#059669" },
+        { id: "temperature", name: "温度", icon: "℃", color: "#ea580c" },
+      ],
+    },
+  ];
+
+  function createCircularList(items: MenuItem[]): MenuNode {
+    const nodes = items.map((item) => new MenuNode(item));
+    nodes.forEach((node, index) => {
+      node.prev = nodes[(index - 1 + nodes.length) % nodes.length];
+      node.next = nodes[(index + 1) % nodes.length];
+    });
+    return nodes[0];
+  }
+
+  function initMenuDemo(root: HTMLElement): void {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const getRequired = <T extends Element>(selector: string): T => {
+      const element = root.querySelector<T>(selector);
+      if (!element) throw new Error(`Menu demo element not found: ${selector}`);
+      return element;
+    };
+
+    const track = getRequired<HTMLElement>("[data-track]");
+    const viewport = getRequired<HTMLElement>("[data-viewport]");
+    const currentText = getRequired<HTMLElement>("[data-current]");
+    const screenCurrent = getRequired<HTMLElement>("[data-screen-current]");
+    const pathText = getRequired<HTMLElement>("[data-path]");
+    const prevName = getRequired<HTMLElement>("[data-prev-name]");
+    const nodeName = getRequired<HTMLElement>("[data-node-name]");
+    const nextName = getRequired<HTMLElement>("[data-next-name]");
+    const prevButton = getRequired<HTMLButtonElement>("[data-prev]");
+    const nextButton = getRequired<HTMLButtonElement>("[data-next]");
+    const enterButton = getRequired<HTMLButtonElement>("[data-enter]");
+    const backButton = getRequired<HTMLButtonElement>("[data-back]");
+
+    const stack: MenuLevel[] = [];
+    let current = createCircularList(menuData).next.next;
+
+    function getVisibleNodes(): { node: MenuNode; offset: number }[] {
+      return [
+        { node: current.prev.prev, offset: -2 },
+        { node: current.prev, offset: -1 },
+        { node: current, offset: 0 },
+        { node: current.next, offset: 1 },
+        { node: current.next.next, offset: 2 },
+      ];
+    }
+
+    function render(): void {
+      track.replaceChildren();
+
+      for (const { node, offset } of getVisibleNodes()) {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "menu-item";
+        item.dataset.offset = String(offset);
+        item.setAttribute("aria-label", offset === 0 ? `进入${node.item.name}` : `切换到${node.item.name}`);
+
+        const icon = document.createElement("span");
+        icon.className = "menu-item__icon";
+        icon.style.background = node.item.color;
+        icon.textContent = node.item.icon;
+
+        const label = document.createElement("span");
+        label.className = "menu-item__text";
+        label.textContent = node.item.name;
+
+        item.append(icon, label);
+        item.addEventListener("click", () => {
+          if (offset === 0) {
+            enter();
+            return;
+          }
+          const steps = Math.abs(offset);
+          for (let index = 0; index < steps; index += 1) {
+            current = offset < 0 ? current.prev : current.next;
+          }
+          render();
+        });
+        track.append(item);
+      }
+
+      currentText.textContent = current.item.name;
+      screenCurrent.textContent = current.item.name;
+      prevName.textContent = current.prev.item.name;
+      nodeName.textContent = current.item.name;
+      nextName.textContent = current.next.item.name;
+      pathText.textContent = ["主菜单", ...stack.map((level) => level.title)].join(" / ");
+      backButton.disabled = stack.length === 0;
+      backButton.style.opacity = stack.length === 0 ? "0.45" : "1";
+      enterButton.textContent = current.item.children?.length ? "进入菜单 ↵" : "执行当前项 ↵";
+    }
+
+    function moveNext(): void {
+      current = current.next;
+      render();
+    }
+
+    function movePrev(): void {
+      current = current.prev;
+      render();
+    }
+
+    function enter(): void {
+      const children = current.item.children;
+      if (!children?.length) {
+        const original = current.item.name;
+        screenCurrent.textContent = `${original} ✓`;
+        window.setTimeout(() => {
+          if (screenCurrent.textContent === `${original} ✓`) screenCurrent.textContent = original;
+        }, 450);
+        return;
+      }
+
+      stack.push({ title: current.item.name, current });
+      current = createCircularList(children);
+      render();
+    }
+
+    function back(): void {
+      const previous = stack.pop();
+      if (!previous) return;
+      current = previous.current;
+      render();
+    }
+
+    prevButton.addEventListener("click", movePrev);
+    nextButton.addEventListener("click", moveNext);
+    enterButton.addEventListener("click", enter);
+    backButton.addEventListener("click", back);
+
+    viewport.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        movePrev();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        moveNext();
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        enter();
+      } else if (event.key === "Escape" || event.key === "Backspace") {
+        event.preventDefault();
+        back();
+      }
+    });
+
+    let wheelLocked = false;
+    viewport.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        if (wheelLocked) return;
+        wheelLocked = true;
+        const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+        if (delta > 0) moveNext();
+        else movePrev();
+        window.setTimeout(() => { wheelLocked = false; }, 130);
+      },
+      { passive: false },
+    );
+
+    let pointerStartX = 0;
+    viewport.addEventListener("pointerdown", (event) => {
+      pointerStartX = event.clientX;
+      viewport.setPointerCapture?.(event.pointerId);
+    });
+    viewport.addEventListener("pointerup", (event) => {
+      const delta = event.clientX - pointerStartX;
+      if (Math.abs(delta) < 35) return;
+      if (delta < 0) moveNext();
+      else movePrev();
+    });
+
+    render();
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-menu-demo]").forEach(initMenuDemo);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll<HTMLElement>("[data-menu-demo]").forEach(initMenuDemo);
+  });
+</script>
