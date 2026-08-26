@@ -1,8 +1,8 @@
 ---
 const rowCount = 24;
-const baseAddress = 0x20001000;
+const stackOrigin = 0x20001000;
 const addresses = Array.from({ length: rowCount }, (_, index) =>
-  `0x${(baseAddress - index).toString(16).toUpperCase()}`,
+  `0x${(stackOrigin - index - 1).toString(16).toUpperCase()}`,
 );
 
 const mainCode = [
@@ -42,153 +42,158 @@ const recursiveCode = [
 ];
 ---
 
-<section class="stack-viz not-prose" data-stack-viz>
-  <div class="stack-viz__header">
+<section class="stack-frame-demo not-prose" data-stack-frame-demo>
+  <div class="stack-frame-demo__header">
     <div>
-      <h3>代码执行与栈内存同步演示</h3>
-      <p>左侧逐行执行 C 代码，右侧同步显示变量占用、函数栈帧、地址与 SP 的变化。</p>
+      <h3>代码执行与函数栈帧可视化</h3>
+      <p>教学模型：1 格 = 1 Byte；uint8_t / uint16_t / uint32_t 分别占 1 / 2 / 4 格，32 位返回地址 RET 占 4 格。</p>
     </div>
-    <div class="stack-viz__legend">
-      <span><i class="legend-dot legend-dot--main"></i>main 栈帧</span>
-      <span><i class="legend-dot legend-dot--callee"></i>函数栈帧</span>
-      <span><i class="legend-dot legend-dot--active"></i>当前执行行</span>
+    <div class="stack-frame-demo__legend">
+      <span><i class="stack-frame-demo__dot stack-frame-demo__dot--main"></i>main 栈帧</span>
+      <span><i class="stack-frame-demo__dot stack-frame-demo__dot--func"></i>do_nothing 栈帧</span>
+      <span><i class="stack-frame-demo__dot stack-frame-demo__dot--active"></i>当前执行</span>
     </div>
   </div>
 
-  <div class="stack-viz__controls">
+  <div class="stack-frame-demo__controls">
     <button type="button" data-action="prev">上一步</button>
     <button type="button" data-action="next">下一步</button>
     <button type="button" data-action="play">自动播放</button>
     <button type="button" data-action="overflow">递归溢出演示</button>
     <button type="button" data-action="reset">重置</button>
-    <span class="stack-viz__counter">步骤 <strong data-step-index>1</strong> / <span data-step-total>1</span></span>
+    <span class="stack-frame-demo__counter">步骤 <strong data-step-index>1</strong> / <span data-step-total>1</span></span>
   </div>
 
-  <div class="stack-viz__summary">
+  <div class="stack-frame-demo__summary">
     <div><span>当前动作</span><strong data-step-title>进入 main()</strong></div>
     <div><span>活动栈帧</span><strong data-active-frame>main</strong></div>
-    <div><span>已用空间</span><strong data-used-space>0 B</strong></div>
-    <div><span>当前 SP</span><strong data-sp-value>0x20001000</strong></div>
+    <div><span>已用空间</span><strong data-used-space>0 / 24 B</strong></div>
+    <div><span>SP</span><strong data-sp-value>0x20001000</strong></div>
   </div>
 
-  <div class="stack-viz__workspace">
-    <div class="stack-viz__code-side">
+  <div class="stack-frame-demo__workspace">
+    <div class="stack-frame-demo__code-side">
       <div data-normal-code>
-        <div class="code-panel code-panel--helper">
-          <div class="code-panel__title">do_nothing()</div>
-          <ol class="code-list">
+        <div class="stack-frame-code stack-frame-code--helper">
+          <div class="stack-frame-code__title">do_nothing()</div>
+          <ol class="stack-frame-code__list">
             {helperCode.map((line, index) => (
-              <li class="code-line" data-panel="helper" data-line={String(index)}>{line || " "}</li>
+              <li class="stack-frame-code__line" data-panel="helper" data-line={String(index)}>{line}</li>
             ))}
           </ol>
         </div>
 
-        <div class="code-panel code-panel--main">
-          <div class="code-panel__title">main()</div>
-          <ol class="code-list">
+        <div class="stack-frame-code stack-frame-code--main">
+          <div class="stack-frame-code__title">main()</div>
+          <ol class="stack-frame-code__list">
             {mainCode.map((line, index) => (
-              <li class="code-line" data-panel="main" data-line={String(index)}>{line || " "}</li>
+              <li class="stack-frame-code__line" data-panel="main" data-line={String(index)}>{line}</li>
             ))}
           </ol>
         </div>
       </div>
 
-      <div class="code-panel code-panel--recursive" data-recursive-code hidden>
-        <div class="code-panel__title">递归导致 Stack Overflow</div>
-        <ol class="code-list">
+      <div class="stack-frame-code stack-frame-code--recursive" data-recursive-code hidden>
+        <div class="stack-frame-code__title">递归导致 Stack Overflow</div>
+        <ol class="stack-frame-code__list">
           {recursiveCode.map((line, index) => (
-            <li class="code-line" data-panel="recursive" data-line={String(index)}>{line || " "}</li>
+            <li class="stack-frame-code__line" data-panel="recursive" data-line={String(index)}>{line || " "}</li>
           ))}
         </ol>
       </div>
 
-      <div class="stack-viz__explanation" data-explanation>
-        main() 开始执行，此时还没有局部变量占用演示栈空间。
+      <div class="stack-frame-demo__explain" data-explanation>
+        main() 开始执行。SP 初始位于 Stack Origin，局部变量尚未占用演示栈空间。
       </div>
     </div>
 
-    <div class="stack-viz__memory-side">
-      <div class="stack-viz__memory-heading">
-        <strong>Stack</strong>
-        <span>每格 = 1 Byte · 栈向低地址增长 ↓</span>
+    <div class="stack-frame-demo__memory-side">
+      <div class="stack-frame-demo__memory-title">
+        <strong>Stack Memory</strong>
+        <span>高地址在上 · 向低地址增长 ↓</span>
       </div>
 
-      <div class="memory-board">
-        <div class="memory-addresses">
+      <div class="stack-memory-board">
+        <div class="stack-memory-addresses">
           {addresses.map((address) => <span>{address}</span>)}
         </div>
 
-        <div class="memory-shell">
-          <div class="memory-grid">
+        <div class="stack-memory-column">
+          <div class="stack-memory-origin"><span>Stack Origin</span><b>▶</b></div>
+          <div class="stack-memory-grid">
             {addresses.map(() => <span></span>)}
           </div>
-          <div class="memory-blocks" data-blocks></div>
-          <div class="memory-brackets" data-brackets></div>
-          <div class="memory-origin">Stack Origin <b>▶</b></div>
-          <div class="memory-sp" data-sp-marker>SP ▶</div>
-          <div class="memory-overflow" data-overflow-banner>
+          <div class="stack-memory-blocks" data-blocks></div>
+          <div class="stack-memory-sp" data-sp-marker>SP ▶</div>
+          <div class="stack-memory-overflow" data-overflow-banner>
             <strong>STACK OVERFLOW</strong>
-            <span>SP 已越过可用栈边界</span>
+            <span>继续压栈会越过 24 Byte 演示边界</span>
           </div>
         </div>
+
+        <div class="stack-frame-column" data-brackets></div>
       </div>
     </div>
   </div>
+
+  <div class="stack-frame-demo__note">
+    注：该动画用于解释“栈帧、返回地址和局部变量占用”的核心概念。真实 ARM/MCU 编译结果还会受 ABI、栈对齐、保存寄存器和编译优化影响。
+  </div>
 </section>
 
-<style>
-  .stack-viz {
-    --row-h: 22px;
-    --rows: 24;
-    --border: color-mix(in srgb, currentColor 14%, transparent);
-    --muted: color-mix(in srgb, currentColor 58%, transparent);
+<style is:global>
+  .stack-frame-demo {
+    --sfd-row: 22px;
+    --sfd-rows: 24;
+    --sfd-border: color-mix(in srgb, currentColor 14%, transparent);
+    --sfd-muted: color-mix(in srgb, currentColor 58%, transparent);
     margin: 1.5rem 0 2rem;
     padding: 1rem;
-    border: 1px solid var(--border);
+    border: 1px solid var(--sfd-border);
     border-radius: 1rem;
     background: color-mix(in srgb, currentColor 2.5%, transparent);
   }
 
-  .stack-viz__header {
+  .stack-frame-demo__header {
     display: flex;
-    align-items: flex-start;
     justify-content: space-between;
+    align-items: flex-start;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: .9rem;
   }
-  .stack-viz__header h3 { margin: 0; font-size: 1.08rem; }
-  .stack-viz__header p { margin: .28rem 0 0; color: var(--muted); font-size: .84rem; }
+  .stack-frame-demo__header h3 { margin: 0; font-size: 1.08rem; }
+  .stack-frame-demo__header p { margin: .28rem 0 0; color: var(--sfd-muted); font-size: .82rem; }
 
-  .stack-viz__legend { display: flex; flex-wrap: wrap; gap: .75rem; color: var(--muted); font-size: .72rem; }
-  .stack-viz__legend span { display: inline-flex; align-items: center; gap: .3rem; }
-  .legend-dot { width: .65rem; height: .65rem; border-radius: 50%; display: inline-block; }
-  .legend-dot--main { background: #0ea5e9; }
-  .legend-dot--callee { background: #a855f7; }
-  .legend-dot--active { background: #facc15; }
+  .stack-frame-demo__legend { display: flex; flex-wrap: wrap; gap: .7rem; color: var(--sfd-muted); font-size: .7rem; }
+  .stack-frame-demo__legend span { display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap; }
+  .stack-frame-demo__dot { width: .65rem; height: .65rem; border-radius: 50%; display: inline-block; }
+  .stack-frame-demo__dot--main { background: #0ea5e9; }
+  .stack-frame-demo__dot--func { background: #a855f7; }
+  .stack-frame-demo__dot--active { background: #facc15; }
 
-  .stack-viz__controls { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin-bottom: .8rem; }
-  .stack-viz__controls button {
-    padding: .52rem .72rem;
-    border: 1px solid var(--border);
+  .stack-frame-demo__controls { display: flex; flex-wrap: wrap; align-items: center; gap: .52rem; margin-bottom: .75rem; }
+  .stack-frame-demo__controls button {
+    padding: .5rem .72rem;
+    border: 1px solid var(--sfd-border);
     border-radius: .62rem;
     color: inherit;
     background: transparent;
     cursor: pointer;
-    font-size: .8rem;
+    font-size: .78rem;
   }
-  .stack-viz__controls button:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
-  .stack-viz__controls button:disabled { opacity: .4; cursor: not-allowed; }
-  .stack-viz__controls [data-action="overflow"] { border-color: rgba(220, 38, 38, .45); }
-  .stack-viz__counter { margin-left: auto; color: var(--muted); font-size: .76rem; }
+  .stack-frame-demo__controls button:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
+  .stack-frame-demo__controls button:disabled { opacity: .4; cursor: not-allowed; }
+  .stack-frame-demo__controls [data-action="overflow"] { border-color: rgba(220, 38, 38, .45); }
+  .stack-frame-demo__counter { margin-left: auto; color: var(--sfd-muted); font-size: .74rem; }
 
-  .stack-viz__summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .55rem; margin-bottom: .85rem; }
-  .stack-viz__summary > div { padding: .65rem .72rem; border: 1px solid var(--border); border-radius: .68rem; }
-  .stack-viz__summary span { display: block; color: var(--muted); font-size: .68rem; }
-  .stack-viz__summary strong { display: block; margin-top: .18rem; font-size: .86rem; }
+  .stack-frame-demo__summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .52rem; margin-bottom: .8rem; }
+  .stack-frame-demo__summary > div { padding: .62rem .7rem; border: 1px solid var(--sfd-border); border-radius: .68rem; }
+  .stack-frame-demo__summary span { display: block; color: var(--sfd-muted); font-size: .66rem; }
+  .stack-frame-demo__summary strong { display: block; margin-top: .16rem; font-size: .84rem; }
 
-  .stack-viz__workspace {
+  .stack-frame-demo__workspace {
     display: grid;
-    grid-template-columns: minmax(360px, 1.15fr) minmax(340px, .9fr);
+    grid-template-columns: minmax(360px, 1.08fr) minmax(440px, 1fr);
     gap: 1rem;
     padding: 1rem;
     border-radius: .9rem;
@@ -196,75 +201,94 @@ const recursiveCode = [
     background: #020304;
   }
 
-  .stack-viz__code-side { min-width: 0; }
-  [data-normal-code] { display: flex; flex-direction: column; gap: .72rem; }
-  .code-panel {
+  .stack-frame-demo__code-side { min-width: 0; }
+  .stack-frame-demo__code-side [data-normal-code] { display: flex; flex-direction: column; gap: .72rem; }
+  .stack-frame-demo__code-side [hidden] { display: none !important; }
+
+  .stack-frame-code {
     overflow: hidden;
     border: 2px dashed #0ea5e9;
     border-radius: .9rem;
     background: #030712;
   }
-  .code-panel--helper { border-color: #a855f7; }
-  .code-panel--recursive { border-color: #ef4444; }
-  .code-panel__title { padding: .52rem .75rem .1rem; color: #94a3b8; font-size: .74rem; font-weight: 700; }
-  .code-list {
+  .stack-frame-code--helper { border-color: #a855f7; }
+  .stack-frame-code--recursive { border-color: #ef4444; }
+  .stack-frame-code__title { padding: .5rem .72rem .1rem; color: #94a3b8; font-size: .72rem; font-weight: 700; }
+  .stack-frame-code__list {
     margin: 0;
-    padding: .35rem .55rem .65rem;
+    padding: .35rem .5rem .65rem;
     list-style: none;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: .82rem;
-    line-height: 1.5;
+    font-size: .8rem;
+    line-height: 1.45;
   }
-  .code-line {
-    margin: .12rem 0;
-    padding: .13rem .48rem;
+  .stack-frame-code__line {
+    margin: .1rem 0;
+    padding: .12rem .45rem;
     border: 2px solid transparent;
     border-radius: .38rem;
     color: #dbeafe;
     white-space: pre;
     transition: background 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease;
   }
-  .code-line[data-state="active"] { border-color: #facc15; background: rgba(250, 204, 21, .12); color: #fef08a; }
-  .code-line[data-state="call"] { border-color: #a855f7; background: rgba(168, 85, 247, .13); color: #f5d0fe; }
-  .code-line[data-state="done"] { color: #86efac; opacity: .72; }
+  .stack-frame-code__line[data-state="active"] { border-color: #facc15; background: rgba(250, 204, 21, .12); color: #fef08a; }
+  .stack-frame-code__line[data-state="call"] { border-color: #a855f7; background: rgba(168, 85, 247, .14); color: #f5d0fe; }
+  .stack-frame-code__line[data-state="done"] { color: #86efac; opacity: .72; }
 
-  .stack-viz__explanation {
-    margin-top: .75rem;
+  .stack-frame-demo__explain {
+    margin-top: .72rem;
     min-height: 3.2rem;
     padding: .72rem .82rem;
     border-left: 3px solid #3b82f6;
     border-radius: .4rem;
     color: #cbd5e1;
     background: rgba(30, 41, 59, .45);
-    font-size: .77rem;
+    font-size: .76rem;
   }
 
-  .stack-viz__memory-side { min-width: 0; }
-  .stack-viz__memory-heading { display: flex; align-items: end; justify-content: space-between; gap: .7rem; margin-bottom: .65rem; }
-  .stack-viz__memory-heading strong { font-size: .95rem; }
-  .stack-viz__memory-heading span { color: #94a3b8; font-size: .68rem; }
+  .stack-frame-demo__memory-side { min-width: 0; overflow-x: auto; padding-bottom: 3.4rem; }
+  .stack-frame-demo__memory-title { display: flex; justify-content: space-between; align-items: flex-end; gap: .7rem; margin-bottom: .62rem; }
+  .stack-frame-demo__memory-title strong { font-size: .92rem; }
+  .stack-frame-demo__memory-title span { color: #94a3b8; font-size: .66rem; }
 
-  .memory-board { display: grid; grid-template-columns: 88px minmax(150px, 1fr); gap: .6rem; }
-  .memory-addresses {
+  .stack-memory-board {
     display: grid;
-    grid-template-rows: repeat(var(--rows), var(--row-h));
+    grid-template-columns: 96px 170px 150px;
+    gap: .62rem;
+    min-width: 436px;
+    align-items: start;
+  }
+
+  .stack-memory-addresses {
+    display: grid;
+    grid-template-rows: repeat(var(--sfd-rows), var(--sfd-row));
     color: #ef4444;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: .6rem;
+    font-size: .58rem;
   }
-  .memory-addresses span { display: flex; align-items: center; justify-content: flex-end; }
+  .stack-memory-addresses span { display: flex; align-items: center; justify-content: flex-end; }
 
-  .memory-shell { position: relative; width: min(205px, 100%); padding-right: 72px; }
-  .memory-grid, .memory-blocks {
+  .stack-memory-column {
+    position: relative;
+    width: 170px;
+  }
+  .stack-memory-grid,
+  .stack-memory-blocks {
     display: grid;
-    grid-template-rows: repeat(var(--rows), var(--row-h));
+    grid-template-rows: repeat(var(--sfd-rows), var(--sfd-row));
   }
-  .memory-grid { border: 2px solid #e5e7eb; background: #050505; }
-  .memory-grid > span { border-bottom: 1px solid rgba(255,255,255,.72); }
-  .memory-grid > span:last-child { border-bottom: 0; }
+  .stack-memory-grid { border: 2px solid #e5e7eb; background: #050505; }
+  .stack-memory-grid > span { border-bottom: 1px solid rgba(255,255,255,.72); }
+  .stack-memory-grid > span:last-child { border-bottom: 0; }
 
-  .memory-blocks { position: absolute; inset: 0 72px 0 0; z-index: 2; grid-template-columns: 1fr; pointer-events: none; }
-  .memory-block {
+  .stack-memory-blocks {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    grid-template-columns: 1fr;
+    pointer-events: none;
+  }
+  .stack-memory-block {
     grid-column: 1;
     grid-row: var(--start) / span var(--span);
     position: relative;
@@ -273,143 +297,281 @@ const recursiveCode = [
     justify-content: center;
     border: 2px solid #f8fafc;
     color: #fff;
-    font-size: .9rem;
+    font-size: .88rem;
     font-weight: 800;
     text-shadow: 0 1px 2px rgba(0,0,0,.45);
-    animation: blockIn 180ms ease-out;
+    animation: stackFrameBlockIn 180ms ease-out;
   }
-  .memory-block small { position: absolute; left: .2rem; bottom: .05rem; font-size: .46rem; font-weight: 700; opacity: .84; }
-
-  .memory-origin { position: absolute; top: -.1rem; left: -7.4rem; color: #f8fafc; font-size: .72rem; white-space: nowrap; }
-  .memory-origin b { color: #fbbf24; font-size: 1rem; }
-  .memory-sp {
+  .stack-memory-block small {
     position: absolute;
-    left: -4rem;
-    top: -.5rem;
+    left: .22rem;
+    bottom: .06rem;
+    padding: 0 .16rem;
+    border-radius: .2rem;
+    background: rgba(0,0,0,.28);
+    font-size: .46rem;
+    font-weight: 700;
+    opacity: .92;
+  }
+
+  .stack-memory-origin {
+    position: absolute;
+    right: calc(100% + .5rem);
+    top: -.95rem;
+    display: flex;
+    align-items: center;
+    gap: .28rem;
+    color: #f8fafc;
+    font-size: .68rem;
+    white-space: nowrap;
+  }
+  .stack-memory-origin b { color: #fbbf24; font-size: 1rem; }
+
+  .stack-memory-sp {
+    position: absolute;
+    right: calc(100% + .48rem);
+    top: -.48rem;
     z-index: 4;
     color: #ef4444;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: .8rem;
+    font-size: .76rem;
     font-weight: 900;
+    white-space: nowrap;
     transition: top 220ms ease;
-    white-space: nowrap;
   }
 
-  .memory-brackets { position: absolute; inset: 0 0 0 auto; width: 68px; z-index: 3; pointer-events: none; }
-  .frame-bracket {
-    position: absolute;
-    right: 0;
-    top: calc((var(--start) - 1) * var(--row-h));
-    height: calc(var(--span) * var(--row-h));
-    width: 62px;
-    border-right: 3px solid var(--frame-color);
-  }
-  .frame-bracket::before, .frame-bracket::after {
-    content: "";
-    position: absolute;
-    right: -3px;
-    width: 13px;
-    border-top: 3px solid var(--frame-color);
-  }
-  .frame-bracket::before { top: 0; }
-  .frame-bracket::after { bottom: 0; }
-  .frame-bracket span {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--frame-color);
-    background: #020304;
-    font-size: .58rem;
-    font-weight: 800;
-    line-height: 1.2;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  .memory-overflow {
+  .stack-memory-overflow {
     position: absolute;
     left: 0;
-    right: 72px;
-    bottom: -2.9rem;
+    right: 0;
+    bottom: -2.8rem;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: .4rem;
-    min-height: 34px;
+    min-height: 38px;
     border: 1px dashed #ef4444;
     border-radius: .42rem;
     color: #fecaca;
-    background: rgba(127,29,29,.4);
+    background: rgba(127,29,29,.42);
     opacity: 0;
     transform: translateY(6px);
     transition: opacity 160ms ease, transform 160ms ease;
   }
-  .memory-overflow[data-active="true"] { opacity: 1; transform: translateY(0); animation: overflowPulse 600ms ease-in-out infinite alternate; }
-  .memory-overflow span { color: #fca5a5; font-size: .62rem; }
+  .stack-memory-overflow[data-active="true"] { opacity: 1; transform: translateY(0); animation: stackFrameOverflowPulse 600ms ease-in-out infinite alternate; }
+  .stack-memory-overflow span { color: #fca5a5; font-size: .58rem; }
 
-  @keyframes blockIn { from { opacity: .2; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes overflowPulse { from { box-shadow: 0 0 0 rgba(239,68,68,0); } to { box-shadow: 0 0 28px rgba(239,68,68,.55); } }
+  .stack-frame-column {
+    position: relative;
+    width: 150px;
+    height: calc(var(--sfd-rows) * var(--sfd-row));
+  }
+  .stack-frame-bracket {
+    position: absolute;
+    left: 4px;
+    top: calc((var(--start) - 1) * var(--sfd-row));
+    width: 22px;
+    height: calc(var(--span) * var(--sfd-row));
+    border-left: 3px solid var(--frame-color);
+  }
+  .stack-frame-bracket::before,
+  .stack-frame-bracket::after {
+    content: "";
+    position: absolute;
+    left: -3px;
+    width: 14px;
+    border-top: 3px solid var(--frame-color);
+  }
+  .stack-frame-bracket::before { top: 0; }
+  .stack-frame-bracket::after { bottom: 0; }
+  .stack-frame-bracket span {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: block;
+    width: 118px;
+    padding: .28rem .38rem;
+    border: 1px solid color-mix(in srgb, var(--frame-color) 55%, transparent);
+    border-radius: .42rem;
+    color: var(--frame-color);
+    background: #0b1020;
+    font-size: .64rem;
+    font-weight: 800;
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 
-  @media (max-width: 900px) {
-    .stack-viz__workspace { grid-template-columns: 1fr; }
-    .stack-viz__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .memory-shell { margin-left: 1rem; }
+  .stack-frame-demo__note { margin-top: .7rem; color: var(--sfd-muted); font-size: .68rem; line-height: 1.55; }
+
+  @keyframes stackFrameBlockIn { from { opacity: .25; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes stackFrameOverflowPulse { from { box-shadow: 0 0 0 rgba(239,68,68,0); } to { box-shadow: 0 0 28px rgba(239,68,68,.55); } }
+
+  @media (max-width: 980px) {
+    .stack-frame-demo__workspace { grid-template-columns: 1fr; }
+    .stack-frame-demo__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 620px) {
-    .stack-viz__header, .stack-viz__memory-heading { flex-direction: column; align-items: flex-start; }
-    .stack-viz__summary { grid-template-columns: 1fr; }
-    .stack-viz__counter { width: 100%; margin-left: 0; }
-    .stack-viz__workspace { padding: .7rem; }
-    .memory-board { grid-template-columns: 74px 1fr; }
-    .memory-shell { padding-right: 62px; }
-    .memory-blocks { right: 62px; }
+    .stack-frame-demo__header,
+    .stack-frame-demo__memory-title { flex-direction: column; align-items: flex-start; }
+    .stack-frame-demo__summary { grid-template-columns: 1fr; }
+    .stack-frame-demo__counter { width: 100%; margin-left: 0; }
+    .stack-frame-demo__workspace { padding: .7rem; }
   }
 </style>
 
 <script>
   type Panel = "main" | "helper" | "recursive";
-  type Highlight = { panel: Panel; line: number; state: "active" | "call" | "done" };
-  type Frame = "main" | "helper" | "recursive";
-  type Block = { key: string; label: string; value: string; size: number; frame: Frame; color: string };
-  type Step = { title: string; activeFrame: string; explanation: string; highlights: Highlight[]; blocks: Block[] };
+  type LineState = "active" | "call" | "done";
+  type Highlight = { panel: Panel; line: number; state: LineState };
+  type FrameKind = "main" | "helper" | "recursive";
+  type StackBlock = {
+    key: string;
+    label: string;
+    value: string;
+    size: number;
+    frame: FrameKind;
+    color: string;
+  };
+  type Step = {
+    title: string;
+    activeFrame: string;
+    explanation: string;
+    highlights: Highlight[];
+    blocks: StackBlock[];
+  };
 
-  function initStackViz(root: HTMLElement): void {
+  function initStackFrameDemo(root: HTMLElement): void {
     if (root.dataset.initialized === "true") return;
     root.dataset.initialized = "true";
 
     const capacity = 24;
-    const base = 0x20001000;
+    const origin = 0x20001000;
 
-    const blockMap: Record<string, Block> = {
-      a:  { key: "a",  label: "a:u8",   value: "12",   size: 1, frame: "main",   color: "#dc2626" },
-      b:  { key: "b",  label: "b:u16",  value: "100",  size: 2, frame: "main",   color: "#059669" },
-      c:  { key: "c",  label: "c:u16",  value: "112",  size: 2, frame: "main",   color: "#f97316" },
-      d:  { key: "d",  label: "d:u32",  value: "4000", size: 4, frame: "main",   color: "#2563eb" },
-      e:  { key: "e",  label: "e:u8",   value: "240",  size: 1, frame: "main",   color: "#7c3aed" },
-      f:  { key: "f",  label: "f:u32",  value: "9",    size: 4, frame: "main",   color: "#ca8a04" },
-      g:  { key: "g",  label: "g:u16",  value: "10",   size: 2, frame: "main",   color: "#0284c7" },
-      ha: { key: "ha", label: "a:u16",  value: "100",  size: 2, frame: "helper", color: "#0ea5e9" },
-      hb: { key: "hb", label: "b:u8",   value: "30",   size: 1, frame: "helper", color: "#1e3a8a" },
+    const map: Record<string, StackBlock> = {
+      a:   { key: "a",   label: "a : uint8_t · 1B",  value: "12",   size: 1, frame: "main",   color: "#dc2626" },
+      b:   { key: "b",   label: "b : uint16_t · 2B", value: "100",  size: 2, frame: "main",   color: "#059669" },
+      c:   { key: "c",   label: "c : uint16_t · 2B", value: "112",  size: 2, frame: "main",   color: "#f97316" },
+      d:   { key: "d",   label: "d : uint32_t · 4B", value: "4000", size: 4, frame: "main",   color: "#2563eb" },
+      e:   { key: "e",   label: "e : uint8_t · 1B",  value: "240",  size: 1, frame: "main",   color: "#7c3aed" },
+      f:   { key: "f",   label: "f : uint32_t · 4B", value: "9",    size: 4, frame: "main",   color: "#ca8a04" },
+      g:   { key: "g",   label: "g : uint16_t · 2B", value: "10",   size: 2, frame: "main",   color: "#0284c7" },
+      ret: { key: "ret", label: "RET · 返回地址 · 4B", value: "RET",  size: 4, frame: "helper", color: "#9333ea" },
+      ha:  { key: "ha",  label: "a : uint16_t · 2B", value: "100",  size: 2, frame: "helper", color: "#0ea5e9" },
+      hb:  { key: "hb",  label: "b : uint8_t · 1B",  value: "30",   size: 1, frame: "helper", color: "#1e3a8a" },
     };
 
-    const blocks = (...keys: string[]): Block[] => keys.map((key) => ({ ...blockMap[key] }));
+    const take = (...keys: string[]): StackBlock[] => keys.map((key) => ({ ...map[key] }));
 
     const steps: Step[] = [
-      { title: "进入 main()", activeFrame: "main", explanation: "main() 开始执行，此时还没有局部变量占用演示栈空间。", highlights: [{ panel: "main", line: 0, state: "active" }], blocks: [] },
-      { title: "a 入栈", activeFrame: "main", explanation: "uint8_t a = 12 占 1 Byte。执行后 SP 向低地址移动 1 Byte。", highlights: [{ panel: "main", line: 2, state: "active" }], blocks: blocks("a") },
-      { title: "b 入栈", activeFrame: "main", explanation: "uint16_t b = 100 占 2 Byte，所以右侧连续占用两个字节格。", highlights: [{ panel: "main", line: 3, state: "active" }], blocks: blocks("a", "b") },
-      { title: "c 入栈", activeFrame: "main", explanation: "c = a + b 得到 112，类型为 uint16_t，因此占 2 Byte。", highlights: [{ panel: "main", line: 4, state: "active" }], blocks: blocks("a", "b", "c") },
-      { title: "d 入栈", activeFrame: "main", explanation: "uint32_t d = 4000 占 4 Byte，栈帧明显向下扩展。", highlights: [{ panel: "main", line: 5, state: "active" }], blocks: blocks("a", "b", "c", "d") },
-      { title: "e 入栈", activeFrame: "main", explanation: "uint8_t e = 240 再占 1 Byte。", highlights: [{ panel: "main", line: 6, state: "active" }], blocks: blocks("a", "b", "c", "d", "e") },
-      { title: "f 入栈", activeFrame: "main", explanation: "uint32_t f = 9 占 4 Byte。此时 main 栈帧已经使用 14 Byte。", highlights: [{ panel: "main", line: 7, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f") },
-      { title: "调用 do_nothing()", activeFrame: "do_nothing", explanation: "执行函数调用时，main 栈帧仍然保留，新函数的栈帧会继续压在它下面。", highlights: [{ panel: "main", line: 8, state: "call" }], blocks: blocks("a", "b", "c", "d", "e", "f") },
-      { title: "do_nothing.a 入栈", activeFrame: "do_nothing", explanation: "进入 do_nothing() 后，它自己的 uint16_t a = 100 入栈，占 2 Byte。", highlights: [{ panel: "main", line: 8, state: "call" }, { panel: "helper", line: 2, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "ha") },
-      { title: "do_nothing.b 入栈", activeFrame: "do_nothing", explanation: "uint8_t b = 30 再占 1 Byte。右侧紫色括号表示独立的 do_nothing 栈帧。", highlights: [{ panel: "main", line: 8, state: "call" }, { panel: "helper", line: 3, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "ha", "hb") },
-      { title: "函数返回", activeFrame: "main", explanation: "do_nothing() 返回后，它的局部变量整体失效，SP 一次回退到 main 栈帧顶部。", highlights: [{ panel: "main", line: 9, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f") },
-      { title: "g 入栈", activeFrame: "main", explanation: "uint16_t g = 10 占 2 Byte，继续扩展 main 栈帧。", highlights: [{ panel: "main", line: 9, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "g") },
-      { title: "再次调用 do_nothing()", activeFrame: "do_nothing", explanation: "第二次调用会重新创建一份 do_nothing 栈帧；上一次调用的局部变量不会被复用为“仍然存活”的变量。", highlights: [{ panel: "main", line: 10, state: "call" }, { panel: "helper", line: 2, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "g", "ha", "hb") },
-      { title: "执行结束", activeFrame: "main", explanation: "do_nothing() 再次返回，临时栈帧释放，程序回到 main() 末尾。", highlights: [{ panel: "main", line: 11, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "g") },
+      {
+        title: "进入 main()",
+        activeFrame: "main",
+        explanation: "SP 初始位于 0x20001000。下面每个小格代表 1 Byte，栈向低地址方向增长。",
+        highlights: [{ panel: "main", line: 0, state: "active" }],
+        blocks: [],
+      },
+      {
+        title: "a 入栈：1 Byte",
+        activeFrame: "main",
+        explanation: "uint8_t a = 12 占 1 Byte，因此只填充 1 个字节格。",
+        highlights: [{ panel: "main", line: 2, state: "active" }],
+        blocks: take("a"),
+      },
+      {
+        title: "b 入栈：2 Byte",
+        activeFrame: "main",
+        explanation: "uint16_t b = 100 占 2 Byte，所以变量块连续跨越 2 个字节格。",
+        highlights: [{ panel: "main", line: 3, state: "active" }],
+        blocks: take("a", "b"),
+      },
+      {
+        title: "c 入栈：2 Byte",
+        activeFrame: "main",
+        explanation: "c = a + b 得到 112，c 是 uint16_t，同样占 2 Byte。",
+        highlights: [{ panel: "main", line: 4, state: "active" }],
+        blocks: take("a", "b", "c"),
+      },
+      {
+        title: "d 入栈：4 Byte",
+        activeFrame: "main",
+        explanation: "uint32_t d = 4000 占 4 Byte，因此能明显看到变量块高度是 uint8_t 的 4 倍。",
+        highlights: [{ panel: "main", line: 5, state: "active" }],
+        blocks: take("a", "b", "c", "d"),
+      },
+      {
+        title: "e 入栈：1 Byte",
+        activeFrame: "main",
+        explanation: "uint8_t e = 240 只占 1 Byte。",
+        highlights: [{ panel: "main", line: 6, state: "active" }],
+        blocks: take("a", "b", "c", "d", "e"),
+      },
+      {
+        title: "f 入栈：4 Byte",
+        activeFrame: "main",
+        explanation: "uint32_t f = 9 占 4 Byte。此时 main 的教学栈帧共占 14 Byte。",
+        highlights: [{ panel: "main", line: 7, state: "active" }],
+        blocks: take("a", "b", "c", "d", "e", "f"),
+      },
+      {
+        title: "CALL：压入 4 Byte 返回地址",
+        activeFrame: "do_nothing",
+        explanation: "执行 do_nothing() 时，先用 4 Byte 的 RET 表示 32 位返回地址。它和随后创建的局部变量一起归入本次函数调用的栈帧。",
+        highlights: [{ panel: "main", line: 8, state: "call" }],
+        blocks: take("a", "b", "c", "d", "e", "f", "ret"),
+      },
+      {
+        title: "do_nothing.a 入栈：2 Byte",
+        activeFrame: "do_nothing",
+        explanation: "进入 do_nothing() 后，uint16_t a = 100 占 2 Byte。紫色括号完整标出本次函数调用的栈帧。",
+        highlights: [
+          { panel: "main", line: 8, state: "call" },
+          { panel: "helper", line: 2, state: "active" },
+        ],
+        blocks: take("a", "b", "c", "d", "e", "f", "ret", "ha"),
+      },
+      {
+        title: "do_nothing.b 入栈：1 Byte",
+        activeFrame: "do_nothing",
+        explanation: "uint8_t b = 30 再占 1 Byte。do_nothing 的教学栈帧此时为 RET 4B + a 2B + b 1B = 7 Byte。",
+        highlights: [
+          { panel: "main", line: 8, state: "call" },
+          { panel: "helper", line: 3, state: "active" },
+        ],
+        blocks: take("a", "b", "c", "d", "e", "f", "ret", "ha", "hb"),
+      },
+      {
+        title: "函数返回：释放整个 do_nothing 栈帧",
+        activeFrame: "main",
+        explanation: "do_nothing() 返回后，RET 和函数局部变量整体弹出，SP 从 21 Byte 已用位置恢复到 main 的 14 Byte 位置。",
+        highlights: [{ panel: "main", line: 9, state: "active" }],
+        blocks: take("a", "b", "c", "d", "e", "f"),
+      },
+      {
+        title: "g 入栈：2 Byte",
+        activeFrame: "main",
+        explanation: "uint16_t g = 10 占 2 Byte，main 教学栈帧扩展为 16 Byte。",
+        highlights: [{ panel: "main", line: 9, state: "active" }],
+        blocks: take("a", "b", "c", "d", "e", "f", "g"),
+      },
+      {
+        title: "再次调用 do_nothing()",
+        activeFrame: "do_nothing",
+        explanation: "第二次调用会重新压入 RET，并重新创建 do_nothing 的局部变量。最大占用为 16B + 7B = 23B，仍未超过 24B 演示边界。",
+        highlights: [
+          { panel: "main", line: 10, state: "call" },
+          { panel: "helper", line: 3, state: "active" },
+        ],
+        blocks: take("a", "b", "c", "d", "e", "f", "g", "ret", "ha", "hb"),
+      },
+      {
+        title: "执行结束",
+        activeFrame: "main",
+        explanation: "第二次函数返回后，do_nothing 栈帧再次整体释放，只留下 main 的局部变量。",
+        highlights: [{ panel: "main", line: 11, state: "active" }],
+        blocks: take("a", "b", "c", "d", "e", "f", "g"),
+      },
     ];
 
     const q = <T extends Element>(selector: string): T | null => root.querySelector<T>(selector);
@@ -425,7 +587,7 @@ const recursiveCode = [
     const spMarker = q<HTMLElement>("[data-sp-marker]");
     const overflowBanner = q<HTMLElement>("[data-overflow-banner]");
     const normalCode = q<HTMLElement>("[data-normal-code]");
-    const recursiveCode = q<HTMLElement>("[data-recursive-code]");
+    const recursivePanel = q<HTMLElement>("[data-recursive-code]");
     const prevBtn = q<HTMLButtonElement>('[data-action="prev"]');
     const nextBtn = q<HTMLButtonElement>('[data-action="next"]');
     const playBtn = q<HTMLButtonElement>('[data-action="play"]');
@@ -433,12 +595,11 @@ const recursiveCode = [
     const resetBtn = q<HTMLButtonElement>('[data-action="reset"]');
     const codeLines = Array.from(root.querySelectorAll<HTMLElement>("[data-panel][data-line]"));
 
-    if (!stepIndexEl || !stepTotalEl || !stepTitleEl || !activeFrameEl || !usedEl || !spValueEl || !explanationEl || !blocksRoot || !bracketsRoot || !spMarker || !overflowBanner || !normalCode || !recursiveCode || !prevBtn || !nextBtn || !playBtn || !overflowBtn || !resetBtn) return;
+    if (!stepIndexEl || !stepTotalEl || !stepTitleEl || !activeFrameEl || !usedEl || !spValueEl || !explanationEl || !blocksRoot || !bracketsRoot || !spMarker || !overflowBanner || !normalCode || !recursivePanel || !prevBtn || !nextBtn || !playBtn || !overflowBtn || !resetBtn) return;
 
-    stepTotalEl.textContent = String(steps.length);
     let currentStep = 0;
     let timer = 0;
-    let overflowMode = false;
+    let recursiveMode = false;
     let recursionDepth = 0;
 
     const stopTimer = (): void => {
@@ -453,7 +614,7 @@ const recursiveCode = [
 
     const addBracket = (start: number, span: number, label: string, color: string): void => {
       const bracket = document.createElement("div");
-      bracket.className = "frame-bracket";
+      bracket.className = "stack-frame-bracket";
       bracket.style.setProperty("--start", String(start + 1));
       bracket.style.setProperty("--span", String(span));
       bracket.style.setProperty("--frame-color", color);
@@ -463,22 +624,24 @@ const recursiveCode = [
       bracketsRoot.append(bracket);
     };
 
-    const renderBlocks = (items: Block[]): number => {
+    const renderBlocks = (items: StackBlock[]): number => {
       blocksRoot.replaceChildren();
       bracketsRoot.replaceChildren();
+
       let offset = 0;
-      const ranges: { frame: Frame; start: number; span: number }[] = [];
-      let frame: Frame | null = null;
+      const ranges: { frame: FrameKind; start: number; span: number }[] = [];
+      let currentFrame: FrameKind | null = null;
       let frameStart = 0;
       let frameSpan = 0;
 
-      items.forEach((item) => {
+      for (const item of items) {
         const block = document.createElement("div");
-        block.className = "memory-block";
+        block.className = "stack-memory-block";
         block.style.setProperty("--start", String(offset + 1));
         block.style.setProperty("--span", String(item.size));
         block.style.background = item.color;
-        block.title = `${item.label} = ${item.value} · ${item.size} Byte`;
+        block.title = `${item.label}；值 = ${item.value}`;
+
         const value = document.createElement("span");
         value.textContent = item.value;
         const label = document.createElement("small");
@@ -486,98 +649,121 @@ const recursiveCode = [
         block.append(value, label);
         blocksRoot.append(block);
 
-        if (frame === null) {
-          frame = item.frame;
+        if (currentFrame === null) {
+          currentFrame = item.frame;
           frameStart = offset;
           frameSpan = item.size;
-        } else if (frame === item.frame) {
+        } else if (currentFrame === item.frame) {
           frameSpan += item.size;
         } else {
-          ranges.push({ frame, start: frameStart, span: frameSpan });
-          frame = item.frame;
+          ranges.push({ frame: currentFrame, start: frameStart, span: frameSpan });
+          currentFrame = item.frame;
           frameStart = offset;
           frameSpan = item.size;
         }
         offset += item.size;
-      });
-      if (frame !== null) ranges.push({ frame, start: frameStart, span: frameSpan });
+      }
 
-      ranges.forEach((range) => {
-        if (range.frame === "main") addBracket(range.start, range.span, "main 栈帧", "#38bdf8");
-        if (range.frame === "helper") addBracket(range.start, range.span, "do_nothing 栈帧", "#a855f7");
-        if (range.frame === "recursive") addBracket(range.start, range.span, `递归栈帧 × ${recursionDepth}`, "#ef4444");
-      });
+      if (currentFrame !== null) {
+        ranges.push({ frame: currentFrame, start: frameStart, span: frameSpan });
+      }
+
+      for (const range of ranges) {
+        if (range.frame === "main") addBracket(range.start, range.span, `main 栈帧 · ${range.span}B`, "#38bdf8");
+        if (range.frame === "helper") addBracket(range.start, range.span, `do_nothing 栈帧 · ${range.span}B`, "#a855f7");
+        if (range.frame === "recursive") addBracket(range.start, range.span, `递归活动栈帧 · ${range.span}B`, "#ef4444");
+      }
+
       return offset;
     };
 
     const setSp = (used: number): void => {
-      usedEl.textContent = `${used} B / ${capacity} B`;
-      spValueEl.textContent = `0x${(base - used).toString(16).toUpperCase()}`;
-      spMarker.style.top = `calc(${Math.min(used, capacity)} * var(--row-h) - .52rem)`;
+      usedEl.textContent = `${used} / ${capacity} B`;
+      spValueEl.textContent = `0x${(origin - used).toString(16).toUpperCase()}`;
+      spMarker.style.top = `calc(${Math.min(used, capacity)} * var(--sfd-row) - .46rem)`;
     };
 
     const renderStep = (): void => {
-      overflowMode = false;
+      recursiveMode = false;
       normalCode.hidden = false;
-      recursiveCode.hidden = true;
+      recursivePanel.hidden = true;
       overflowBanner.dataset.active = "false";
+
       const step = steps[currentStep];
       stepIndexEl.textContent = String(currentStep + 1);
+      stepTotalEl.textContent = String(steps.length);
       stepTitleEl.textContent = step.title;
       activeFrameEl.textContent = step.activeFrame;
       explanationEl.textContent = step.explanation;
       clearHighlights();
-      step.highlights.forEach((highlight) => {
+
+      for (const highlight of step.highlights) {
         const line = q<HTMLElement>(`[data-panel="${highlight.panel}"][data-line="${highlight.line}"]`);
         if (line) line.dataset.state = highlight.state;
-      });
+      }
+
       const used = renderBlocks(step.blocks);
       setSp(used);
       prevBtn.disabled = currentStep === 0;
       nextBtn.disabled = currentStep === steps.length - 1;
-      stepTotalEl.textContent = String(steps.length);
     };
 
     const renderRecursive = (): void => {
-      overflowMode = true;
+      recursiveMode = true;
       normalCode.hidden = true;
-      recursiveCode.hidden = false;
+      recursivePanel.hidden = false;
       clearHighlights();
-      const line = q<HTMLElement>('[data-panel="recursive"][data-line="3"]');
-      if (line) line.dataset.state = "active";
-      const items: Block[] = [];
-      for (let index = 1; index <= recursionDepth; index += 1) {
-        items.push({ key: `r${index}`, label: `buf[4] #${index}`, value: `R${index}`, size: 4, frame: "recursive", color: "#dc2626" });
+      const callLine = q<HTMLElement>('[data-panel="recursive"][data-line="3"]');
+      if (callLine) callLine.dataset.state = "active";
+
+      const recursiveItems: StackBlock[] = [];
+      let requestedBytes = 0;
+      for (let depth = 1; depth <= recursionDepth; depth += 1) {
+        recursiveItems.push(
+          { key: `rr${depth}`, label: `RET #${depth} · 4B`, value: "RET", size: 4, frame: "recursive", color: "#991b1b" },
+          { key: `rb${depth}`, label: `buf[4] #${depth} · 4B`, value: `buf ${depth}`, size: 4, frame: "recursive", color: "#dc2626" },
+        );
+        requestedBytes += 8;
       }
-      const used = renderBlocks(items);
-      setSp(Math.min(used, capacity));
-      stepTitleEl.textContent = used > capacity ? "Stack Overflow" : `递归深度 ${recursionDepth}`;
-      activeFrameEl.textContent = `recurse(${recursionDepth})`;
+
+      const visibleItems: StackBlock[] = [];
+      let visibleBytes = 0;
+      for (const item of recursiveItems) {
+        if (visibleBytes + item.size > capacity) break;
+        visibleItems.push(item);
+        visibleBytes += item.size;
+      }
+
+      renderBlocks(visibleItems);
+      setSp(visibleBytes);
       stepIndexEl.textContent = String(recursionDepth);
       stepTotalEl.textContent = "∞";
+      activeFrameEl.textContent = `recurse(${recursionDepth})`;
       prevBtn.disabled = true;
       nextBtn.disabled = true;
 
-      if (used > capacity) {
+      if (requestedBytes > capacity) {
         overflowBanner.dataset.active = "true";
-        explanationEl.textContent = "新的递归调用还想继续压入 4 Byte 栈帧，但可用栈空间已经耗尽，SP 将越过栈边界，因此发生 Stack Overflow。";
+        stepTitleEl.textContent = "Stack Overflow";
+        explanationEl.textContent = `第 ${recursionDepth} 层递归还需要新的 RET 4B + buf[4] 4B，但总需求达到 ${requestedBytes}B，超过 24B 演示栈容量，因此发生 Stack Overflow。`;
         stopTimer();
       } else {
         overflowBanner.dataset.active = "false";
-        explanationEl.textContent = `第 ${recursionDepth} 层递归创建了新的局部数组 buf[4]，又占用 4 Byte。每次递归都会保留上一层栈帧。`;
+        stepTitleEl.textContent = `递归深度 ${recursionDepth}`;
+        explanationEl.textContent = `每层递归在教学模型中保留返回地址 4B 和局部数组 buf[4] 4B，因此每深入一层就增加 8B 栈占用。`;
       }
     };
 
     prevBtn.addEventListener("click", () => {
       stopTimer();
-      if (overflowMode) return;
+      if (recursiveMode) return;
       currentStep = Math.max(0, currentStep - 1);
       renderStep();
     });
 
     nextBtn.addEventListener("click", () => {
       stopTimer();
-      if (overflowMode) return;
+      if (recursiveMode) return;
       currentStep = Math.min(steps.length - 1, currentStep + 1);
       renderStep();
     });
@@ -587,7 +773,7 @@ const recursiveCode = [
         stopTimer();
         return;
       }
-      if (overflowMode) return;
+      if (recursiveMode) return;
       playBtn.textContent = "暂停";
       timer = window.setInterval(() => {
         if (currentStep >= steps.length - 1) {
@@ -596,25 +782,24 @@ const recursiveCode = [
         }
         currentStep += 1;
         renderStep();
-      }, 1050);
+      }, 1100);
     });
 
     overflowBtn.addEventListener("click", () => {
       stopTimer();
-      recursionDepth = 0;
-      overflowMode = true;
+      recursionDepth = 1;
       renderRecursive();
       timer = window.setInterval(() => {
         recursionDepth += 1;
         renderRecursive();
-      }, 620);
+      }, 720);
     });
 
     resetBtn.addEventListener("click", () => {
       stopTimer();
       currentStep = 0;
       recursionDepth = 0;
-      overflowMode = false;
+      recursiveMode = false;
       renderStep();
     });
 
@@ -622,8 +807,8 @@ const recursiveCode = [
     renderStep();
   }
 
-  document.querySelectorAll<HTMLElement>("[data-stack-viz]").forEach(initStackViz);
+  document.querySelectorAll<HTMLElement>("[data-stack-frame-demo]").forEach(initStackFrameDemo);
   document.addEventListener("astro:page-load", () => {
-    document.querySelectorAll<HTMLElement>("[data-stack-viz]").forEach(initStackViz);
+    document.querySelectorAll<HTMLElement>("[data-stack-frame-demo]").forEach(initStackFrameDemo);
   });
 </script>
