@@ -1,341 +1,629 @@
 ---
+const rowCount = 24;
+const baseAddress = 0x20001000;
+const addresses = Array.from({ length: rowCount }, (_, index) =>
+  `0x${(baseAddress - index).toString(16).toUpperCase()}`,
+);
+
+const mainCode = [
+  "int main(void)",
+  "{",
+  "    uint8_t  a = 12;",
+  "    uint16_t b = 100;",
+  "    uint16_t c = a + b;",
+  "    uint32_t d = 4000;",
+  "    uint8_t  e = 240;",
+  "    uint32_t f = 9;",
+  "    do_nothing();",
+  "    uint16_t g = 10;",
+  "    do_nothing();",
+  "}",
+];
+
+const helperCode = [
+  "void do_nothing(void)",
+  "{",
+  "    uint16_t a = 100;",
+  "    uint8_t  b = 30;",
+  "}",
+];
+
+const recursiveCode = [
+  "void recurse(uint32_t depth)",
+  "{",
+  "    uint8_t buf[4];",
+  "    recurse(depth + 1);",
+  "}",
+  "",
+  "int main(void)",
+  "{",
+  "    recurse(0);",
+  "}",
+];
 ---
 
-<section class="stack-demo not-prose" data-stack-demo>
-  <div class="stack-demo__header">
+<section class="stack-viz not-prose" data-stack-viz>
+  <div class="stack-viz__header">
     <div>
-      <h3>栈内存：变量、栈帧与溢出</h3>
-      <p>左侧执行代码，右侧同步显示栈中数据、地址、SP 与函数栈帧边界。</p>
+      <h3>代码执行与栈内存同步演示</h3>
+      <p>左侧逐行执行 C 代码，右侧同步显示变量占用、函数栈帧、地址与 SP 的变化。</p>
     </div>
-    <span class="stack-demo__status" data-status>运行正常</span>
-  </div>
-
-  <div class="stack-demo__stage">
-    <div class="stack-demo__code-pane">
-      <div class="stack-demo__code-title">C 代码执行过程</div>
-      <div class="stack-demo__code" data-code-lines></div>
-      <div class="stack-demo__legend">
-        <span><i class="legend-main"></i> main 栈帧</span>
-        <span><i class="legend-func"></i> 函数栈帧</span>
-        <span><i class="legend-current"></i> 当前执行</span>
-      </div>
-    </div>
-
-    <div class="stack-demo__memory-pane">
-      <div class="stack-demo__origin">Stack Origin <b>➤</b></div>
-      <div class="stack-demo__stack-shell">
-        <div class="stack-demo__addresses" data-addresses></div>
-        <div class="stack-demo__cells" data-cells></div>
-        <div class="stack-demo__sp" data-sp><span>SP</span><b>➤</b></div>
-        <div class="stack-demo__frame-brackets" data-brackets></div>
-      </div>
-      <div class="stack-demo__growth">栈向低地址增长 ↓</div>
-      <div class="stack-demo__overflow" data-overflow>
-        <strong>STACK OVERFLOW</strong>
-        <span>SP 已越过可用栈边界</span>
-      </div>
+    <div class="stack-viz__legend">
+      <span><i class="legend-dot legend-dot--main"></i>main 栈帧</span>
+      <span><i class="legend-dot legend-dot--callee"></i>函数栈帧</span>
+      <span><i class="legend-dot legend-dot--active"></i>当前执行行</span>
     </div>
   </div>
 
-  <div class="stack-demo__controls">
+  <div class="stack-viz__controls">
+    <button type="button" data-action="prev">上一步</button>
     <button type="button" data-action="next">下一步</button>
-    <button type="button" data-action="call">调用函数</button>
-    <button type="button" data-action="return">函数返回</button>
-    <button type="button" data-action="recurse">递归直到溢出</button>
+    <button type="button" data-action="play">自动播放</button>
+    <button type="button" data-action="overflow">递归溢出演示</button>
     <button type="button" data-action="reset">重置</button>
+    <span class="stack-viz__counter">步骤 <strong data-step-index>1</strong> / <span data-step-total>1</span></span>
   </div>
 
-  <div class="stack-demo__metrics">
-    <div><span>已使用</span><strong data-used>0 / 12</strong></div>
-    <div><span>剩余</span><strong data-free>12</strong></div>
+  <div class="stack-viz__summary">
+    <div><span>当前动作</span><strong data-step-title>进入 main()</strong></div>
+    <div><span>活动栈帧</span><strong data-active-frame>main</strong></div>
+    <div><span>已用空间</span><strong data-used-space>0 B</strong></div>
     <div><span>当前 SP</span><strong data-sp-value>0x20001000</strong></div>
-    <div><span>当前动作</span><strong data-action-label>等待执行</strong></div>
   </div>
 
-  <div class="stack-demo__explain" data-log>
-    点击“下一步”，观察变量如何依次进入 main 的栈帧。
+  <div class="stack-viz__workspace">
+    <div class="stack-viz__code-side">
+      <div data-normal-code>
+        <div class="code-panel code-panel--helper">
+          <div class="code-panel__title">do_nothing()</div>
+          <ol class="code-list">
+            {helperCode.map((line, index) => (
+              <li class="code-line" data-panel="helper" data-line={String(index)}>{line || " "}</li>
+            ))}
+          </ol>
+        </div>
+
+        <div class="code-panel code-panel--main">
+          <div class="code-panel__title">main()</div>
+          <ol class="code-list">
+            {mainCode.map((line, index) => (
+              <li class="code-line" data-panel="main" data-line={String(index)}>{line || " "}</li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
+      <div class="code-panel code-panel--recursive" data-recursive-code hidden>
+        <div class="code-panel__title">递归导致 Stack Overflow</div>
+        <ol class="code-list">
+          {recursiveCode.map((line, index) => (
+            <li class="code-line" data-panel="recursive" data-line={String(index)}>{line || " "}</li>
+          ))}
+        </ol>
+      </div>
+
+      <div class="stack-viz__explanation" data-explanation>
+        main() 开始执行，此时还没有局部变量占用演示栈空间。
+      </div>
+    </div>
+
+    <div class="stack-viz__memory-side">
+      <div class="stack-viz__memory-heading">
+        <strong>Stack</strong>
+        <span>每格 = 1 Byte · 栈向低地址增长 ↓</span>
+      </div>
+
+      <div class="memory-board">
+        <div class="memory-addresses">
+          {addresses.map((address) => <span>{address}</span>)}
+        </div>
+
+        <div class="memory-shell">
+          <div class="memory-grid">
+            {addresses.map(() => <span></span>)}
+          </div>
+          <div class="memory-blocks" data-blocks></div>
+          <div class="memory-brackets" data-brackets></div>
+          <div class="memory-origin">Stack Origin <b>▶</b></div>
+          <div class="memory-sp" data-sp-marker>SP ▶</div>
+          <div class="memory-overflow" data-overflow-banner>
+            <strong>STACK OVERFLOW</strong>
+            <span>SP 已越过可用栈边界</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
 <style>
-  .stack-demo {
-    --sd-border: color-mix(in srgb, currentColor 16%, transparent);
-    --sd-muted: color-mix(in srgb, currentColor 58%, transparent);
+  .stack-viz {
+    --row-h: 22px;
+    --rows: 24;
+    --border: color-mix(in srgb, currentColor 14%, transparent);
+    --muted: color-mix(in srgb, currentColor 58%, transparent);
     margin: 1.5rem 0 2rem;
     padding: 1rem;
-    border: 1px solid var(--sd-border);
+    border: 1px solid var(--border);
     border-radius: 1rem;
     background: color-mix(in srgb, currentColor 2.5%, transparent);
   }
-  .stack-demo__header { display:flex; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
-  .stack-demo__header h3 { margin:0; font-size:1.05rem; }
-  .stack-demo__header p { margin:.25rem 0 0; color:var(--sd-muted); font-size:.84rem; }
-  .stack-demo__status { align-self:flex-start; padding:.3rem .65rem; border-radius:999px; color:#15803d; background:rgba(22,163,74,.14); font-size:.75rem; font-weight:700; white-space:nowrap; }
 
-  .stack-demo__stage {
-    display:grid;
-    grid-template-columns:minmax(330px,1fr) minmax(360px,1fr);
-    gap:1rem;
-    padding:1rem;
-    border-radius:.9rem;
-    background:#020304;
-    color:#e5e7eb;
+  .stack-viz__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .stack-viz__header h3 { margin: 0; font-size: 1.08rem; }
+  .stack-viz__header p { margin: .28rem 0 0; color: var(--muted); font-size: .84rem; }
+
+  .stack-viz__legend { display: flex; flex-wrap: wrap; gap: .75rem; color: var(--muted); font-size: .72rem; }
+  .stack-viz__legend span { display: inline-flex; align-items: center; gap: .3rem; }
+  .legend-dot { width: .65rem; height: .65rem; border-radius: 50%; display: inline-block; }
+  .legend-dot--main { background: #0ea5e9; }
+  .legend-dot--callee { background: #a855f7; }
+  .legend-dot--active { background: #facc15; }
+
+  .stack-viz__controls { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin-bottom: .8rem; }
+  .stack-viz__controls button {
+    padding: .52rem .72rem;
+    border: 1px solid var(--border);
+    border-radius: .62rem;
+    color: inherit;
+    background: transparent;
+    cursor: pointer;
+    font-size: .8rem;
+  }
+  .stack-viz__controls button:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
+  .stack-viz__controls button:disabled { opacity: .4; cursor: not-allowed; }
+  .stack-viz__controls [data-action="overflow"] { border-color: rgba(220, 38, 38, .45); }
+  .stack-viz__counter { margin-left: auto; color: var(--muted); font-size: .76rem; }
+
+  .stack-viz__summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .55rem; margin-bottom: .85rem; }
+  .stack-viz__summary > div { padding: .65rem .72rem; border: 1px solid var(--border); border-radius: .68rem; }
+  .stack-viz__summary span { display: block; color: var(--muted); font-size: .68rem; }
+  .stack-viz__summary strong { display: block; margin-top: .18rem; font-size: .86rem; }
+
+  .stack-viz__workspace {
+    display: grid;
+    grid-template-columns: minmax(360px, 1.15fr) minmax(340px, .9fr);
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: .9rem;
+    color: #e5e7eb;
+    background: #020304;
   }
 
-  .stack-demo__code-pane { min-width:0; }
-  .stack-demo__code-title { margin-bottom:.6rem; color:#94a3b8; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; }
-  .stack-demo__code { display:flex; flex-direction:column; gap:.18rem; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:.78rem; line-height:1.45; }
-  .stack-demo__line { display:grid; grid-template-columns:2rem 1fr; gap:.35rem; padding:.2rem .45rem; border:1px solid transparent; border-radius:.4rem; color:#dbeafe; transition:all 160ms ease; }
-  .stack-demo__line-no { color:#475569; text-align:right; user-select:none; }
-  .stack-demo__line[data-frame="main"] { border-left:2px solid #0ea5e9; }
-  .stack-demo__line[data-frame="func"] { border-left:2px solid #8b5cf6; }
-  .stack-demo__line[data-active="true"] { border-color:#facc15; background:rgba(250,204,21,.12); box-shadow:0 0 0 1px rgba(250,204,21,.18); color:#fff; }
-  .stack-demo__line[data-done="true"] { opacity:.62; }
-  .stack-demo__legend { display:flex; flex-wrap:wrap; gap:.55rem 1rem; margin-top:.8rem; color:#94a3b8; font-size:.68rem; }
-  .stack-demo__legend span { display:inline-flex; align-items:center; gap:.35rem; }
-  .stack-demo__legend i { width:1.2rem; height:3px; border-radius:999px; }
-  .legend-main { background:#0ea5e9; } .legend-func { background:#8b5cf6; } .legend-current { background:#facc15; }
+  .stack-viz__code-side { min-width: 0; }
+  [data-normal-code] { display: flex; flex-direction: column; gap: .72rem; }
+  .code-panel {
+    overflow: hidden;
+    border: 2px dashed #0ea5e9;
+    border-radius: .9rem;
+    background: #030712;
+  }
+  .code-panel--helper { border-color: #a855f7; }
+  .code-panel--recursive { border-color: #ef4444; }
+  .code-panel__title { padding: .52rem .75rem .1rem; color: #94a3b8; font-size: .74rem; font-weight: 700; }
+  .code-list {
+    margin: 0;
+    padding: .35rem .55rem .65rem;
+    list-style: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: .82rem;
+    line-height: 1.5;
+  }
+  .code-line {
+    margin: .12rem 0;
+    padding: .13rem .48rem;
+    border: 2px solid transparent;
+    border-radius: .38rem;
+    color: #dbeafe;
+    white-space: pre;
+    transition: background 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease;
+  }
+  .code-line[data-state="active"] { border-color: #facc15; background: rgba(250, 204, 21, .12); color: #fef08a; }
+  .code-line[data-state="call"] { border-color: #a855f7; background: rgba(168, 85, 247, .13); color: #f5d0fe; }
+  .code-line[data-state="done"] { color: #86efac; opacity: .72; }
 
-  .stack-demo__memory-pane { position:relative; min-height:520px; padding:2.2rem 4.2rem 2.6rem 4.4rem; }
-  .stack-demo__origin { position:absolute; top:.1rem; left:0; color:#f8fafc; font-size:.78rem; }
-  .stack-demo__origin b { margin-left:.45rem; color:#fbbf24; font-size:1.25rem; }
-  .stack-demo__stack-shell { position:relative; height:430px; }
-  .stack-demo__cells { position:absolute; inset:0 2.8rem 0 0; display:grid; grid-template-rows:repeat(12,1fr); border:2px solid #e5e7eb; background:#050505; }
-  .stack-demo__cell { display:flex; align-items:center; justify-content:center; border-bottom:2px solid #e5e7eb; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:.84rem; color:#94a3b8; transition:all 180ms ease; }
-  .stack-demo__cell:last-child { border-bottom:0; }
-  .stack-demo__cell[data-kind="u8"] { background:#0ea5e9; color:#fff; }
-  .stack-demo__cell[data-kind="u16"] { background:#059669; color:#fff; }
-  .stack-demo__cell[data-kind="u32"] { background:#2563eb; color:#fff; }
-  .stack-demo__cell[data-kind="sum"] { background:#f97316; color:#fff; }
-  .stack-demo__cell[data-kind="ret"] { background:#7c3aed; color:#fff; }
-  .stack-demo__cell[data-kind="recursive"] { background:#dc2626; color:#fff; }
-  .stack-demo__cell[data-active="true"] { outline:3px solid #facc15; outline-offset:-3px; }
+  .stack-viz__explanation {
+    margin-top: .75rem;
+    min-height: 3.2rem;
+    padding: .72rem .82rem;
+    border-left: 3px solid #3b82f6;
+    border-radius: .4rem;
+    color: #cbd5e1;
+    background: rgba(30, 41, 59, .45);
+    font-size: .77rem;
+  }
 
-  .stack-demo__addresses { position:absolute; right:0; top:0; bottom:0; width:2.6rem; display:grid; grid-template-rows:repeat(12,1fr); color:#ef4444; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.6rem; }
-  .stack-demo__address-row { display:flex; align-items:flex-start; justify-content:flex-start; padding-left:.2rem; }
+  .stack-viz__memory-side { min-width: 0; }
+  .stack-viz__memory-heading { display: flex; align-items: end; justify-content: space-between; gap: .7rem; margin-bottom: .65rem; }
+  .stack-viz__memory-heading strong { font-size: .95rem; }
+  .stack-viz__memory-heading span { color: #94a3b8; font-size: .68rem; }
 
-  .stack-demo__sp { position:absolute; left:-4.1rem; top:0; display:flex; align-items:center; gap:.35rem; color:#ef4444; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:800; transition:top 220ms ease; }
-  .stack-demo__sp b { font-size:1.35rem; }
-  .stack-demo__frame-brackets { position:absolute; inset:0 -2.2rem 0 auto; width:2rem; pointer-events:none; }
-  .stack-demo__bracket { position:absolute; right:0; width:1.25rem; border-right:3px solid; border-top:3px solid; border-bottom:3px solid; border-radius:0 .25rem .25rem 0; }
-  .stack-demo__bracket span { position:absolute; right:1.45rem; top:50%; transform:translateY(-50%); padding:.1rem .25rem; background:#020304; white-space:nowrap; font-size:.62rem; }
-  .stack-demo__bracket[data-frame="main"] { color:#0ea5e9; }
-  .stack-demo__bracket[data-frame="func"] { color:#8b5cf6; }
+  .memory-board { display: grid; grid-template-columns: 88px minmax(150px, 1fr); gap: .6rem; }
+  .memory-addresses {
+    display: grid;
+    grid-template-rows: repeat(var(--rows), var(--row-h));
+    color: #ef4444;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: .6rem;
+  }
+  .memory-addresses span { display: flex; align-items: center; justify-content: flex-end; }
 
-  .stack-demo__growth { position:absolute; right:.1rem; bottom:.25rem; color:#94a3b8; font-size:.68rem; }
-  .stack-demo__overflow { position:absolute; left:4.4rem; right:4.2rem; bottom:.05rem; display:flex; align-items:center; justify-content:center; gap:.5rem; min-height:34px; border:1px dashed #ef4444; border-radius:.45rem; color:#fecaca; background:rgba(127,29,29,.26); opacity:0; transform:translateY(8px); transition:all 180ms ease; }
-  .stack-demo__overflow[data-active="true"] { opacity:1; transform:translateY(0); animation:overflowPulse 600ms ease-in-out infinite alternate; }
-  .stack-demo__overflow span { color:#fca5a5; font-size:.68rem; }
+  .memory-shell { position: relative; width: min(205px, 100%); padding-right: 72px; }
+  .memory-grid, .memory-blocks {
+    display: grid;
+    grid-template-rows: repeat(var(--rows), var(--row-h));
+  }
+  .memory-grid { border: 2px solid #e5e7eb; background: #050505; }
+  .memory-grid > span { border-bottom: 1px solid rgba(255,255,255,.72); }
+  .memory-grid > span:last-child { border-bottom: 0; }
 
-  .stack-demo__controls { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1rem; }
-  .stack-demo__controls button { padding:.55rem .75rem; border:1px solid var(--sd-border); border-radius:.6rem; color:inherit; background:transparent; cursor:pointer; font-size:.8rem; }
-  .stack-demo__controls button:hover { background:color-mix(in srgb,currentColor 7%,transparent); }
-  .stack-demo__controls button[data-action="recurse"] { border-color:rgba(220,38,38,.45); }
+  .memory-blocks { position: absolute; inset: 0 72px 0 0; z-index: 2; grid-template-columns: 1fr; pointer-events: none; }
+  .memory-block {
+    grid-column: 1;
+    grid-row: var(--start) / span var(--span);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #f8fafc;
+    color: #fff;
+    font-size: .9rem;
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0,0,0,.45);
+    animation: blockIn 180ms ease-out;
+  }
+  .memory-block small { position: absolute; left: .2rem; bottom: .05rem; font-size: .46rem; font-weight: 700; opacity: .84; }
 
-  .stack-demo__metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.55rem; margin-top:.8rem; }
-  .stack-demo__metrics div { padding:.65rem; border:1px solid var(--sd-border); border-radius:.65rem; }
-  .stack-demo__metrics span { display:block; color:var(--sd-muted); font-size:.7rem; }
-  .stack-demo__metrics strong { display:block; margin-top:.2rem; font-size:.86rem; }
-  .stack-demo__explain { margin-top:.8rem; padding:.7rem .8rem; border-left:3px solid #3b82f6; border-radius:.35rem; background:color-mix(in srgb,currentColor 3%,transparent); color:var(--sd-muted); font-size:.78rem; }
+  .memory-origin { position: absolute; top: -.1rem; left: -7.4rem; color: #f8fafc; font-size: .72rem; white-space: nowrap; }
+  .memory-origin b { color: #fbbf24; font-size: 1rem; }
+  .memory-sp {
+    position: absolute;
+    left: -4rem;
+    top: -.5rem;
+    z-index: 4;
+    color: #ef4444;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .8rem;
+    font-weight: 900;
+    transition: top 220ms ease;
+    white-space: nowrap;
+  }
 
-  @keyframes overflowPulse { from { box-shadow:0 0 0 rgba(239,68,68,0); } to { box-shadow:0 0 28px rgba(239,68,68,.5); } }
-  @media (max-width:860px) { .stack-demo__stage { grid-template-columns:1fr; } .stack-demo__memory-pane { min-height:500px; } }
-  @media (max-width:620px) { .stack-demo__header { flex-direction:column; } .stack-demo__metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .stack-demo__stage { padding:.7rem; } }
+  .memory-brackets { position: absolute; inset: 0 0 0 auto; width: 68px; z-index: 3; pointer-events: none; }
+  .frame-bracket {
+    position: absolute;
+    right: 0;
+    top: calc((var(--start) - 1) * var(--row-h));
+    height: calc(var(--span) * var(--row-h));
+    width: 62px;
+    border-right: 3px solid var(--frame-color);
+  }
+  .frame-bracket::before, .frame-bracket::after {
+    content: "";
+    position: absolute;
+    right: -3px;
+    width: 13px;
+    border-top: 3px solid var(--frame-color);
+  }
+  .frame-bracket::before { top: 0; }
+  .frame-bracket::after { bottom: 0; }
+  .frame-bracket span {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--frame-color);
+    background: #020304;
+    font-size: .58rem;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .memory-overflow {
+    position: absolute;
+    left: 0;
+    right: 72px;
+    bottom: -2.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    min-height: 34px;
+    border: 1px dashed #ef4444;
+    border-radius: .42rem;
+    color: #fecaca;
+    background: rgba(127,29,29,.4);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+  .memory-overflow[data-active="true"] { opacity: 1; transform: translateY(0); animation: overflowPulse 600ms ease-in-out infinite alternate; }
+  .memory-overflow span { color: #fca5a5; font-size: .62rem; }
+
+  @keyframes blockIn { from { opacity: .2; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes overflowPulse { from { box-shadow: 0 0 0 rgba(239,68,68,0); } to { box-shadow: 0 0 28px rgba(239,68,68,.55); } }
+
+  @media (max-width: 900px) {
+    .stack-viz__workspace { grid-template-columns: 1fr; }
+    .stack-viz__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .memory-shell { margin-left: 1rem; }
+  }
+  @media (max-width: 620px) {
+    .stack-viz__header, .stack-viz__memory-heading { flex-direction: column; align-items: flex-start; }
+    .stack-viz__summary { grid-template-columns: 1fr; }
+    .stack-viz__counter { width: 100%; margin-left: 0; }
+    .stack-viz__workspace { padding: .7rem; }
+    .memory-board { grid-template-columns: 74px 1fr; }
+    .memory-shell { padding-right: 62px; }
+    .memory-blocks { right: 62px; }
+  }
 </style>
 
 <script>
-  type Kind = "u8" | "u16" | "u32" | "sum" | "ret" | "recursive";
-  type Cell = { label: string; kind: Kind; frame: "main" | "func" | "recursive" };
-  type CodeLine = { text: string; frame: "main" | "func" };
+  type Panel = "main" | "helper" | "recursive";
+  type Highlight = { panel: Panel; line: number; state: "active" | "call" | "done" };
+  type Frame = "main" | "helper" | "recursive";
+  type Block = { key: string; label: string; value: string; size: number; frame: Frame; color: string };
+  type Step = { title: string; activeFrame: string; explanation: string; highlights: Highlight[]; blocks: Block[] };
 
-  function initStackDemo(root: HTMLElement): void {
+  function initStackViz(root: HTMLElement): void {
     if (root.dataset.initialized === "true") return;
     root.dataset.initialized = "true";
 
-    const capacity = 12;
+    const capacity = 24;
     const base = 0x20001000;
-    const bytesPerCell = 4;
-    const cells: Cell[] = [];
-    let stepIndex = 0;
-    let funcActive = false;
-    let recursionTimer = 0;
-    let overflowed = false;
 
-    const mainProgram = [
-      { text: "int main(void)", frame: "main" },
-      { text: "{", frame: "main" },
-      { text: "    uint8_t  a = 12;", frame: "main" },
-      { text: "    uint16_t b = 100;", frame: "main" },
-      { text: "    uint16_t c = a + b;", frame: "main" },
-      { text: "    uint32_t d = 4000;", frame: "main" },
-      { text: "    uint8_t  e = 240;", frame: "main" },
-      { text: "    uint32_t f = 9;", frame: "main" },
-      { text: "    do_nothing();", frame: "main" },
-      { text: "}", frame: "main" },
-      { text: "", frame: "func" },
-      { text: "void do_nothing(void)", frame: "func" },
-      { text: "{", frame: "func" },
-      { text: "    uint16_t a = 100;", frame: "func" },
-      { text: "    uint8_t  b = 30;", frame: "func" },
-      { text: "}", frame: "func" },
-    ] satisfies CodeLine[];
+    const blockMap: Record<string, Block> = {
+      a:  { key: "a",  label: "a:u8",   value: "12",   size: 1, frame: "main",   color: "#dc2626" },
+      b:  { key: "b",  label: "b:u16",  value: "100",  size: 2, frame: "main",   color: "#059669" },
+      c:  { key: "c",  label: "c:u16",  value: "112",  size: 2, frame: "main",   color: "#f97316" },
+      d:  { key: "d",  label: "d:u32",  value: "4000", size: 4, frame: "main",   color: "#2563eb" },
+      e:  { key: "e",  label: "e:u8",   value: "240",  size: 1, frame: "main",   color: "#7c3aed" },
+      f:  { key: "f",  label: "f:u32",  value: "9",    size: 4, frame: "main",   color: "#ca8a04" },
+      g:  { key: "g",  label: "g:u16",  value: "10",   size: 2, frame: "main",   color: "#0284c7" },
+      ha: { key: "ha", label: "a:u16",  value: "100",  size: 2, frame: "helper", color: "#0ea5e9" },
+      hb: { key: "hb", label: "b:u8",   value: "30",   size: 1, frame: "helper", color: "#1e3a8a" },
+    };
 
-    const actions = [
-      { line: 2, cell: { label: "12", kind: "u8", frame: "main" } as Cell, msg: "main 创建 uint8_t a = 12，变量进入 main 栈帧。" },
-      { line: 3, cell: { label: "100", kind: "u16", frame: "main" } as Cell, msg: "uint16_t b = 100 占用栈空间。" },
-      { line: 4, cell: { label: "112", kind: "sum", frame: "main" } as Cell, msg: "计算 c = a + b，结果 112 保存到栈。" },
-      { line: 5, cell: { label: "4000", kind: "u32", frame: "main" } as Cell, msg: "uint32_t d = 4000 进入栈。" },
-      { line: 6, cell: { label: "240", kind: "ret", frame: "main" } as Cell, msg: "uint8_t e = 240 进入栈。" },
-      { line: 7, cell: { label: "9", kind: "sum", frame: "main" } as Cell, msg: "uint32_t f = 9 进入 main 栈帧。" },
-      { line: 8, cell: null, msg: "即将调用 do_nothing()：下一步会创建新的函数栈帧。" },
+    const blocks = (...keys: string[]): Block[] => keys.map((key) => ({ ...blockMap[key] }));
+
+    const steps: Step[] = [
+      { title: "进入 main()", activeFrame: "main", explanation: "main() 开始执行，此时还没有局部变量占用演示栈空间。", highlights: [{ panel: "main", line: 0, state: "active" }], blocks: [] },
+      { title: "a 入栈", activeFrame: "main", explanation: "uint8_t a = 12 占 1 Byte。执行后 SP 向低地址移动 1 Byte。", highlights: [{ panel: "main", line: 2, state: "active" }], blocks: blocks("a") },
+      { title: "b 入栈", activeFrame: "main", explanation: "uint16_t b = 100 占 2 Byte，所以右侧连续占用两个字节格。", highlights: [{ panel: "main", line: 3, state: "active" }], blocks: blocks("a", "b") },
+      { title: "c 入栈", activeFrame: "main", explanation: "c = a + b 得到 112，类型为 uint16_t，因此占 2 Byte。", highlights: [{ panel: "main", line: 4, state: "active" }], blocks: blocks("a", "b", "c") },
+      { title: "d 入栈", activeFrame: "main", explanation: "uint32_t d = 4000 占 4 Byte，栈帧明显向下扩展。", highlights: [{ panel: "main", line: 5, state: "active" }], blocks: blocks("a", "b", "c", "d") },
+      { title: "e 入栈", activeFrame: "main", explanation: "uint8_t e = 240 再占 1 Byte。", highlights: [{ panel: "main", line: 6, state: "active" }], blocks: blocks("a", "b", "c", "d", "e") },
+      { title: "f 入栈", activeFrame: "main", explanation: "uint32_t f = 9 占 4 Byte。此时 main 栈帧已经使用 14 Byte。", highlights: [{ panel: "main", line: 7, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f") },
+      { title: "调用 do_nothing()", activeFrame: "do_nothing", explanation: "执行函数调用时，main 栈帧仍然保留，新函数的栈帧会继续压在它下面。", highlights: [{ panel: "main", line: 8, state: "call" }], blocks: blocks("a", "b", "c", "d", "e", "f") },
+      { title: "do_nothing.a 入栈", activeFrame: "do_nothing", explanation: "进入 do_nothing() 后，它自己的 uint16_t a = 100 入栈，占 2 Byte。", highlights: [{ panel: "main", line: 8, state: "call" }, { panel: "helper", line: 2, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "ha") },
+      { title: "do_nothing.b 入栈", activeFrame: "do_nothing", explanation: "uint8_t b = 30 再占 1 Byte。右侧紫色括号表示独立的 do_nothing 栈帧。", highlights: [{ panel: "main", line: 8, state: "call" }, { panel: "helper", line: 3, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "ha", "hb") },
+      { title: "函数返回", activeFrame: "main", explanation: "do_nothing() 返回后，它的局部变量整体失效，SP 一次回退到 main 栈帧顶部。", highlights: [{ panel: "main", line: 9, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f") },
+      { title: "g 入栈", activeFrame: "main", explanation: "uint16_t g = 10 占 2 Byte，继续扩展 main 栈帧。", highlights: [{ panel: "main", line: 9, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "g") },
+      { title: "再次调用 do_nothing()", activeFrame: "do_nothing", explanation: "第二次调用会重新创建一份 do_nothing 栈帧；上一次调用的局部变量不会被复用为“仍然存活”的变量。", highlights: [{ panel: "main", line: 10, state: "call" }, { panel: "helper", line: 2, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "g", "ha", "hb") },
+      { title: "执行结束", activeFrame: "main", explanation: "do_nothing() 再次返回，临时栈帧释放，程序回到 main() 末尾。", highlights: [{ panel: "main", line: 11, state: "active" }], blocks: blocks("a", "b", "c", "d", "e", "f", "g") },
     ];
 
-    const codeRoot = root.querySelector<HTMLElement>("[data-code-lines]");
-    const cellsRoot = root.querySelector<HTMLElement>("[data-cells]");
-    const addressesRoot = root.querySelector<HTMLElement>("[data-addresses]");
-    const bracketsRoot = root.querySelector<HTMLElement>("[data-brackets]");
-    const sp = root.querySelector<HTMLElement>("[data-sp]");
-    const status = root.querySelector<HTMLElement>("[data-status]");
-    const used = root.querySelector<HTMLElement>("[data-used]");
-    const free = root.querySelector<HTMLElement>("[data-free]");
-    const spValue = root.querySelector<HTMLElement>("[data-sp-value]");
-    const actionLabel = root.querySelector<HTMLElement>("[data-action-label]");
-    const log = root.querySelector<HTMLElement>("[data-log]");
-    const overflow = root.querySelector<HTMLElement>("[data-overflow]");
-    if (!codeRoot || !cellsRoot || !addressesRoot || !bracketsRoot || !sp || !status || !used || !free || !spValue || !actionLabel || !log || !overflow) return;
+    const q = <T extends Element>(selector: string): T | null => root.querySelector<T>(selector);
+    const stepIndexEl = q<HTMLElement>("[data-step-index]");
+    const stepTotalEl = q<HTMLElement>("[data-step-total]");
+    const stepTitleEl = q<HTMLElement>("[data-step-title]");
+    const activeFrameEl = q<HTMLElement>("[data-active-frame]");
+    const usedEl = q<HTMLElement>("[data-used-space]");
+    const spValueEl = q<HTMLElement>("[data-sp-value]");
+    const explanationEl = q<HTMLElement>("[data-explanation]");
+    const blocksRoot = q<HTMLElement>("[data-blocks]");
+    const bracketsRoot = q<HTMLElement>("[data-brackets]");
+    const spMarker = q<HTMLElement>("[data-sp-marker]");
+    const overflowBanner = q<HTMLElement>("[data-overflow-banner]");
+    const normalCode = q<HTMLElement>("[data-normal-code]");
+    const recursiveCode = q<HTMLElement>("[data-recursive-code]");
+    const prevBtn = q<HTMLButtonElement>('[data-action="prev"]');
+    const nextBtn = q<HTMLButtonElement>('[data-action="next"]');
+    const playBtn = q<HTMLButtonElement>('[data-action="play"]');
+    const overflowBtn = q<HTMLButtonElement>('[data-action="overflow"]');
+    const resetBtn = q<HTMLButtonElement>('[data-action="reset"]');
+    const codeLines = Array.from(root.querySelectorAll<HTMLElement>("[data-panel][data-line]"));
 
-    const stopRecursion = () => { if (recursionTimer) window.clearInterval(recursionTimer); recursionTimer = 0; };
+    if (!stepIndexEl || !stepTotalEl || !stepTitleEl || !activeFrameEl || !usedEl || !spValueEl || !explanationEl || !blocksRoot || !bracketsRoot || !spMarker || !overflowBanner || !normalCode || !recursiveCode || !prevBtn || !nextBtn || !playBtn || !overflowBtn || !resetBtn) return;
 
-    mainProgram.forEach((line, index) => {
-      const row = document.createElement("div");
-      row.className = "stack-demo__line";
-      row.dataset.line = String(index);
-      row.dataset.frame = line.frame;
-      const no = document.createElement("span"); no.className = "stack-demo__line-no"; no.textContent = String(index + 1);
-      const text = document.createElement("span"); text.textContent = line.text || " ";
-      row.append(no, text); codeRoot.append(row);
-    });
+    stepTotalEl.textContent = String(steps.length);
+    let currentStep = 0;
+    let timer = 0;
+    let overflowMode = false;
+    let recursionDepth = 0;
 
-    for (let i = 0; i < capacity; i += 1) {
-      const cell = document.createElement("div"); cell.className = "stack-demo__cell"; cell.dataset.cell = String(i); cell.textContent = ""; cellsRoot.append(cell);
-      const addr = document.createElement("div"); addr.className = "stack-demo__address-row"; addr.textContent = `0x${(base - i * bytesPerCell).toString(16).toUpperCase()}`; addressesRoot.append(addr);
-    }
-
-    const highlightLine = (line: number) => {
-      codeRoot.querySelectorAll<HTMLElement>("[data-line]").forEach((el, idx) => {
-        el.dataset.active = idx === line ? "true" : "false";
-        el.dataset.done = idx < line ? "true" : "false";
-      });
+    const stopTimer = (): void => {
+      if (timer) window.clearInterval(timer);
+      timer = 0;
+      playBtn.textContent = "自动播放";
     };
 
-    const renderBrackets = () => {
+    const clearHighlights = (): void => {
+      codeLines.forEach((line) => delete line.dataset.state);
+    };
+
+    const addBracket = (start: number, span: number, label: string, color: string): void => {
+      const bracket = document.createElement("div");
+      bracket.className = "frame-bracket";
+      bracket.style.setProperty("--start", String(start + 1));
+      bracket.style.setProperty("--span", String(span));
+      bracket.style.setProperty("--frame-color", color);
+      const text = document.createElement("span");
+      text.textContent = label;
+      bracket.append(text);
+      bracketsRoot.append(bracket);
+    };
+
+    const renderBlocks = (items: Block[]): number => {
+      blocksRoot.replaceChildren();
       bracketsRoot.replaceChildren();
-      const addBracket = (frame: "main" | "func", start: number, count: number, label: string) => {
-        if (count <= 0) return;
-        const bracket = document.createElement("div");
-        bracket.className = "stack-demo__bracket";
-        bracket.dataset.frame = frame;
-        bracket.style.top = `${(start / capacity) * 100}%`;
-        bracket.style.height = `${(count / capacity) * 100}%`;
-        const text = document.createElement("span"); text.textContent = label; bracket.append(text); bracketsRoot.append(bracket);
-      };
-      const mainCount = cells.filter(c => c.frame === "main").length;
-      const funcCount = cells.filter(c => c.frame === "func").length;
-      addBracket("main", 0, mainCount, "main frame");
-      addBracket("func", mainCount, funcCount, "do_nothing frame");
-    };
+      let offset = 0;
+      const ranges: { frame: Frame; start: number; span: number }[] = [];
+      let frame: Frame | null = null;
+      let frameStart = 0;
+      let frameSpan = 0;
 
-    const render = () => {
-      const cellEls = Array.from(cellsRoot.querySelectorAll<HTMLElement>("[data-cell]"));
-      cellEls.forEach((el, index) => {
-        const cell = cells[index];
-        el.textContent = cell?.label ?? "";
-        if (cell) el.dataset.kind = cell.kind; else delete el.dataset.kind;
-        el.dataset.active = index === cells.length - 1 && cells.length > 0 ? "true" : "false";
+      items.forEach((item) => {
+        const block = document.createElement("div");
+        block.className = "memory-block";
+        block.style.setProperty("--start", String(offset + 1));
+        block.style.setProperty("--span", String(item.size));
+        block.style.background = item.color;
+        block.title = `${item.label} = ${item.value} · ${item.size} Byte`;
+        const value = document.createElement("span");
+        value.textContent = item.value;
+        const label = document.createElement("small");
+        label.textContent = item.label;
+        block.append(value, label);
+        blocksRoot.append(block);
+
+        if (frame === null) {
+          frame = item.frame;
+          frameStart = offset;
+          frameSpan = item.size;
+        } else if (frame === item.frame) {
+          frameSpan += item.size;
+        } else {
+          ranges.push({ frame, start: frameStart, span: frameSpan });
+          frame = item.frame;
+          frameStart = offset;
+          frameSpan = item.size;
+        }
+        offset += item.size;
       });
-      const count = cells.length;
-      used.textContent = `${count} / ${capacity}`;
-      free.textContent = String(capacity - count);
-      spValue.textContent = `0x${(base - count * bytesPerCell).toString(16).toUpperCase()}`;
-      sp.style.top = `${Math.min(count, capacity) * (430 / capacity) - 10}px`;
-      renderBrackets();
-      if (!overflowed) {
-        const tight = count >= 9;
-        status.textContent = tight ? "栈空间紧张" : "运行正常";
-        status.style.color = tight ? "#a16207" : "#15803d";
-        status.style.background = tight ? "rgba(234,179,8,.16)" : "rgba(22,163,74,.14)";
+      if (frame !== null) ranges.push({ frame, start: frameStart, span: frameSpan });
+
+      ranges.forEach((range) => {
+        if (range.frame === "main") addBracket(range.start, range.span, "main 栈帧", "#38bdf8");
+        if (range.frame === "helper") addBracket(range.start, range.span, "do_nothing 栈帧", "#a855f7");
+        if (range.frame === "recursive") addBracket(range.start, range.span, `递归栈帧 × ${recursionDepth}`, "#ef4444");
+      });
+      return offset;
+    };
+
+    const setSp = (used: number): void => {
+      usedEl.textContent = `${used} B / ${capacity} B`;
+      spValueEl.textContent = `0x${(base - used).toString(16).toUpperCase()}`;
+      spMarker.style.top = `calc(${Math.min(used, capacity)} * var(--row-h) - .52rem)`;
+    };
+
+    const renderStep = (): void => {
+      overflowMode = false;
+      normalCode.hidden = false;
+      recursiveCode.hidden = true;
+      overflowBanner.dataset.active = "false";
+      const step = steps[currentStep];
+      stepIndexEl.textContent = String(currentStep + 1);
+      stepTitleEl.textContent = step.title;
+      activeFrameEl.textContent = step.activeFrame;
+      explanationEl.textContent = step.explanation;
+      clearHighlights();
+      step.highlights.forEach((highlight) => {
+        const line = q<HTMLElement>(`[data-panel="${highlight.panel}"][data-line="${highlight.line}"]`);
+        if (line) line.dataset.state = highlight.state;
+      });
+      const used = renderBlocks(step.blocks);
+      setSp(used);
+      prevBtn.disabled = currentStep === 0;
+      nextBtn.disabled = currentStep === steps.length - 1;
+      stepTotalEl.textContent = String(steps.length);
+    };
+
+    const renderRecursive = (): void => {
+      overflowMode = true;
+      normalCode.hidden = true;
+      recursiveCode.hidden = false;
+      clearHighlights();
+      const line = q<HTMLElement>('[data-panel="recursive"][data-line="3"]');
+      if (line) line.dataset.state = "active";
+      const items: Block[] = [];
+      for (let index = 1; index <= recursionDepth; index += 1) {
+        items.push({ key: `r${index}`, label: `buf[4] #${index}`, value: `R${index}`, size: 4, frame: "recursive", color: "#dc2626" });
+      }
+      const used = renderBlocks(items);
+      setSp(Math.min(used, capacity));
+      stepTitleEl.textContent = used > capacity ? "Stack Overflow" : `递归深度 ${recursionDepth}`;
+      activeFrameEl.textContent = `recurse(${recursionDepth})`;
+      stepIndexEl.textContent = String(recursionDepth);
+      stepTotalEl.textContent = "∞";
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+
+      if (used > capacity) {
+        overflowBanner.dataset.active = "true";
+        explanationEl.textContent = "新的递归调用还想继续压入 4 Byte 栈帧，但可用栈空间已经耗尽，SP 将越过栈边界，因此发生 Stack Overflow。";
+        stopTimer();
+      } else {
+        overflowBanner.dataset.active = "false";
+        explanationEl.textContent = `第 ${recursionDepth} 层递归创建了新的局部数组 buf[4]，又占用 4 Byte。每次递归都会保留上一层栈帧。`;
       }
     };
 
-    const push = (cell: Cell): boolean => {
-      if (cells.length >= capacity) {
-        overflowed = true; stopRecursion(); overflow.dataset.active = "true";
-        status.textContent = "栈溢出"; status.style.color = "#b91c1c"; status.style.background = "rgba(239,68,68,.14)";
-        actionLabel.textContent = "Stack Overflow";
-        log.textContent = "继续压栈需要越过栈边界，SP 已进入非法区域。";
-        return false;
+    prevBtn.addEventListener("click", () => {
+      stopTimer();
+      if (overflowMode) return;
+      currentStep = Math.max(0, currentStep - 1);
+      renderStep();
+    });
+
+    nextBtn.addEventListener("click", () => {
+      stopTimer();
+      if (overflowMode) return;
+      currentStep = Math.min(steps.length - 1, currentStep + 1);
+      renderStep();
+    });
+
+    playBtn.addEventListener("click", () => {
+      if (timer) {
+        stopTimer();
+        return;
       }
-      cells.push(cell); render(); return true;
-    };
-
-    const callFunction = () => {
-      stopRecursion(); overflowed = false; overflow.dataset.active = "false";
-      if (funcActive) { log.textContent = "do_nothing() 栈帧已经存在。"; return; }
-      if (cells.length + 3 > capacity) { push({ label:"overflow", kind:"recursive", frame:"recursive" }); return; }
-      highlightLine(8);
-      push({ label:"RET", kind:"ret", frame:"func" });
-      push({ label:"100", kind:"u16", frame:"func" });
-      push({ label:"30", kind:"u8", frame:"func" });
-      funcActive = true;
-      highlightLine(14);
-      actionLabel.textContent = "调用 do_nothing()";
-      log.textContent = "函数调用创建新栈帧：保存返回地址 RET，并压入局部变量 100 和 30。紫色括号显示函数栈帧范围。";
-    };
-
-    root.querySelector('[data-action="next"]')?.addEventListener("click", () => {
-      stopRecursion(); overflowed = false; overflow.dataset.active = "false";
-      if (stepIndex >= actions.length) { callFunction(); return; }
-      const action = actions[stepIndex]; highlightLine(action.line);
-      if (action.cell) push(action.cell);
-      actionLabel.textContent = `执行第 ${action.line + 1} 行`;
-      log.textContent = action.msg;
-      stepIndex += 1;
+      if (overflowMode) return;
+      playBtn.textContent = "暂停";
+      timer = window.setInterval(() => {
+        if (currentStep >= steps.length - 1) {
+          stopTimer();
+          return;
+        }
+        currentStep += 1;
+        renderStep();
+      }, 1050);
     });
 
-    root.querySelector('[data-action="call"]')?.addEventListener("click", callFunction);
-
-    root.querySelector('[data-action="return"]')?.addEventListener("click", () => {
-      stopRecursion();
-      const firstFunc = cells.findIndex(c => c.frame === "func");
-      if (firstFunc < 0) { log.textContent = "当前没有函数栈帧可以返回。"; return; }
-      cells.splice(firstFunc);
-      funcActive = false; overflowed = false; overflow.dataset.active = "false";
-      highlightLine(9); actionLabel.textContent = "函数返回";
-      log.textContent = "do_nothing() 返回：整个函数栈帧一次性释放，SP 回到 main 栈帧顶部。";
-      render();
+    overflowBtn.addEventListener("click", () => {
+      stopTimer();
+      recursionDepth = 0;
+      overflowMode = true;
+      renderRecursive();
+      timer = window.setInterval(() => {
+        recursionDepth += 1;
+        renderRecursive();
+      }, 620);
     });
 
-    root.querySelector('[data-action="recurse"]')?.addEventListener("click", () => {
-      if (recursionTimer) return;
-      overflowed = false; overflow.dataset.active = "false";
-      actionLabel.textContent = "递归压栈";
-      log.textContent = "开始递归：每次调用都创建新的栈帧，直到耗尽栈空间。";
-      let depth = 1;
-      recursionTimer = window.setInterval(() => {
-        if (!push({ label:`R${depth}`, kind:"recursive", frame:"recursive" })) return;
-        depth += 1;
-      }, 360);
+    resetBtn.addEventListener("click", () => {
+      stopTimer();
+      currentStep = 0;
+      recursionDepth = 0;
+      overflowMode = false;
+      renderStep();
     });
 
-    root.querySelector('[data-action="reset"]')?.addEventListener("click", () => {
-      stopRecursion(); cells.length = 0; stepIndex = 0; funcActive = false; overflowed = false; overflow.dataset.active = "false";
-      highlightLine(0); actionLabel.textContent = "等待执行"; log.textContent = "点击“下一步”，观察变量如何依次进入 main 的栈帧。"; render();
-    });
-
-    document.addEventListener("astro:before-swap", stopRecursion, { once:true });
-    highlightLine(0); render();
+    document.addEventListener("astro:before-swap", stopTimer, { once: true });
+    renderStep();
   }
 
-  document.querySelectorAll<HTMLElement>("[data-stack-demo]").forEach(initStackDemo);
-  document.addEventListener("astro:page-load", () => document.querySelectorAll<HTMLElement>("[data-stack-demo]").forEach(initStackDemo));
+  document.querySelectorAll<HTMLElement>("[data-stack-viz]").forEach(initStackViz);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll<HTMLElement>("[data-stack-viz]").forEach(initStackViz);
+  });
 </script>
