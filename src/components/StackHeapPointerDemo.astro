@@ -1,0 +1,321 @@
+---
+const codeLines = [
+  "int main(void)",
+  "{",
+  "    int *p = malloc(sizeof(int));",
+  "    *p = 1029;",
+  "    int *q = malloc(sizeof(int));",
+  "    *q = 1037;",
+  "    free(p);",
+  "    p = NULL;",
+  "}",
+];
+---
+
+<section class="stack-heap-pointer not-prose" data-stack-heap-pointer>
+  <div class="stack-heap-pointer__header">
+    <div>
+      <h3>栈中指针 → 堆中数据</h3>
+      <p>局部指针变量保存在栈中，malloc 分配的数据块位于堆中；箭头表示指针保存的地址指向哪一块堆内存。</p>
+    </div>
+    <div class="stack-heap-pointer__legend">
+      <span><i class="stack-heap-pointer__dot stack-heap-pointer__dot--stack"></i>栈指针</span>
+      <span><i class="stack-heap-pointer__dot stack-heap-pointer__dot--heap"></i>堆数据</span>
+      <span><i class="stack-heap-pointer__dot stack-heap-pointer__dot--free"></i>已释放</span>
+    </div>
+  </div>
+
+  <div class="stack-heap-pointer__controls">
+    <button type="button" data-action="prev">上一步</button>
+    <button type="button" data-action="next">下一步</button>
+    <button type="button" data-action="play">自动播放</button>
+    <button type="button" data-action="reset">重置</button>
+    <span>步骤 <strong data-step-index>1</strong> / <span data-step-total>1</span></span>
+  </div>
+
+  <div class="stack-heap-pointer__summary">
+    <div><span>当前动作</span><strong data-step-title>初始状态</strong></div>
+    <div><span>栈中指针</span><strong data-stack-state>无</strong></div>
+    <div><span>有效堆块</span><strong data-heap-state>0</strong></div>
+    <div><span>指向关系</span><strong data-relation>尚未分配</strong></div>
+  </div>
+
+  <div class="stack-heap-pointer__workspace">
+    <div class="stack-heap-pointer__code">
+      <div class="stack-heap-pointer__panel-title">C 代码执行过程</div>
+      <ol>
+        {codeLines.map((line, index) => (
+          <li data-code-line={String(index)}>{line}</li>
+        ))}
+      </ol>
+      <div class="stack-heap-pointer__explain" data-explanation>
+        初始时还没有调用 malloc，因此没有有效的堆分配。
+      </div>
+    </div>
+
+    <div class="stack-heap-pointer__memory" data-memory-layout>
+      <svg class="stack-heap-pointer__arrows" data-arrows aria-hidden="true"></svg>
+
+      <div class="stack-heap-pointer__area">
+        <h4>Stack（栈）</h4>
+        <div class="stack-heap-pointer__stack-card" data-stack-card="p" data-hidden="true">
+          <div><strong>p</strong><small>int *</small></div>
+          <code data-stack-value="p">NULL</code>
+        </div>
+        <div class="stack-heap-pointer__stack-card" data-stack-card="q" data-hidden="true">
+          <div><strong>q</strong><small>int *</small></div>
+          <code data-stack-value="q">NULL</code>
+        </div>
+      </div>
+
+      <div class="stack-heap-pointer__area">
+        <h4>Heap（堆）</h4>
+        <div class="stack-heap-pointer__heap-card" data-heap-card="h1" data-hidden="true">
+          <div class="stack-heap-pointer__heap-head"><strong>Heap Block A</strong><code>0x20002000</code></div>
+          <div class="stack-heap-pointer__heap-value" data-heap-value="h1">未分配</div>
+        </div>
+        <div class="stack-heap-pointer__heap-card" data-heap-card="h2" data-hidden="true">
+          <div class="stack-heap-pointer__heap-head"><strong>Heap Block B</strong><code>0x20002008</code></div>
+          <div class="stack-heap-pointer__heap-value" data-heap-value="h2">未分配</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stack-heap-pointer__note">
+    <strong>关键：</strong>栈里的 <code>p</code>/<code>q</code> 存的是地址；<code>*p</code>/<code>*q</code> 访问的是对应堆块中的真实数据。
+  </div>
+</section>
+
+<style is:global>
+  .stack-heap-pointer {
+    --shp-border: color-mix(in srgb, currentColor 14%, transparent);
+    --shp-muted: color-mix(in srgb, currentColor 58%, transparent);
+    margin: 1.5rem 0 2rem;
+    padding: 1rem;
+    border: 1px solid var(--shp-border);
+    border-radius: 1rem;
+    background: color-mix(in srgb, currentColor 2.5%, transparent);
+  }
+  .stack-heap-pointer__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .9rem; }
+  .stack-heap-pointer__header h3 { margin: 0; font-size: 1.08rem; }
+  .stack-heap-pointer__header p { margin: .28rem 0 0; color: var(--shp-muted); font-size: .82rem; }
+  .stack-heap-pointer__legend { display: flex; flex-wrap: wrap; gap: .65rem; color: var(--shp-muted); font-size: .7rem; }
+  .stack-heap-pointer__legend span { display: inline-flex; align-items: center; gap: .28rem; }
+  .stack-heap-pointer__dot { width: .65rem; height: .65rem; border-radius: 50%; display: inline-block; }
+  .stack-heap-pointer__dot--stack { background: #2563eb; }
+  .stack-heap-pointer__dot--heap { background: #059669; }
+  .stack-heap-pointer__dot--free { background: #6b7280; }
+
+  .stack-heap-pointer__controls { display: flex; flex-wrap: wrap; align-items: center; gap: .52rem; margin-bottom: .75rem; }
+  .stack-heap-pointer__controls button { padding: .5rem .72rem; border: 1px solid var(--shp-border); border-radius: .62rem; color: inherit; background: transparent; cursor: pointer; font-size: .78rem; }
+  .stack-heap-pointer__controls button:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
+  .stack-heap-pointer__controls button:disabled { opacity: .4; cursor: not-allowed; }
+  .stack-heap-pointer__controls > span { margin-left: auto; color: var(--shp-muted); font-size: .74rem; }
+
+  .stack-heap-pointer__summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .52rem; margin-bottom: .8rem; }
+  .stack-heap-pointer__summary > div { padding: .62rem .7rem; border: 1px solid var(--shp-border); border-radius: .68rem; }
+  .stack-heap-pointer__summary span { display: block; color: var(--shp-muted); font-size: .66rem; }
+  .stack-heap-pointer__summary strong { display: block; margin-top: .16rem; font-size: .84rem; }
+
+  .stack-heap-pointer__workspace { display: grid; grid-template-columns: minmax(320px, .85fr) minmax(460px, 1.25fr); gap: 1rem; padding: 1rem; border-radius: .9rem; color: #e5e7eb; background: #020304; }
+  .stack-heap-pointer__code { overflow: hidden; border: 2px dashed #0ea5e9; border-radius: .9rem; background: #030712; }
+  .stack-heap-pointer__panel-title { padding: .5rem .72rem .1rem; color: #94a3b8; font-size: .72rem; font-weight: 700; }
+  .stack-heap-pointer__code ol { margin: 0; padding: .35rem .5rem .65rem; list-style: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .8rem; line-height: 1.45; }
+  .stack-heap-pointer__code li { margin: .1rem 0; padding: .12rem .45rem; border: 2px solid transparent; border-radius: .38rem; color: #dbeafe; white-space: pre; }
+  .stack-heap-pointer__code li[data-state="active"] { border-color: #facc15; background: rgba(250,204,21,.12); color: #fef08a; }
+  .stack-heap-pointer__code li[data-state="done"] { color: #86efac; opacity: .72; }
+  .stack-heap-pointer__explain { margin: .72rem; min-height: 3.2rem; padding: .72rem .82rem; border-left: 3px solid #3b82f6; border-radius: .4rem; color: #cbd5e1; background: rgba(30,41,59,.45); font-size: .76rem; }
+
+  .stack-heap-pointer__memory { position: relative; display: grid; grid-template-columns: minmax(170px, .8fr) minmax(220px, 1.2fr); gap: 4rem; min-height: 330px; padding: 1rem; border: 1px solid rgba(148,163,184,.16); border-radius: .85rem; background: #030712; overflow: hidden; }
+  .stack-heap-pointer__arrows { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+  .stack-heap-pointer__area { position: relative; z-index: 2; display: flex; flex-direction: column; gap: .8rem; }
+  .stack-heap-pointer__area h4 { margin: 0 0 .1rem; color: #cbd5e1; font-size: .84rem; }
+  .stack-heap-pointer__stack-card { padding: .75rem; border: 2px solid #3b82f6; border-radius: .75rem; background: rgba(37,99,235,.12); transition: opacity 180ms ease, filter 180ms ease; }
+  .stack-heap-pointer__stack-card[data-hidden="true"] { opacity: .2; filter: grayscale(.4); }
+  .stack-heap-pointer__stack-card > div { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+  .stack-heap-pointer__stack-card strong { color: #bfdbfe; font-size: .92rem; }
+  .stack-heap-pointer__stack-card small { color: #93c5fd; font-size: .65rem; }
+  .stack-heap-pointer__stack-card code { display: block; margin-top: .42rem; padding: .42rem .5rem; border-radius: .4rem; background: rgba(2,6,23,.68); color: #f8fafc; font-size: .78rem; }
+
+  .stack-heap-pointer__heap-card { padding: .75rem; border: 2px solid #10b981; border-radius: .75rem; background: rgba(5,150,105,.10); transition: opacity 180ms ease, filter 180ms ease; }
+  .stack-heap-pointer__heap-card[data-hidden="true"] { opacity: .2; filter: grayscale(.5); }
+  .stack-heap-pointer__heap-card[data-freed="true"] { border-color: #6b7280; background: rgba(107,114,128,.14); }
+  .stack-heap-pointer__heap-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; color: #d1fae5; font-size: .7rem; }
+  .stack-heap-pointer__heap-head code { color: #6ee7b7; font-size: .65rem; }
+  .stack-heap-pointer__heap-value { margin-top: .5rem; padding: .6rem; border-radius: .48rem; background: rgba(2,6,23,.68); color: #f8fafc; font-size: 1rem; font-weight: 800; text-align: center; }
+  .stack-heap-pointer__note { margin-top: .72rem; color: var(--shp-muted); font-size: .72rem; line-height: 1.5; }
+
+  @media (max-width: 980px) {
+    .stack-heap-pointer__workspace { grid-template-columns: 1fr; }
+    .stack-heap-pointer__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 680px) {
+    .stack-heap-pointer__header { flex-direction: column; align-items: flex-start; }
+    .stack-heap-pointer__summary { grid-template-columns: 1fr; }
+    .stack-heap-pointer__controls > span { width: 100%; margin-left: 0; }
+    .stack-heap-pointer__memory { grid-template-columns: 1fr; gap: 1rem; }
+    .stack-heap-pointer__arrows { display: none; }
+  }
+</style>
+
+<script>
+  type PointerName = "p" | "q";
+  type HeapName = "h1" | "h2";
+  type PointerState = { visible: boolean; value: string };
+  type HeapState = { visible: boolean; value: string; freed?: boolean };
+  type Step = {
+    title: string;
+    line: number;
+    explanation: string;
+    p: PointerState;
+    q: PointerState;
+    h1: HeapState;
+    h2: HeapState;
+    arrows: Array<{ from: PointerName; to: HeapName }>;
+    stackState: string;
+    heapState: string;
+    relation: string;
+  };
+
+  function initStackHeapPointer(root: HTMLElement): void {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const steps: Step[] = [
+      { title: "初始状态", line: 0, explanation: "初始时还没有调用 malloc，因此没有有效的堆分配。", p: { visible: false, value: "NULL" }, q: { visible: false, value: "NULL" }, h1: { visible: false, value: "未分配" }, h2: { visible: false, value: "未分配" }, arrows: [], stackState: "无", heapState: "0", relation: "尚未分配" },
+      { title: "p = malloc(sizeof(int))", line: 2, explanation: "局部变量 p 位于栈中；malloc 在堆中创建 Heap Block A，并把其地址 0x20002000 返回给 p。", p: { visible: true, value: "0x20002000" }, q: { visible: false, value: "NULL" }, h1: { visible: true, value: "未写入" }, h2: { visible: false, value: "未分配" }, arrows: [{ from: "p", to: "h1" }], stackState: "p", heapState: "1", relation: "p → Heap A" },
+      { title: "*p = 1029", line: 3, explanation: "1029 被写入 p 指向的堆块。p 本身仍只保存地址，并不直接保存 1029。", p: { visible: true, value: "0x20002000" }, q: { visible: false, value: "NULL" }, h1: { visible: true, value: "1029" }, h2: { visible: false, value: "未分配" }, arrows: [{ from: "p", to: "h1" }], stackState: "p", heapState: "1", relation: "p → 1029" },
+      { title: "q = malloc(sizeof(int))", line: 4, explanation: "q 同样是栈上的局部指针。第二次 malloc 创建 Heap Block B，并把地址 0x20002008 保存到 q。", p: { visible: true, value: "0x20002000" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "1029" }, h2: { visible: true, value: "未写入" }, arrows: [{ from: "p", to: "h1" }, { from: "q", to: "h2" }], stackState: "p, q", heapState: "2", relation: "p → A，q → B" },
+      { title: "*q = 1037", line: 5, explanation: "1037 被写入 q 指向的 Heap Block B。此时两个栈指针分别指向两个堆数据块。", p: { visible: true, value: "0x20002000" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "1029" }, h2: { visible: true, value: "1037" }, arrows: [{ from: "p", to: "h1" }, { from: "q", to: "h2" }], stackState: "p, q", heapState: "2", relation: "A=1029，B=1037" },
+      { title: "free(p)", line: 6, explanation: "free(p) 释放的是 p 指向的 Heap Block A；栈中的 p 变量仍然存在，此时它成为悬空指针。", p: { visible: true, value: "0x20002000" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "已释放", freed: true }, h2: { visible: true, value: "1037" }, arrows: [{ from: "p", to: "h1" }, { from: "q", to: "h2" }], stackState: "p, q", heapState: "1", relation: "p 为悬空指针" },
+      { title: "p = NULL", line: 7, explanation: "把 p 设为 NULL 后，p 不再指向已释放区域，箭头消失；q 仍然有效地指向 Heap Block B。", p: { visible: true, value: "NULL" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "空闲", freed: true }, h2: { visible: true, value: "1037" }, arrows: [{ from: "q", to: "h2" }], stackState: "p, q", heapState: "1", relation: "p=NULL，q → B" },
+    ];
+
+    const q = <T extends Element>(selector: string): T | null => root.querySelector<T>(selector);
+    const codeEls = Array.from(root.querySelectorAll<HTMLElement>("[data-code-line]"));
+    const stepIndex = q<HTMLElement>("[data-step-index]");
+    const stepTotal = q<HTMLElement>("[data-step-total]");
+    const stepTitle = q<HTMLElement>("[data-step-title]");
+    const stackState = q<HTMLElement>("[data-stack-state]");
+    const heapState = q<HTMLElement>("[data-heap-state]");
+    const relation = q<HTMLElement>("[data-relation]");
+    const explanation = q<HTMLElement>("[data-explanation]");
+    const arrowsSvg = q<SVGSVGElement>("[data-arrows]");
+    const prevBtn = q<HTMLButtonElement>('[data-action="prev"]');
+    const nextBtn = q<HTMLButtonElement>('[data-action="next"]');
+    const playBtn = q<HTMLButtonElement>('[data-action="play"]');
+    const resetBtn = q<HTMLButtonElement>('[data-action="reset"]');
+    if (!stepIndex || !stepTotal || !stepTitle || !stackState || !heapState || !relation || !explanation || !arrowsSvg || !prevBtn || !nextBtn || !playBtn || !resetBtn) return;
+
+    stepTotal.textContent = String(steps.length);
+    let current = 0;
+    let timer = 0;
+
+    const setPointer = (name: PointerName, state: PointerState): void => {
+      const card = q<HTMLElement>(`[data-stack-card="${name}"]`);
+      const value = q<HTMLElement>(`[data-stack-value="${name}"]`);
+      if (!card || !value) return;
+      card.dataset.hidden = state.visible ? "false" : "true";
+      value.textContent = state.value;
+    };
+
+    const setHeap = (name: HeapName, state: HeapState): void => {
+      const card = q<HTMLElement>(`[data-heap-card="${name}"]`);
+      const value = q<HTMLElement>(`[data-heap-value="${name}"]`);
+      if (!card || !value) return;
+      card.dataset.hidden = state.visible ? "false" : "true";
+      card.dataset.freed = state.freed ? "true" : "false";
+      value.textContent = state.value;
+    };
+
+    const drawArrows = (items: Array<{ from: PointerName; to: HeapName }>): void => {
+      const layout = q<HTMLElement>("[data-memory-layout]");
+      if (!layout) return;
+      const rect = layout.getBoundingClientRect();
+      arrowsSvg.replaceChildren();
+      const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+      const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+      marker.setAttribute("id", "stack-heap-arrow-head");
+      marker.setAttribute("markerWidth", "10");
+      marker.setAttribute("markerHeight", "10");
+      marker.setAttribute("refX", "8");
+      marker.setAttribute("refY", "3");
+      marker.setAttribute("orient", "auto");
+      const head = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      head.setAttribute("d", "M0,0 L0,6 L9,3 z");
+      head.setAttribute("fill", "#f59e0b");
+      marker.append(head);
+      defs.append(marker);
+      arrowsSvg.append(defs);
+
+      for (const item of items) {
+        const from = q<HTMLElement>(`[data-stack-card="${item.from}"]`);
+        const to = q<HTMLElement>(`[data-heap-card="${item.to}"]`);
+        if (!from || !to) continue;
+        const a = from.getBoundingClientRect();
+        const b = to.getBoundingClientRect();
+        const x1 = a.right - rect.left;
+        const y1 = a.top + a.height / 2 - rect.top;
+        const x2 = b.left - rect.left;
+        const y2 = b.top + b.height / 2 - rect.top;
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", `M ${x1} ${y1} C ${x1 + 55} ${y1}, ${x2 - 55} ${y2}, ${x2} ${y2}`);
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", "#f59e0b");
+        path.setAttribute("stroke-width", "3");
+        path.setAttribute("marker-end", "url(#stack-heap-arrow-head)");
+        arrowsSvg.append(path);
+      }
+    };
+
+    const render = (): void => {
+      const step = steps[current];
+      stepIndex.textContent = String(current + 1);
+      stepTitle.textContent = step.title;
+      stackState.textContent = step.stackState;
+      heapState.textContent = step.heapState;
+      relation.textContent = step.relation;
+      explanation.textContent = step.explanation;
+      codeEls.forEach((el, index) => {
+        delete el.dataset.state;
+        if (index < step.line) el.dataset.state = "done";
+        if (index === step.line) el.dataset.state = "active";
+      });
+      setPointer("p", step.p);
+      setPointer("q", step.q);
+      setHeap("h1", step.h1);
+      setHeap("h2", step.h2);
+      window.requestAnimationFrame(() => drawArrows(step.arrows));
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === steps.length - 1;
+    };
+
+    const stop = (): void => {
+      if (timer) window.clearInterval(timer);
+      timer = 0;
+      playBtn.textContent = "自动播放";
+    };
+
+    prevBtn.addEventListener("click", () => { stop(); current = Math.max(0, current - 1); render(); });
+    nextBtn.addEventListener("click", () => { stop(); current = Math.min(steps.length - 1, current + 1); render(); });
+    playBtn.addEventListener("click", () => {
+      if (timer) { stop(); return; }
+      playBtn.textContent = "暂停";
+      timer = window.setInterval(() => {
+        if (current >= steps.length - 1) { stop(); return; }
+        current += 1;
+        render();
+      }, 1200);
+    });
+    resetBtn.addEventListener("click", () => { stop(); current = 0; render(); });
+    window.addEventListener("resize", () => drawArrows(steps[current].arrows));
+    document.addEventListener("astro:before-swap", stop, { once: true });
+    render();
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-stack-heap-pointer]").forEach(initStackHeapPointer);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll<HTMLElement>("[data-stack-heap-pointer]").forEach(initStackHeapPointer);
+  });
+</script>
