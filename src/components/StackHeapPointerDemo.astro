@@ -4,8 +4,10 @@ const codeLines = [
   "{",
   "    int *p = malloc(sizeof(int));",
   "    *p = 1029;",
+  "",
   "    int *q = malloc(sizeof(int));",
   "    *q = 1037;",
+  "",
   "    free(p);",
   "    p = NULL;",
   "}",
@@ -15,13 +17,17 @@ const codeLines = [
 <section class="stack-heap-pointer not-prose" data-stack-heap-pointer>
   <div class="stack-heap-pointer__header">
     <div>
-      <h3>栈中指针 → 堆中数据</h3>
-      <p>局部指针变量保存在栈中，malloc 分配的数据块位于堆中；箭头表示指针保存的地址指向哪一块堆内存。</p>
+      <h3>栈中指针、堆中数据与地址指向</h3>
+      <p>
+        布局采用“函数在左、栈在右上、堆在下方”的内存拓扑。教学模型按 32 位环境展示：
+        <code>int *</code> 为 4B，<code>int</code> 有效数据为 4B；堆块按 8B 对齐的简化 allocator chunk 展示。
+      </p>
     </div>
     <div class="stack-heap-pointer__legend">
-      <span><i class="stack-heap-pointer__dot stack-heap-pointer__dot--stack"></i>栈指针</span>
-      <span><i class="stack-heap-pointer__dot stack-heap-pointer__dot--heap"></i>堆数据</span>
+      <span><i class="stack-heap-pointer__dot stack-heap-pointer__dot--stack"></i>栈指针 4B</span>
+      <span><i class="stack-heap-pointer__dot stack-heap-pointer__dot--heap"></i>堆 payload 4B</span>
       <span><i class="stack-heap-pointer__dot stack-heap-pointer__dot--free"></i>已释放</span>
+      <span><i class="stack-heap-pointer__dot stack-heap-pointer__dot--active"></i>当前执行</span>
     </div>
   </div>
 
@@ -30,7 +36,7 @@ const codeLines = [
     <button type="button" data-action="next">下一步</button>
     <button type="button" data-action="play">自动播放</button>
     <button type="button" data-action="reset">重置</button>
-    <span>步骤 <strong data-step-index>1</strong> / <span data-step-total>1</span></span>
+    <span class="stack-heap-pointer__counter">步骤 <strong data-step-index>1</strong> / <span data-step-total>1</span></span>
   </div>
 
   <div class="stack-heap-pointer__summary">
@@ -40,12 +46,14 @@ const codeLines = [
     <div><span>指向关系</span><strong data-relation>尚未分配</strong></div>
   </div>
 
-  <div class="stack-heap-pointer__workspace">
-    <div class="stack-heap-pointer__code">
+  <div class="stack-heap-pointer__board" data-memory-layout>
+    <svg class="stack-heap-pointer__arrows" data-arrows aria-hidden="true"></svg>
+
+    <div class="stack-heap-pointer__code-panel">
       <div class="stack-heap-pointer__panel-title">C 代码执行过程</div>
-      <ol>
+      <ol class="stack-heap-pointer__code-list">
         {codeLines.map((line, index) => (
-          <li data-code-line={String(index)}>{line}</li>
+          <li class="stack-heap-pointer__code-line" data-code-line={String(index)}>{line || " "}</li>
         ))}
       </ol>
       <div class="stack-heap-pointer__explain" data-explanation>
@@ -53,37 +61,94 @@ const codeLines = [
       </div>
     </div>
 
-    <div class="stack-heap-pointer__memory" data-memory-layout>
-      <svg class="stack-heap-pointer__arrows" data-arrows aria-hidden="true"></svg>
-
-      <div class="stack-heap-pointer__area">
-        <h4>Stack（栈）</h4>
-        <div class="stack-heap-pointer__stack-card" data-stack-card="p" data-hidden="true">
-          <div><strong>p</strong><small>int *</small></div>
-          <code data-stack-value="p">NULL</code>
+    <div class="stack-heap-pointer__stack-panel">
+      <div class="stack-heap-pointer__stack-title">
+        <div>
+          <strong>Stack（栈）</strong>
+          <span>main 栈帧中的局部指针</span>
         </div>
-        <div class="stack-heap-pointer__stack-card" data-stack-card="q" data-hidden="true">
-          <div><strong>q</strong><small>int *</small></div>
+        <small>向低地址增长 ↓</small>
+      </div>
+
+      <div class="stack-heap-pointer__stack-origin">SP / 栈顶</div>
+      <div class="stack-heap-pointer__stack-frame">
+        <div class="stack-heap-pointer__stack-slot" data-stack-card="p" data-hidden="true">
+          <div class="stack-heap-pointer__stack-slot-head">
+            <strong>p</strong>
+            <span>int * · 4B</span>
+          </div>
+          <code data-stack-value="p">NULL</code>
+          <small>0x20000FFC – 0x20000FFF</small>
+        </div>
+
+        <div class="stack-heap-pointer__stack-slot" data-stack-card="q" data-hidden="true">
+          <div class="stack-heap-pointer__stack-slot-head">
+            <strong>q</strong>
+            <span>int * · 4B</span>
+          </div>
           <code data-stack-value="q">NULL</code>
+          <small>0x20000FF8 – 0x20000FFB</small>
+        </div>
+
+        <div class="stack-heap-pointer__stack-free">栈帧剩余空间</div>
+      </div>
+    </div>
+
+    <div class="stack-heap-pointer__heap-panel">
+      <div class="stack-heap-pointer__heap-title">
+        <div>
+          <strong>Heap（堆）</strong>
+          <span>malloc 动态分配区域</span>
+        </div>
+        <small>向高地址增长 →</small>
+      </div>
+
+      <div class="stack-heap-pointer__heap-strip">
+        <div class="stack-heap-pointer__heap-chunk" data-heap-card="h1" data-hidden="true">
+          <div class="stack-heap-pointer__chunk-head">
+            <strong>Chunk A</strong>
+            <code>0x20002000</code>
+          </div>
+          <div class="stack-heap-pointer__chunk-layout">
+            <div class="stack-heap-pointer__payload">
+              <small>payload · int · 4B</small>
+              <strong data-heap-value="h1">未分配</strong>
+            </div>
+            <div class="stack-heap-pointer__overhead">对齐/元数据<br />示意 4B</div>
+          </div>
+        </div>
+
+        <div class="stack-heap-pointer__heap-chunk" data-heap-card="h2" data-hidden="true">
+          <div class="stack-heap-pointer__chunk-head">
+            <strong>Chunk B</strong>
+            <code>0x20002008</code>
+          </div>
+          <div class="stack-heap-pointer__chunk-layout">
+            <div class="stack-heap-pointer__payload">
+              <small>payload · int · 4B</small>
+              <strong data-heap-value="h2">未分配</strong>
+            </div>
+            <div class="stack-heap-pointer__overhead">对齐/元数据<br />示意 4B</div>
+          </div>
+        </div>
+
+        <div class="stack-heap-pointer__heap-free">
+          <strong>Free Heap</strong>
+          <span>后续可分配空间</span>
         </div>
       </div>
 
-      <div class="stack-heap-pointer__area">
-        <h4>Heap（堆）</h4>
-        <div class="stack-heap-pointer__heap-card" data-heap-card="h1" data-hidden="true">
-          <div class="stack-heap-pointer__heap-head"><strong>Heap Block A</strong><code>0x20002000</code></div>
-          <div class="stack-heap-pointer__heap-value" data-heap-value="h1">未分配</div>
-        </div>
-        <div class="stack-heap-pointer__heap-card" data-heap-card="h2" data-hidden="true">
-          <div class="stack-heap-pointer__heap-head"><strong>Heap Block B</strong><code>0x20002008</code></div>
-          <div class="stack-heap-pointer__heap-value" data-heap-value="h2">未分配</div>
-        </div>
+      <div class="stack-heap-pointer__heap-axis">
+        <span>0x20002000</span>
+        <span>0x20002008</span>
+        <span>更高地址 →</span>
       </div>
     </div>
   </div>
 
   <div class="stack-heap-pointer__note">
-    <strong>关键：</strong>栈里的 <code>p</code>/<code>q</code> 存的是地址；<code>*p</code>/<code>*q</code> 访问的是对应堆块中的真实数据。
+    <strong>关键：</strong>栈中的 <code>p</code>/<code>q</code> 自身只保存地址；<code>*p</code>/<code>*q</code> 才访问堆中的真实数据。
+    图中的 8B chunk 是教学化简：4B 为 <code>int</code> payload，另外 4B 用来表示分配器对齐/元数据开销；真实大小取决于 ABI 和 malloc 实现。
   </div>
 </section>
 
@@ -99,63 +164,103 @@ const codeLines = [
   }
   .stack-heap-pointer__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .9rem; }
   .stack-heap-pointer__header h3 { margin: 0; font-size: 1.08rem; }
-  .stack-heap-pointer__header p { margin: .28rem 0 0; color: var(--shp-muted); font-size: .82rem; }
+  .stack-heap-pointer__header p { margin: .28rem 0 0; color: var(--shp-muted); font-size: .82rem; line-height: 1.6; }
   .stack-heap-pointer__legend { display: flex; flex-wrap: wrap; gap: .65rem; color: var(--shp-muted); font-size: .7rem; }
-  .stack-heap-pointer__legend span { display: inline-flex; align-items: center; gap: .28rem; }
+  .stack-heap-pointer__legend span { display: inline-flex; align-items: center; gap: .28rem; white-space: nowrap; }
   .stack-heap-pointer__dot { width: .65rem; height: .65rem; border-radius: 50%; display: inline-block; }
   .stack-heap-pointer__dot--stack { background: #2563eb; }
   .stack-heap-pointer__dot--heap { background: #059669; }
   .stack-heap-pointer__dot--free { background: #6b7280; }
+  .stack-heap-pointer__dot--active { background: #facc15; }
 
   .stack-heap-pointer__controls { display: flex; flex-wrap: wrap; align-items: center; gap: .52rem; margin-bottom: .75rem; }
   .stack-heap-pointer__controls button { padding: .5rem .72rem; border: 1px solid var(--shp-border); border-radius: .62rem; color: inherit; background: transparent; cursor: pointer; font-size: .78rem; }
   .stack-heap-pointer__controls button:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
   .stack-heap-pointer__controls button:disabled { opacity: .4; cursor: not-allowed; }
-  .stack-heap-pointer__controls > span { margin-left: auto; color: var(--shp-muted); font-size: .74rem; }
+  .stack-heap-pointer__counter { margin-left: auto; color: var(--shp-muted); font-size: .74rem; }
 
   .stack-heap-pointer__summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .52rem; margin-bottom: .8rem; }
   .stack-heap-pointer__summary > div { padding: .62rem .7rem; border: 1px solid var(--shp-border); border-radius: .68rem; }
   .stack-heap-pointer__summary span { display: block; color: var(--shp-muted); font-size: .66rem; }
   .stack-heap-pointer__summary strong { display: block; margin-top: .16rem; font-size: .84rem; }
 
-  .stack-heap-pointer__workspace { display: grid; grid-template-columns: minmax(320px, .85fr) minmax(460px, 1.25fr); gap: 1rem; padding: 1rem; border-radius: .9rem; color: #e5e7eb; background: #020304; }
-  .stack-heap-pointer__code { overflow: hidden; border: 2px dashed #0ea5e9; border-radius: .9rem; background: #030712; }
+  .stack-heap-pointer__board {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(330px, 1.05fr) minmax(280px, .78fr);
+    grid-template-areas:
+      "code stack"
+      "heap heap";
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: .9rem;
+    color: #e5e7eb;
+    background: #020304;
+    overflow: hidden;
+  }
+  .stack-heap-pointer__arrows { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: visible; }
+
+  .stack-heap-pointer__code-panel { grid-area: code; position: relative; z-index: 2; overflow: hidden; border: 2px dashed #0ea5e9; border-radius: .9rem; background: #030712; }
   .stack-heap-pointer__panel-title { padding: .5rem .72rem .1rem; color: #94a3b8; font-size: .72rem; font-weight: 700; }
-  .stack-heap-pointer__code ol { margin: 0; padding: .35rem .5rem .65rem; list-style: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .8rem; line-height: 1.45; }
-  .stack-heap-pointer__code li { margin: .1rem 0; padding: .12rem .45rem; border: 2px solid transparent; border-radius: .38rem; color: #dbeafe; white-space: pre; }
-  .stack-heap-pointer__code li[data-state="active"] { border-color: #facc15; background: rgba(250,204,21,.12); color: #fef08a; }
-  .stack-heap-pointer__code li[data-state="done"] { color: #86efac; opacity: .72; }
-  .stack-heap-pointer__explain { margin: .72rem; min-height: 3.2rem; padding: .72rem .82rem; border-left: 3px solid #3b82f6; border-radius: .4rem; color: #cbd5e1; background: rgba(30,41,59,.45); font-size: .76rem; }
+  .stack-heap-pointer__code-list { margin: 0; padding: .35rem .5rem .65rem; list-style: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .8rem; line-height: 1.45; }
+  .stack-heap-pointer__code-line { margin: .1rem 0; padding: .12rem .45rem; border: 2px solid transparent; border-radius: .38rem; color: #dbeafe; white-space: pre; }
+  .stack-heap-pointer__code-line[data-state="active"] { border-color: #facc15; background: rgba(250,204,21,.12); color: #fef08a; }
+  .stack-heap-pointer__code-line[data-state="done"] { color: #86efac; opacity: .72; }
+  .stack-heap-pointer__explain { margin: .72rem; min-height: 3.2rem; padding: .72rem .82rem; border-left: 3px solid #3b82f6; border-radius: .4rem; color: #cbd5e1; background: rgba(30,41,59,.45); font-size: .76rem; line-height: 1.55; }
 
-  .stack-heap-pointer__memory { position: relative; display: grid; grid-template-columns: minmax(170px, .8fr) minmax(220px, 1.2fr); gap: 4rem; min-height: 330px; padding: 1rem; border: 1px solid rgba(148,163,184,.16); border-radius: .85rem; background: #030712; overflow: hidden; }
-  .stack-heap-pointer__arrows { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-  .stack-heap-pointer__area { position: relative; z-index: 2; display: flex; flex-direction: column; gap: .8rem; }
-  .stack-heap-pointer__area h4 { margin: 0 0 .1rem; color: #cbd5e1; font-size: .84rem; }
-  .stack-heap-pointer__stack-card { padding: .75rem; border: 2px solid #3b82f6; border-radius: .75rem; background: rgba(37,99,235,.12); transition: opacity 180ms ease, filter 180ms ease; }
-  .stack-heap-pointer__stack-card[data-hidden="true"] { opacity: .2; filter: grayscale(.4); }
-  .stack-heap-pointer__stack-card > div { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
-  .stack-heap-pointer__stack-card strong { color: #bfdbfe; font-size: .92rem; }
-  .stack-heap-pointer__stack-card small { color: #93c5fd; font-size: .65rem; }
-  .stack-heap-pointer__stack-card code { display: block; margin-top: .42rem; padding: .42rem .5rem; border-radius: .4rem; background: rgba(2,6,23,.68); color: #f8fafc; font-size: .78rem; }
+  .stack-heap-pointer__stack-panel { grid-area: stack; position: relative; z-index: 2; padding: .75rem; border: 1px solid rgba(59,130,246,.28); border-radius: .9rem; background: #030712; }
+  .stack-heap-pointer__stack-title { display: flex; justify-content: space-between; gap: .6rem; align-items: flex-end; }
+  .stack-heap-pointer__stack-title > div { display: flex; flex-direction: column; gap: .12rem; }
+  .stack-heap-pointer__stack-title strong { color: #dbeafe; font-size: .88rem; }
+  .stack-heap-pointer__stack-title span,
+  .stack-heap-pointer__stack-title small { color: #94a3b8; font-size: .64rem; }
+  .stack-heap-pointer__stack-origin { margin: .7rem 0 .32rem; color: #fbbf24; font-size: .64rem; text-align: right; }
+  .stack-heap-pointer__stack-frame { display: flex; flex-direction: column; border: 2px solid #64748b; background: #05070d; }
+  .stack-heap-pointer__stack-slot { min-height: 88px; padding: .58rem .65rem; border-bottom: 1px solid #475569; background: rgba(37,99,235,.13); transition: opacity 180ms ease, filter 180ms ease; }
+  .stack-heap-pointer__stack-slot[data-hidden="true"] { opacity: .22; filter: grayscale(.55); }
+  .stack-heap-pointer__stack-slot-head { display: flex; justify-content: space-between; gap: .4rem; }
+  .stack-heap-pointer__stack-slot-head strong { color: #bfdbfe; font-size: .92rem; }
+  .stack-heap-pointer__stack-slot-head span { color: #93c5fd; font-size: .63rem; }
+  .stack-heap-pointer__stack-slot code { display: block; margin-top: .36rem; color: #f8fafc; font-size: .75rem; }
+  .stack-heap-pointer__stack-slot > small { display: block; margin-top: .28rem; color: #64748b; font-size: .55rem; }
+  .stack-heap-pointer__stack-free { min-height: 84px; display: grid; place-items: center; color: #64748b; font-size: .66rem; }
 
-  .stack-heap-pointer__heap-card { padding: .75rem; border: 2px solid #10b981; border-radius: .75rem; background: rgba(5,150,105,.10); transition: opacity 180ms ease, filter 180ms ease; }
-  .stack-heap-pointer__heap-card[data-hidden="true"] { opacity: .2; filter: grayscale(.5); }
-  .stack-heap-pointer__heap-card[data-freed="true"] { border-color: #6b7280; background: rgba(107,114,128,.14); }
-  .stack-heap-pointer__heap-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; color: #d1fae5; font-size: .7rem; }
-  .stack-heap-pointer__heap-head code { color: #6ee7b7; font-size: .65rem; }
-  .stack-heap-pointer__heap-value { margin-top: .5rem; padding: .6rem; border-radius: .48rem; background: rgba(2,6,23,.68); color: #f8fafc; font-size: 1rem; font-weight: 800; text-align: center; }
-  .stack-heap-pointer__note { margin-top: .72rem; color: var(--shp-muted); font-size: .72rem; line-height: 1.5; }
+  .stack-heap-pointer__heap-panel { grid-area: heap; position: relative; z-index: 2; padding: .75rem; border: 1px solid rgba(16,185,129,.25); border-radius: .9rem; background: #030712; }
+  .stack-heap-pointer__heap-title { display: flex; justify-content: space-between; align-items: flex-end; gap: .7rem; }
+  .stack-heap-pointer__heap-title > div { display: flex; flex-direction: column; gap: .12rem; }
+  .stack-heap-pointer__heap-title strong { color: #d1fae5; font-size: .88rem; }
+  .stack-heap-pointer__heap-title span,
+  .stack-heap-pointer__heap-title small { color: #94a3b8; font-size: .64rem; }
+  .stack-heap-pointer__heap-strip { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: .55rem; margin-top: .72rem; }
+  .stack-heap-pointer__heap-chunk { min-height: 118px; padding: .62rem; border: 2px solid #10b981; border-radius: .62rem; background: rgba(5,150,105,.1); transition: opacity 180ms ease, filter 180ms ease; }
+  .stack-heap-pointer__heap-chunk[data-hidden="true"] { opacity: .2; filter: grayscale(.5); }
+  .stack-heap-pointer__heap-chunk[data-freed="true"] { border-color: #6b7280; background: rgba(107,114,128,.14); }
+  .stack-heap-pointer__chunk-head { display: flex; justify-content: space-between; gap: .5rem; align-items: center; }
+  .stack-heap-pointer__chunk-head strong { color: #d1fae5; font-size: .72rem; }
+  .stack-heap-pointer__chunk-head code { color: #6ee7b7; font-size: .6rem; }
+  .stack-heap-pointer__chunk-layout { display: grid; grid-template-columns: 1fr .72fr; gap: .35rem; margin-top: .52rem; }
+  .stack-heap-pointer__payload { min-height: 62px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: .42rem; background: rgba(4,120,87,.28); }
+  .stack-heap-pointer__payload small { color: #a7f3d0; font-size: .56rem; }
+  .stack-heap-pointer__payload strong { margin-top: .15rem; color: #fff; font-size: .95rem; }
+  .stack-heap-pointer__overhead { display: grid; place-items: center; padding: .3rem; border-radius: .42rem; background: rgba(51,65,85,.72); color: #94a3b8; font-size: .54rem; line-height: 1.35; text-align: center; }
+  .stack-heap-pointer__heap-free { min-height: 118px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #475569; border-radius: .62rem; color: #64748b; }
+  .stack-heap-pointer__heap-free strong { font-size: .78rem; }
+  .stack-heap-pointer__heap-free span { margin-top: .2rem; font-size: .58rem; }
+  .stack-heap-pointer__heap-axis { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: .55rem; margin-top: .32rem; color: #ef4444; font-size: .56rem; text-align: center; }
+
+  .stack-heap-pointer__note { margin-top: .72rem; color: var(--shp-muted); font-size: .72rem; line-height: 1.55; }
 
   @media (max-width: 980px) {
-    .stack-heap-pointer__workspace { grid-template-columns: 1fr; }
     .stack-heap-pointer__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stack-heap-pointer__board { grid-template-columns: 1fr; grid-template-areas: "code" "stack" "heap"; }
+    .stack-heap-pointer__arrows { display: none; }
   }
   @media (max-width: 680px) {
     .stack-heap-pointer__header { flex-direction: column; align-items: flex-start; }
     .stack-heap-pointer__summary { grid-template-columns: 1fr; }
-    .stack-heap-pointer__controls > span { width: 100%; margin-left: 0; }
-    .stack-heap-pointer__memory { grid-template-columns: 1fr; gap: 1rem; }
-    .stack-heap-pointer__arrows { display: none; }
+    .stack-heap-pointer__counter { width: 100%; margin-left: 0; }
+    .stack-heap-pointer__heap-strip,
+    .stack-heap-pointer__heap-axis { grid-template-columns: 1fr; }
   }
 </style>
 
@@ -183,13 +288,13 @@ const codeLines = [
     root.dataset.initialized = "true";
 
     const steps: Step[] = [
-      { title: "初始状态", line: 0, explanation: "初始时还没有调用 malloc，因此没有有效的堆分配。", p: { visible: false, value: "NULL" }, q: { visible: false, value: "NULL" }, h1: { visible: false, value: "未分配" }, h2: { visible: false, value: "未分配" }, arrows: [], stackState: "无", heapState: "0", relation: "尚未分配" },
-      { title: "p = malloc(sizeof(int))", line: 2, explanation: "局部变量 p 位于栈中；malloc 在堆中创建 Heap Block A，并把其地址 0x20002000 返回给 p。", p: { visible: true, value: "0x20002000" }, q: { visible: false, value: "NULL" }, h1: { visible: true, value: "未写入" }, h2: { visible: false, value: "未分配" }, arrows: [{ from: "p", to: "h1" }], stackState: "p", heapState: "1", relation: "p → Heap A" },
-      { title: "*p = 1029", line: 3, explanation: "1029 被写入 p 指向的堆块。p 本身仍只保存地址，并不直接保存 1029。", p: { visible: true, value: "0x20002000" }, q: { visible: false, value: "NULL" }, h1: { visible: true, value: "1029" }, h2: { visible: false, value: "未分配" }, arrows: [{ from: "p", to: "h1" }], stackState: "p", heapState: "1", relation: "p → 1029" },
-      { title: "q = malloc(sizeof(int))", line: 4, explanation: "q 同样是栈上的局部指针。第二次 malloc 创建 Heap Block B，并把地址 0x20002008 保存到 q。", p: { visible: true, value: "0x20002000" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "1029" }, h2: { visible: true, value: "未写入" }, arrows: [{ from: "p", to: "h1" }, { from: "q", to: "h2" }], stackState: "p, q", heapState: "2", relation: "p → A，q → B" },
-      { title: "*q = 1037", line: 5, explanation: "1037 被写入 q 指向的 Heap Block B。此时两个栈指针分别指向两个堆数据块。", p: { visible: true, value: "0x20002000" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "1029" }, h2: { visible: true, value: "1037" }, arrows: [{ from: "p", to: "h1" }, { from: "q", to: "h2" }], stackState: "p, q", heapState: "2", relation: "A=1029，B=1037" },
-      { title: "free(p)", line: 6, explanation: "free(p) 释放的是 p 指向的 Heap Block A；栈中的 p 变量仍然存在，此时它成为悬空指针。", p: { visible: true, value: "0x20002000" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "已释放", freed: true }, h2: { visible: true, value: "1037" }, arrows: [{ from: "p", to: "h1" }, { from: "q", to: "h2" }], stackState: "p, q", heapState: "1", relation: "p 为悬空指针" },
-      { title: "p = NULL", line: 7, explanation: "把 p 设为 NULL 后，p 不再指向已释放区域，箭头消失；q 仍然有效地指向 Heap Block B。", p: { visible: true, value: "NULL" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "空闲", freed: true }, h2: { visible: true, value: "1037" }, arrows: [{ from: "q", to: "h2" }], stackState: "p, q", heapState: "1", relation: "p=NULL，q → B" },
+      { title: "初始状态", line: 0, explanation: "main() 刚开始执行，还没有调用 malloc。栈中的指针槽位和堆中的 chunk 都处于未使用状态。", p: { visible: false, value: "NULL" }, q: { visible: false, value: "NULL" }, h1: { visible: false, value: "未分配" }, h2: { visible: false, value: "未分配" }, arrows: [], stackState: "无", heapState: "0", relation: "尚未分配" },
+      { title: "p = malloc(sizeof(int))", line: 2, explanation: "p 是 main 栈帧中的 4B 指针变量。malloc 返回 Heap Chunk A 的 payload 地址 0x20002000，并把该地址写入 p。", p: { visible: true, value: "0x20002000" }, q: { visible: false, value: "NULL" }, h1: { visible: true, value: "未写入" }, h2: { visible: false, value: "未分配" }, arrows: [{ from: "p", to: "h1" }], stackState: "p · 4B", heapState: "1 chunk", relation: "p → Chunk A" },
+      { title: "*p = 1029", line: 3, explanation: "解引用 p 后访问的是堆中的 payload，因此 1029 写入 Heap Chunk A；栈中的 p 仍然只保存地址。", p: { visible: true, value: "0x20002000" }, q: { visible: false, value: "NULL" }, h1: { visible: true, value: "1029" }, h2: { visible: false, value: "未分配" }, arrows: [{ from: "p", to: "h1" }], stackState: "p · 4B", heapState: "1 chunk", relation: "p → 1029" },
+      { title: "q = malloc(sizeof(int))", line: 5, explanation: "q 同样在栈上占 4B。第二次 malloc 返回按 8B chunk 对齐后的下一个 payload 地址 0x20002008。", p: { visible: true, value: "0x20002000" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "1029" }, h2: { visible: true, value: "未写入" }, arrows: [{ from: "p", to: "h1" }, { from: "q", to: "h2" }], stackState: "p + q · 8B", heapState: "2 chunks", relation: "p → A，q → B" },
+      { title: "*q = 1037", line: 6, explanation: "1037 被写入 q 指向的 Heap Chunk B。两个栈指针分别保存两个堆 payload 的首地址。", p: { visible: true, value: "0x20002000" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "1029" }, h2: { visible: true, value: "1037" }, arrows: [{ from: "p", to: "h1" }, { from: "q", to: "h2" }], stackState: "p + q · 8B", heapState: "2 chunks", relation: "A=1029，B=1037" },
+      { title: "free(p)", line: 8, explanation: "free(p) 释放的是 Heap Chunk A。p 变量自身还留在栈中并保存旧地址，因此此时 p 是悬空指针。", p: { visible: true, value: "0x20002000" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "已释放", freed: true }, h2: { visible: true, value: "1037" }, arrows: [{ from: "p", to: "h1" }, { from: "q", to: "h2" }], stackState: "p + q · 8B", heapState: "1 有效 chunk", relation: "p 为悬空指针" },
+      { title: "p = NULL", line: 9, explanation: "把 p 置为 NULL 后，栈中的 p 仍占 4B，但不再保存已释放堆块的地址，因此 p 的箭头消失。", p: { visible: true, value: "NULL" }, q: { visible: true, value: "0x20002008" }, h1: { visible: true, value: "空闲", freed: true }, h2: { visible: true, value: "1037" }, arrows: [{ from: "q", to: "h2" }], stackState: "p + q · 8B", heapState: "1 有效 chunk", relation: "p=NULL，q → B" },
     ];
 
     const q = <T extends Element>(selector: string): T | null => root.querySelector<T>(selector);
@@ -230,13 +335,14 @@ const codeLines = [
     };
 
     const drawArrows = (items: Array<{ from: PointerName; to: HeapName }>): void => {
-      const layout = q<HTMLElement>("[data-memory-layout]");
-      if (!layout) return;
-      const rect = layout.getBoundingClientRect();
+      const board = q<HTMLElement>("[data-memory-layout]");
+      if (!board || window.innerWidth <= 980) return;
+      const rect = board.getBoundingClientRect();
       arrowsSvg.replaceChildren();
+
       const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
       const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-      marker.setAttribute("id", "stack-heap-arrow-head");
+      marker.setAttribute("id", "stack-heap-pointer-arrow-head");
       marker.setAttribute("markerWidth", "10");
       marker.setAttribute("markerHeight", "10");
       marker.setAttribute("refX", "8");
@@ -255,16 +361,17 @@ const codeLines = [
         if (!from || !to) continue;
         const a = from.getBoundingClientRect();
         const b = to.getBoundingClientRect();
-        const x1 = a.right - rect.left;
-        const y1 = a.top + a.height / 2 - rect.top;
-        const x2 = b.left - rect.left;
-        const y2 = b.top + b.height / 2 - rect.top;
+        const x1 = a.left + a.width / 2 - rect.left;
+        const y1 = a.bottom - rect.top;
+        const x2 = b.left + b.width / 2 - rect.left;
+        const y2 = b.top - rect.top;
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", `M ${x1} ${y1} C ${x1 + 55} ${y1}, ${x2 - 55} ${y2}, ${x2} ${y2}`);
+        path.setAttribute("d", `M ${x1} ${y1} C ${x1} ${y1 + 45}, ${x2} ${y2 - 45}, ${x2} ${y2}`);
         path.setAttribute("fill", "none");
         path.setAttribute("stroke", "#f59e0b");
         path.setAttribute("stroke-width", "3");
-        path.setAttribute("marker-end", "url(#stack-heap-arrow-head)");
+        path.setAttribute("marker-end", "url(#stack-heap-pointer-arrow-head)");
+        path.setAttribute("opacity", ".96");
         arrowsSvg.append(path);
       }
     };
