@@ -151,13 +151,19 @@ const heapCode = [
   .heap-memory-demo__summary strong { display: block; margin-top: .16rem; font-size: .84rem; }
 
   .heap-memory-demo__workspace {
-    display: grid;
-    grid-template-columns: minmax(350px, .9fr) minmax(430px, 1.15fr);
-    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
     padding: 1rem;
     border-radius: .9rem;
     color: #e5e7eb;
     background: #020304;
+  }
+
+  .heap-memory-demo__code-side,
+  .heap-memory-demo__heap-side {
+    width: 100%;
+    min-width: 0;
   }
 
   .heap-memory-demo__code-panel,
@@ -215,11 +221,21 @@ const heapCode = [
   .heap-memory-demo__alloc-item strong { color: #f8fafc; }
   .heap-memory-demo__alloc-empty { color: #94a3b8; font-size: .7rem; }
 
-  .heap-memory-demo__heap-side { min-width: 0; }
+  .heap-memory-demo__heap-side {
+    padding-top: .95rem;
+    border-top: 1px solid rgba(148, 163, 184, .18);
+  }
   .heap-memory-demo__heap-title { display: flex; justify-content: space-between; align-items: flex-end; gap: .7rem; margin-bottom: .7rem; }
   .heap-memory-demo__heap-title strong { font-size: .92rem; }
   .heap-memory-demo__heap-title span { color: #94a3b8; font-size: .66rem; }
-  .heap-memory-demo__heap-wrap { position: relative; padding-top: 2rem; overflow-x: auto; padding-bottom: .25rem; }
+  .heap-memory-demo__heap-wrap {
+    position: relative;
+    width: 100%;
+    padding-top: 2rem;
+    padding-bottom: .4rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
 
   .heap-memory-demo__pointer {
     position: absolute;
@@ -239,15 +255,15 @@ const heapCode = [
   .heap-memory-demo__grid,
   .heap-memory-demo__indexes {
     display: grid;
-    grid-template-columns: repeat(16, minmax(28px, 1fr));
-    gap: .2rem;
-    min-width: 590px;
+    grid-template-columns: repeat(16, minmax(34px, 1fr));
+    gap: .24rem;
+    min-width: 720px;
   }
   .heap-memory-demo__cell {
     position: relative;
-    height: 70px;
+    height: 78px;
     border: 2px solid #454956;
-    border-radius: .34rem;
+    border-radius: .4rem;
     background: #11131c;
     transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, opacity 180ms ease;
   }
@@ -274,7 +290,6 @@ const heapCode = [
   .heap-memory-demo__note { margin-top: .75rem; color: #94a3b8; font-size: .68rem; line-height: 1.5; }
 
   @media (max-width: 980px) {
-    .heap-memory-demo__workspace { grid-template-columns: 1fr; }
     .heap-memory-demo__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 620px) {
@@ -283,6 +298,9 @@ const heapCode = [
     .heap-memory-demo__summary { grid-template-columns: 1fr; }
     .heap-memory-demo__counter { width: 100%; margin-left: 0; }
     .heap-memory-demo__workspace { padding: .7rem; }
+    .heap-memory-demo__grid,
+    .heap-memory-demo__indexes { grid-template-columns: repeat(16, minmax(30px, 1fr)); min-width: 640px; }
+    .heap-memory-demo__cell { height: 64px; }
   }
 </style>
 
@@ -336,7 +354,6 @@ const heapCode = [
     const allocListEl = q<HTMLElement>("[data-alloc-list]");
     const pointerMarker = q<HTMLElement>("[data-pointer-marker]");
     const pointerLabel = q<HTMLElement>("[data-pointer-label]");
-    const heapGrid = q<HTMLElement>("[data-heap-grid]");
     const failureEl = q<HTMLElement>("[data-failure]");
     const prevBtn = q<HTMLButtonElement>('[data-action="prev"]');
     const nextBtn = q<HTMLButtonElement>('[data-action="next"]');
@@ -345,7 +362,7 @@ const heapCode = [
     const cells = Array.from(root.querySelectorAll<HTMLElement>("[data-cell]"));
     const codeLines = Array.from(root.querySelectorAll<HTMLElement>("[data-code-line]"));
 
-    if (!stepIndexEl || !stepTotalEl || !stepTitleEl || !usedEl || !freeInfoEl || !pointerValueEl || !explanationEl || !allocListEl || !pointerMarker || !pointerLabel || !heapGrid || !failureEl || !prevBtn || !nextBtn || !playBtn || !resetBtn) return;
+    if (!stepIndexEl || !stepTotalEl || !stepTitleEl || !usedEl || !freeInfoEl || !pointerValueEl || !explanationEl || !allocListEl || !pointerMarker || !pointerLabel || !failureEl || !prevBtn || !nextBtn || !playBtn || !resetBtn) return;
 
     let currentStep = 0;
     let timer = 0;
@@ -384,7 +401,7 @@ const heapCode = [
         const item = document.createElement("div");
         item.className = "heap-memory-demo__alloc-item";
         const name = document.createElement("strong");
-        name.textContent = `${allocation.name}`;
+        name.textContent = allocation.name;
         item.append(name, document.createElement("br"), `起始块 ${allocation.start} · 大小 ${allocation.size} blocks`);
         allocListEl.append(item);
       }
@@ -475,7 +492,7 @@ const heapCode = [
       render();
     });
 
-    window.addEventListener("resize", renderPointer.bind(null, steps[currentStep].pointer));
+    window.addEventListener("resize", () => renderPointer(steps[currentStep].pointer));
     document.addEventListener("astro:before-swap", stopTimer, { once: true });
     render();
   }
