@@ -1,57 +1,59 @@
 ---
-const initialCode = `void main(void)
-{
-    int a = 10;
-}`;
 ---
 
 <section class="stack-demo not-prose" data-stack-demo>
   <div class="stack-demo__header">
     <div>
-      <h3>栈存储与溢出演示</h3>
-      <p>观察局部变量、函数调用和递归如何占用栈空间。</p>
+      <h3>栈内存：变量、栈帧与溢出</h3>
+      <p>左侧执行代码，右侧同步显示栈中数据、地址、SP 与函数栈帧边界。</p>
     </div>
     <span class="stack-demo__status" data-status>运行正常</span>
   </div>
 
-  <div class="stack-demo__workspace">
-    <div class="stack-demo__memory">
-      <span class="stack-demo__address stack-demo__address--high">高地址 0x20001000</span>
-      <div class="stack-demo__slots" data-slots></div>
-      <div class="stack-demo__sp" data-sp>SP →</div>
-      <span class="stack-demo__address stack-demo__address--low">低地址</span>
-      <span class="stack-demo__direction">栈向低地址增长 ↓</span>
+  <div class="stack-demo__stage">
+    <div class="stack-demo__code-pane">
+      <div class="stack-demo__code-title">C 代码执行过程</div>
+      <div class="stack-demo__code" data-code-lines></div>
+      <div class="stack-demo__legend">
+        <span><i class="legend-main"></i> main 栈帧</span>
+        <span><i class="legend-func"></i> 函数栈帧</span>
+        <span><i class="legend-current"></i> 当前执行</span>
+      </div>
+    </div>
+
+    <div class="stack-demo__memory-pane">
+      <div class="stack-demo__origin">Stack Origin <b>➤</b></div>
+      <div class="stack-demo__stack-shell">
+        <div class="stack-demo__addresses" data-addresses></div>
+        <div class="stack-demo__cells" data-cells></div>
+        <div class="stack-demo__sp" data-sp><span>SP</span><b>➤</b></div>
+        <div class="stack-demo__frame-brackets" data-brackets></div>
+      </div>
+      <div class="stack-demo__growth">栈向低地址增长 ↓</div>
       <div class="stack-demo__overflow" data-overflow>
         <strong>STACK OVERFLOW</strong>
-        <span>栈空间耗尽</span>
+        <span>SP 已越过可用栈边界</span>
       </div>
     </div>
+  </div>
 
-    <div class="stack-demo__panel">
-      <div class="stack-demo__buttons">
-        <button type="button" data-action="push">压入局部变量</button>
-        <button type="button" data-action="call">调用函数</button>
-        <button type="button" data-action="pop">函数返回 / 出栈</button>
-        <button type="button" data-action="recurse">递归直到溢出</button>
-        <button type="button" data-action="reset">重置</button>
-      </div>
+  <div class="stack-demo__controls">
+    <button type="button" data-action="next">下一步</button>
+    <button type="button" data-action="call">调用函数</button>
+    <button type="button" data-action="return">函数返回</button>
+    <button type="button" data-action="recurse">递归直到溢出</button>
+    <button type="button" data-action="reset">重置</button>
+  </div>
 
-      <div class="stack-demo__info">
-        <div><span>栈容量</span><strong>8 单元</strong></div>
-        <div><span>已使用</span><strong data-used>0 / 8</strong></div>
-        <div><span>剩余空间</span><strong data-free>8</strong></div>
-        <div><span>当前 SP</span><strong data-sp-value>0x20001000</strong></div>
-      </div>
+  <div class="stack-demo__metrics">
+    <div><span>已使用</span><strong data-used>0 / 12</strong></div>
+    <div><span>剩余</span><strong data-free>12</strong></div>
+    <div><span>当前 SP</span><strong data-sp-value>0x20001000</strong></div>
+    <div><span>当前动作</span><strong data-action-label>等待执行</strong></div>
+  </div>
 
-      <div class="stack-demo__code">
-        <div class="stack-demo__code-title">示意代码</div>
-        <pre><code data-code>{initialCode}</code></pre>
-      </div>
-
-      <div class="stack-demo__log" aria-live="polite" data-log>
-        点击按钮观察栈帧变化。
-      </div>
-    </div>
+  <div class="stack-demo__explain" data-log>
+    点击“下一步”，观察变量如何依次进入 main 的栈帧。
   </div>
 </section>
 
@@ -65,382 +67,275 @@ const initialCode = `void main(void)
     border-radius: 1rem;
     background: color-mix(in srgb, currentColor 2.5%, transparent);
   }
+  .stack-demo__header { display:flex; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+  .stack-demo__header h3 { margin:0; font-size:1.05rem; }
+  .stack-demo__header p { margin:.25rem 0 0; color:var(--sd-muted); font-size:.84rem; }
+  .stack-demo__status { align-self:flex-start; padding:.3rem .65rem; border-radius:999px; color:#15803d; background:rgba(22,163,74,.14); font-size:.75rem; font-weight:700; white-space:nowrap; }
 
-  .stack-demo__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1rem;
+  .stack-demo__stage {
+    display:grid;
+    grid-template-columns:minmax(330px,1fr) minmax(360px,1fr);
+    gap:1rem;
+    padding:1rem;
+    border-radius:.9rem;
+    background:#020304;
+    color:#e5e7eb;
   }
 
-  .stack-demo__header h3 { margin: 0; font-size: 1.05rem; }
-  .stack-demo__header p { margin: 0.25rem 0 0; color: var(--sd-muted); font-size: 0.86rem; }
+  .stack-demo__code-pane { min-width:0; }
+  .stack-demo__code-title { margin-bottom:.6rem; color:#94a3b8; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; }
+  .stack-demo__code { display:flex; flex-direction:column; gap:.18rem; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:.78rem; line-height:1.45; }
+  .stack-demo__line { display:grid; grid-template-columns:2rem 1fr; gap:.35rem; padding:.2rem .45rem; border:1px solid transparent; border-radius:.4rem; color:#dbeafe; transition:all 160ms ease; }
+  .stack-demo__line-no { color:#475569; text-align:right; user-select:none; }
+  .stack-demo__line[data-frame="main"] { border-left:2px solid #0ea5e9; }
+  .stack-demo__line[data-frame="func"] { border-left:2px solid #8b5cf6; }
+  .stack-demo__line[data-active="true"] { border-color:#facc15; background:rgba(250,204,21,.12); box-shadow:0 0 0 1px rgba(250,204,21,.18); color:#fff; }
+  .stack-demo__line[data-done="true"] { opacity:.62; }
+  .stack-demo__legend { display:flex; flex-wrap:wrap; gap:.55rem 1rem; margin-top:.8rem; color:#94a3b8; font-size:.68rem; }
+  .stack-demo__legend span { display:inline-flex; align-items:center; gap:.35rem; }
+  .stack-demo__legend i { width:1.2rem; height:3px; border-radius:999px; }
+  .legend-main { background:#0ea5e9; } .legend-func { background:#8b5cf6; } .legend-current { background:#facc15; }
 
-  .stack-demo__status {
-    flex: 0 0 auto;
-    padding: 0.3rem 0.65rem;
-    border-radius: 999px;
-    color: #15803d;
-    background: rgba(22, 163, 74, 0.14);
-    font-size: 0.76rem;
-    font-weight: 700;
-  }
+  .stack-demo__memory-pane { position:relative; min-height:520px; padding:2.2rem 4.2rem 2.6rem 4.4rem; }
+  .stack-demo__origin { position:absolute; top:.1rem; left:0; color:#f8fafc; font-size:.78rem; }
+  .stack-demo__origin b { margin-left:.45rem; color:#fbbf24; font-size:1.25rem; }
+  .stack-demo__stack-shell { position:relative; height:430px; }
+  .stack-demo__cells { position:absolute; inset:0 2.8rem 0 0; display:grid; grid-template-rows:repeat(12,1fr); border:2px solid #e5e7eb; background:#050505; }
+  .stack-demo__cell { display:flex; align-items:center; justify-content:center; border-bottom:2px solid #e5e7eb; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:.84rem; color:#94a3b8; transition:all 180ms ease; }
+  .stack-demo__cell:last-child { border-bottom:0; }
+  .stack-demo__cell[data-kind="u8"] { background:#0ea5e9; color:#fff; }
+  .stack-demo__cell[data-kind="u16"] { background:#059669; color:#fff; }
+  .stack-demo__cell[data-kind="u32"] { background:#2563eb; color:#fff; }
+  .stack-demo__cell[data-kind="sum"] { background:#f97316; color:#fff; }
+  .stack-demo__cell[data-kind="ret"] { background:#7c3aed; color:#fff; }
+  .stack-demo__cell[data-kind="recursive"] { background:#dc2626; color:#fff; }
+  .stack-demo__cell[data-active="true"] { outline:3px solid #facc15; outline-offset:-3px; }
 
-  .stack-demo__workspace {
-    display: grid;
-    grid-template-columns: minmax(260px, 0.85fr) minmax(320px, 1.15fr);
-    gap: 1rem;
-  }
+  .stack-demo__addresses { position:absolute; right:0; top:0; bottom:0; width:2.6rem; display:grid; grid-template-rows:repeat(12,1fr); color:#ef4444; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.6rem; }
+  .stack-demo__address-row { display:flex; align-items:flex-start; justify-content:flex-start; padding-left:.2rem; }
 
-  .stack-demo__memory {
-    position: relative;
-    min-height: 500px;
-    padding: 3.2rem 3rem 4.2rem 4.4rem;
-    overflow: hidden;
-    border-radius: 0.85rem;
-    color: #e5e7eb;
-    background: #05070a;
-  }
+  .stack-demo__sp { position:absolute; left:-4.1rem; top:0; display:flex; align-items:center; gap:.35rem; color:#ef4444; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:800; transition:top 220ms ease; }
+  .stack-demo__sp b { font-size:1.35rem; }
+  .stack-demo__frame-brackets { position:absolute; inset:0 -2.2rem 0 auto; width:2rem; pointer-events:none; }
+  .stack-demo__bracket { position:absolute; right:0; width:1.25rem; border-right:3px solid; border-top:3px solid; border-bottom:3px solid; border-radius:0 .25rem .25rem 0; }
+  .stack-demo__bracket span { position:absolute; right:1.45rem; top:50%; transform:translateY(-50%); padding:.1rem .25rem; background:#020304; white-space:nowrap; font-size:.62rem; }
+  .stack-demo__bracket[data-frame="main"] { color:#0ea5e9; }
+  .stack-demo__bracket[data-frame="func"] { color:#8b5cf6; }
 
-  .stack-demo__slots {
-    display: grid;
-    grid-template-rows: repeat(8, 1fr);
-    height: 360px;
-    overflow: hidden;
-    border: 2px solid #64748b;
-    border-radius: 0.45rem;
-    background: #0f172a;
-  }
+  .stack-demo__growth { position:absolute; right:.1rem; bottom:.25rem; color:#94a3b8; font-size:.68rem; }
+  .stack-demo__overflow { position:absolute; left:4.4rem; right:4.2rem; bottom:.05rem; display:flex; align-items:center; justify-content:center; gap:.5rem; min-height:34px; border:1px dashed #ef4444; border-radius:.45rem; color:#fecaca; background:rgba(127,29,29,.26); opacity:0; transform:translateY(8px); transition:all 180ms ease; }
+  .stack-demo__overflow[data-active="true"] { opacity:1; transform:translateY(0); animation:overflowPulse 600ms ease-in-out infinite alternate; }
+  .stack-demo__overflow span { color:#fca5a5; font-size:.68rem; }
 
-  .stack-demo__slot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0 0.7rem;
-    border-bottom: 1px solid #334155;
-    color: #94a3b8;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.75rem;
-  }
+  .stack-demo__controls { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1rem; }
+  .stack-demo__controls button { padding:.55rem .75rem; border:1px solid var(--sd-border); border-radius:.6rem; color:inherit; background:transparent; cursor:pointer; font-size:.8rem; }
+  .stack-demo__controls button:hover { background:color-mix(in srgb,currentColor 7%,transparent); }
+  .stack-demo__controls button[data-action="recurse"] { border-color:rgba(220,38,38,.45); }
 
-  .stack-demo__slot:last-child { border-bottom: 0; }
-  .stack-demo__slot[data-kind="local"] { color: #fff; background: linear-gradient(90deg, #1d4ed8, #2563eb); }
-  .stack-demo__slot[data-kind="frame"] { color: #fff; background: linear-gradient(90deg, #6d28d9, #9333ea); }
-  .stack-demo__slot[data-kind="recursive"] { color: #fff; background: linear-gradient(90deg, #be123c, #e11d48); }
+  .stack-demo__metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.55rem; margin-top:.8rem; }
+  .stack-demo__metrics div { padding:.65rem; border:1px solid var(--sd-border); border-radius:.65rem; }
+  .stack-demo__metrics span { display:block; color:var(--sd-muted); font-size:.7rem; }
+  .stack-demo__metrics strong { display:block; margin-top:.2rem; font-size:.86rem; }
+  .stack-demo__explain { margin-top:.8rem; padding:.7rem .8rem; border-left:3px solid #3b82f6; border-radius:.35rem; background:color-mix(in srgb,currentColor 3%,transparent); color:var(--sd-muted); font-size:.78rem; }
 
-  .stack-demo__slot-address { opacity: 0.72; font-size: 0.66rem; }
-
-  .stack-demo__sp {
-    position: absolute;
-    left: 0.7rem;
-    top: 3.2rem;
-    color: #fbbf24;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-weight: 800;
-    transition: top 240ms ease;
-  }
-
-  .stack-demo__address {
-    position: absolute;
-    right: 0.8rem;
-    color: #94a3b8;
-    font-size: 0.68rem;
-  }
-
-  .stack-demo__address--high { top: 1rem; }
-  .stack-demo__address--low { bottom: 1rem; }
-
-  .stack-demo__direction {
-    position: absolute;
-    left: 0.6rem;
-    bottom: 1rem;
-    color: #94a3b8;
-    font-size: 0.68rem;
-  }
-
-  .stack-demo__overflow {
-    position: absolute;
-    left: 4.4rem;
-    right: 3rem;
-    bottom: 0.7rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.55rem;
-    min-height: 36px;
-    border: 1px dashed #ef4444;
-    border-radius: 0.45rem;
-    color: #fecaca;
-    background: rgba(127, 29, 29, 0.28);
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 180ms ease, transform 180ms ease;
-  }
-
-  .stack-demo__overflow[data-active="true"] {
-    opacity: 1;
-    transform: translateY(0);
-    animation: stack-overflow 600ms ease-in-out infinite alternate;
-  }
-
-  .stack-demo__overflow span { color: #fca5a5; font-size: 0.72rem; }
-  .stack-demo__panel { display: flex; flex-direction: column; gap: 0.9rem; }
-
-  .stack-demo__buttons {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
-  }
-
-  .stack-demo__buttons button {
-    padding: 0.58rem 0.65rem;
-    border: 1px solid var(--sd-border);
-    border-radius: 0.65rem;
-    color: inherit;
-    background: transparent;
-    cursor: pointer;
-    font-size: 0.82rem;
-  }
-
-  .stack-demo__buttons button:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
-  .stack-demo__buttons button[data-action="recurse"] { border-color: rgba(225, 29, 72, 0.45); }
-
-  .stack-demo__info {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
-  }
-
-  .stack-demo__info div {
-    padding: 0.65rem;
-    border: 1px solid var(--sd-border);
-    border-radius: 0.65rem;
-  }
-
-  .stack-demo__info span { display: block; color: var(--sd-muted); font-size: 0.72rem; }
-  .stack-demo__info strong { display: block; margin-top: 0.2rem; font-size: 0.9rem; }
-
-  .stack-demo__code {
-    overflow: hidden;
-    border: 1px solid var(--sd-border);
-    border-radius: 0.7rem;
-    color: #dbeafe;
-    background: #0b1020;
-  }
-
-  .stack-demo__code-title {
-    padding: 0.45rem 0.65rem;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-    color: #94a3b8;
-    font-size: 0.7rem;
-  }
-
-  .stack-demo__code pre {
-    margin: 0;
-    padding: 0.75rem;
-    overflow-x: auto;
-    color: inherit;
-    background: transparent;
-    font-size: 0.75rem;
-    line-height: 1.55;
-  }
-
-  .stack-demo__log {
-    min-height: 42px;
-    padding: 0.65rem 0.75rem;
-    border-left: 3px solid #3b82f6;
-    border-radius: 0.35rem;
-    color: var(--sd-muted);
-    background: color-mix(in srgb, currentColor 3%, transparent);
-    font-size: 0.78rem;
-  }
-
-  @keyframes stack-overflow {
-    from { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
-    to { box-shadow: 0 0 24px rgba(239, 68, 68, 0.48); }
-  }
-
-  @media (max-width: 760px) {
-    .stack-demo__workspace { grid-template-columns: 1fr; }
-  }
-
-  @media (max-width: 520px) {
-    .stack-demo__header { flex-direction: column; }
-    .stack-demo__buttons,
-    .stack-demo__info { grid-template-columns: 1fr; }
-  }
+  @keyframes overflowPulse { from { box-shadow:0 0 0 rgba(239,68,68,0); } to { box-shadow:0 0 28px rgba(239,68,68,.5); } }
+  @media (max-width:860px) { .stack-demo__stage { grid-template-columns:1fr; } .stack-demo__memory-pane { min-height:500px; } }
+  @media (max-width:620px) { .stack-demo__header { flex-direction:column; } .stack-demo__metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .stack-demo__stage { padding:.7rem; } }
 </style>
 
 <script>
-  type CellKind = "local" | "frame" | "recursive";
-  type StackCell = { label: string; kind: CellKind };
+  type Kind = "u8" | "u16" | "u32" | "sum" | "ret" | "recursive";
+  type Cell = { label: string; kind: Kind; frame: "main" | "func" | "recursive" };
+  type CodeLine = { text: string; frame: "main" | "func" };
 
   function initStackDemo(root: HTMLElement): void {
     if (root.dataset.initialized === "true") return;
     root.dataset.initialized = "true";
 
-    const capacity = 8;
-    const baseAddress = 0x20001000;
-    const bytesPerCell = 16;
-    const cells: StackCell[] = [];
-    let variableId = 0;
-    let functionId = 0;
-    let timer = 0;
+    const capacity = 12;
+    const base = 0x20001000;
+    const bytesPerCell = 4;
+    const cells: Cell[] = [];
+    let stepIndex = 0;
+    let funcActive = false;
+    let recursionTimer = 0;
     let overflowed = false;
 
-    const slotsRoot = root.querySelector<HTMLElement>("[data-slots]");
-    const spMarker = root.querySelector<HTMLElement>("[data-sp]");
+    const mainProgram = [
+      { text: "int main(void)", frame: "main" },
+      { text: "{", frame: "main" },
+      { text: "    uint8_t  a = 12;", frame: "main" },
+      { text: "    uint16_t b = 100;", frame: "main" },
+      { text: "    uint16_t c = a + b;", frame: "main" },
+      { text: "    uint32_t d = 4000;", frame: "main" },
+      { text: "    uint8_t  e = 240;", frame: "main" },
+      { text: "    uint32_t f = 9;", frame: "main" },
+      { text: "    do_nothing();", frame: "main" },
+      { text: "}", frame: "main" },
+      { text: "", frame: "func" },
+      { text: "void do_nothing(void)", frame: "func" },
+      { text: "{", frame: "func" },
+      { text: "    uint16_t a = 100;", frame: "func" },
+      { text: "    uint8_t  b = 30;", frame: "func" },
+      { text: "}", frame: "func" },
+    ] satisfies CodeLine[];
+
+    const actions = [
+      { line: 2, cell: { label: "12", kind: "u8", frame: "main" } as Cell, msg: "main 创建 uint8_t a = 12，变量进入 main 栈帧。" },
+      { line: 3, cell: { label: "100", kind: "u16", frame: "main" } as Cell, msg: "uint16_t b = 100 占用栈空间。" },
+      { line: 4, cell: { label: "112", kind: "sum", frame: "main" } as Cell, msg: "计算 c = a + b，结果 112 保存到栈。" },
+      { line: 5, cell: { label: "4000", kind: "u32", frame: "main" } as Cell, msg: "uint32_t d = 4000 进入栈。" },
+      { line: 6, cell: { label: "240", kind: "ret", frame: "main" } as Cell, msg: "uint8_t e = 240 进入栈。" },
+      { line: 7, cell: { label: "9", kind: "sum", frame: "main" } as Cell, msg: "uint32_t f = 9 进入 main 栈帧。" },
+      { line: 8, cell: null, msg: "即将调用 do_nothing()：下一步会创建新的函数栈帧。" },
+    ];
+
+    const codeRoot = root.querySelector<HTMLElement>("[data-code-lines]");
+    const cellsRoot = root.querySelector<HTMLElement>("[data-cells]");
+    const addressesRoot = root.querySelector<HTMLElement>("[data-addresses]");
+    const bracketsRoot = root.querySelector<HTMLElement>("[data-brackets]");
+    const sp = root.querySelector<HTMLElement>("[data-sp]");
     const status = root.querySelector<HTMLElement>("[data-status]");
     const used = root.querySelector<HTMLElement>("[data-used]");
     const free = root.querySelector<HTMLElement>("[data-free]");
     const spValue = root.querySelector<HTMLElement>("[data-sp-value]");
+    const actionLabel = root.querySelector<HTMLElement>("[data-action-label]");
     const log = root.querySelector<HTMLElement>("[data-log]");
-    const code = root.querySelector<HTMLElement>("[data-code]");
     const overflow = root.querySelector<HTMLElement>("[data-overflow]");
+    if (!codeRoot || !cellsRoot || !addressesRoot || !bracketsRoot || !sp || !status || !used || !free || !spValue || !actionLabel || !log || !overflow) return;
 
-    if (!slotsRoot || !spMarker || !status || !used || !free || !spValue || !log || !code || !overflow) return;
+    const stopRecursion = () => { if (recursionTimer) window.clearInterval(recursionTimer); recursionTimer = 0; };
 
-    for (let index = 0; index < capacity; index += 1) {
-      const slot = document.createElement("div");
-      slot.className = "stack-demo__slot";
-      slot.dataset.slot = String(index);
-      slotsRoot.append(slot);
+    mainProgram.forEach((line, index) => {
+      const row = document.createElement("div");
+      row.className = "stack-demo__line";
+      row.dataset.line = String(index);
+      row.dataset.frame = line.frame;
+      const no = document.createElement("span"); no.className = "stack-demo__line-no"; no.textContent = String(index + 1);
+      const text = document.createElement("span"); text.textContent = line.text || " ";
+      row.append(no, text); codeRoot.append(row);
+    });
+
+    for (let i = 0; i < capacity; i += 1) {
+      const cell = document.createElement("div"); cell.className = "stack-demo__cell"; cell.dataset.cell = String(i); cell.textContent = ""; cellsRoot.append(cell);
+      const addr = document.createElement("div"); addr.className = "stack-demo__address-row"; addr.textContent = `0x${(base - i * bytesPerCell).toString(16).toUpperCase()}`; addressesRoot.append(addr);
     }
 
-    const stopRecursion = (): void => {
-      if (timer) window.clearInterval(timer);
-      timer = 0;
-    };
-
-    const setCode = (value: string): void => {
-      code.textContent = value;
-    };
-
-    const setOverflow = (message: string): void => {
-      overflowed = true;
-      stopRecursion();
-      overflow.dataset.active = "true";
-      status.textContent = "栈溢出";
-      status.style.color = "#b91c1c";
-      status.style.background = "rgba(239,68,68,0.14)";
-      log.textContent = message;
-      setCode("void recurse(void)\n{\n    char buf[16];\n    recurse();\n}\n\n// Stack Overflow");
-    };
-
-    const render = (): void => {
-      const slotElements = Array.from(slotsRoot.querySelectorAll<HTMLElement>("[data-slot]"));
-      slotElements.forEach((slot, index) => {
-        const cell = cells[index];
-        slot.replaceChildren();
-        if (cell) slot.dataset.kind = cell.kind;
-        else delete slot.dataset.kind;
-
-        const label = document.createElement("span");
-        label.textContent = cell?.label ?? "空闲";
-        const address = document.createElement("span");
-        address.className = "stack-demo__slot-address";
-        address.textContent = `0x${(baseAddress - index * bytesPerCell).toString(16).toUpperCase()}`;
-        slot.append(label, address);
+    const highlightLine = (line: number) => {
+      codeRoot.querySelectorAll<HTMLElement>("[data-line]").forEach((el, idx) => {
+        el.dataset.active = idx === line ? "true" : "false";
+        el.dataset.done = idx < line ? "true" : "false";
       });
+    };
 
+    const renderBrackets = () => {
+      bracketsRoot.replaceChildren();
+      const addBracket = (frame: "main" | "func", start: number, count: number, label: string) => {
+        if (count <= 0) return;
+        const bracket = document.createElement("div");
+        bracket.className = "stack-demo__bracket";
+        bracket.dataset.frame = frame;
+        bracket.style.top = `${(start / capacity) * 100}%`;
+        bracket.style.height = `${(count / capacity) * 100}%`;
+        const text = document.createElement("span"); text.textContent = label; bracket.append(text); bracketsRoot.append(bracket);
+      };
+      const mainCount = cells.filter(c => c.frame === "main").length;
+      const funcCount = cells.filter(c => c.frame === "func").length;
+      addBracket("main", 0, mainCount, "main frame");
+      addBracket("func", mainCount, funcCount, "do_nothing frame");
+    };
+
+    const render = () => {
+      const cellEls = Array.from(cellsRoot.querySelectorAll<HTMLElement>("[data-cell]"));
+      cellEls.forEach((el, index) => {
+        const cell = cells[index];
+        el.textContent = cell?.label ?? "";
+        if (cell) el.dataset.kind = cell.kind; else delete el.dataset.kind;
+        el.dataset.active = index === cells.length - 1 && cells.length > 0 ? "true" : "false";
+      });
       const count = cells.length;
       used.textContent = `${count} / ${capacity}`;
       free.textContent = String(capacity - count);
-      spValue.textContent = `0x${(baseAddress - count * bytesPerCell).toString(16).toUpperCase()}`;
-      spMarker.style.top = `${51 + (Math.min(count, capacity) * 360) / capacity}px`;
-
+      spValue.textContent = `0x${(base - count * bytesPerCell).toString(16).toUpperCase()}`;
+      sp.style.top = `${Math.min(count, capacity) * (430 / capacity) - 10}px`;
+      renderBrackets();
       if (!overflowed) {
-        const tight = count >= 6;
+        const tight = count >= 9;
         status.textContent = tight ? "栈空间紧张" : "运行正常";
         status.style.color = tight ? "#a16207" : "#15803d";
-        status.style.background = tight ? "rgba(234,179,8,0.16)" : "rgba(22,163,74,0.14)";
+        status.style.background = tight ? "rgba(234,179,8,.16)" : "rgba(22,163,74,.14)";
       }
     };
 
-    const pushCell = (cell: StackCell): boolean => {
+    const push = (cell: Cell): boolean => {
       if (cells.length >= capacity) {
-        setOverflow("继续压栈将越过栈边界，发生 Stack Overflow。");
+        overflowed = true; stopRecursion(); overflow.dataset.active = "true";
+        status.textContent = "栈溢出"; status.style.color = "#b91c1c"; status.style.background = "rgba(239,68,68,.14)";
+        actionLabel.textContent = "Stack Overflow";
+        log.textContent = "继续压栈需要越过栈边界，SP 已进入非法区域。";
         return false;
       }
-      cells.push(cell);
-      render();
-      return true;
+      cells.push(cell); render(); return true;
     };
 
-    const clearOverflow = (): void => {
-      overflowed = false;
-      overflow.dataset.active = "false";
+    const callFunction = () => {
+      stopRecursion(); overflowed = false; overflow.dataset.active = "false";
+      if (funcActive) { log.textContent = "do_nothing() 栈帧已经存在。"; return; }
+      if (cells.length + 3 > capacity) { push({ label:"overflow", kind:"recursive", frame:"recursive" }); return; }
+      highlightLine(8);
+      push({ label:"RET", kind:"ret", frame:"func" });
+      push({ label:"100", kind:"u16", frame:"func" });
+      push({ label:"30", kind:"u8", frame:"func" });
+      funcActive = true;
+      highlightLine(14);
+      actionLabel.textContent = "调用 do_nothing()";
+      log.textContent = "函数调用创建新栈帧：保存返回地址 RET，并压入局部变量 100 和 30。紫色括号显示函数栈帧范围。";
     };
 
-    root.querySelector('[data-action="push"]')?.addEventListener("click", () => {
-      stopRecursion();
-      clearOverflow();
-      variableId += 1;
-      if (pushCell({ label: `局部变量 v${variableId}`, kind: "local" })) {
-        log.textContent = `创建局部变量 v${variableId}，SP 向低地址移动 ${bytesPerCell} 字节。`;
-        setCode(`void task(void)\n{\n    int v${variableId} = ${variableId * 10};\n}`);
-      }
+    root.querySelector('[data-action="next"]')?.addEventListener("click", () => {
+      stopRecursion(); overflowed = false; overflow.dataset.active = "false";
+      if (stepIndex >= actions.length) { callFunction(); return; }
+      const action = actions[stepIndex]; highlightLine(action.line);
+      if (action.cell) push(action.cell);
+      actionLabel.textContent = `执行第 ${action.line + 1} 行`;
+      log.textContent = action.msg;
+      stepIndex += 1;
     });
 
-    root.querySelector('[data-action="call"]')?.addEventListener("click", () => {
-      stopRecursion();
-      clearOverflow();
-      functionId += 1;
-      if (cells.length + 2 > capacity) {
-        setOverflow(`func${functionId} 需要两个栈单元，但剩余空间不足。`);
-        return;
-      }
-      pushCell({ label: `func${functionId}: 返回地址`, kind: "frame" });
-      pushCell({ label: `func${functionId}: 局部变量`, kind: "frame" });
-      log.textContent = `调用 func${functionId}，创建新的函数栈帧。`;
-      setCode(`void func${functionId}(void)\n{\n    int temp = ${functionId};\n}\n\nfunc${functionId}();`);
-    });
+    root.querySelector('[data-action="call"]')?.addEventListener("click", callFunction);
 
-    root.querySelector('[data-action="pop"]')?.addEventListener("click", () => {
+    root.querySelector('[data-action="return"]')?.addEventListener("click", () => {
       stopRecursion();
-      if (cells.length === 0) {
-        log.textContent = "栈已经为空。";
-        return;
-      }
-      const removed = cells.pop();
-      clearOverflow();
-      log.textContent = `${removed?.label ?? "栈单元"} 已出栈，SP 向高地址恢复。`;
-      setCode("// 函数返回或作用域结束\n// 对应栈空间自动释放");
+      const firstFunc = cells.findIndex(c => c.frame === "func");
+      if (firstFunc < 0) { log.textContent = "当前没有函数栈帧可以返回。"; return; }
+      cells.splice(firstFunc);
+      funcActive = false; overflowed = false; overflow.dataset.active = "false";
+      highlightLine(9); actionLabel.textContent = "函数返回";
+      log.textContent = "do_nothing() 返回：整个函数栈帧一次性释放，SP 回到 main 栈帧顶部。";
       render();
     });
 
     root.querySelector('[data-action="recurse"]')?.addEventListener("click", () => {
-      if (timer) return;
-      clearOverflow();
-      setCode("void recurse(void)\n{\n    char buf[16];\n    recurse();\n}");
-      log.textContent = "开始递归，每次调用都会增加一个栈帧……";
-      timer = window.setInterval(() => {
-        const depth = cells.filter((cell) => cell.kind === "recursive").length + 1;
-        if (pushCell({ label: `recurse(${depth}) 栈帧`, kind: "recursive" })) {
-          log.textContent = `递归深度 ${depth}，栈继续向低地址增长。`;
-        }
-      }, 430);
+      if (recursionTimer) return;
+      overflowed = false; overflow.dataset.active = "false";
+      actionLabel.textContent = "递归压栈";
+      log.textContent = "开始递归：每次调用都创建新的栈帧，直到耗尽栈空间。";
+      let depth = 1;
+      recursionTimer = window.setInterval(() => {
+        if (!push({ label:`R${depth}`, kind:"recursive", frame:"recursive" })) return;
+        depth += 1;
+      }, 360);
     });
 
     root.querySelector('[data-action="reset"]')?.addEventListener("click", () => {
-      stopRecursion();
-      cells.length = 0;
-      variableId = 0;
-      functionId = 0;
-      clearOverflow();
-      log.textContent = "栈已重置。点击按钮观察栈帧变化。";
-      setCode("void main(void)\n{\n    int a = 10;\n}");
-      render();
+      stopRecursion(); cells.length = 0; stepIndex = 0; funcActive = false; overflowed = false; overflow.dataset.active = "false";
+      highlightLine(0); actionLabel.textContent = "等待执行"; log.textContent = "点击“下一步”，观察变量如何依次进入 main 的栈帧。"; render();
     });
 
-    document.addEventListener("astro:before-swap", stopRecursion, { once: true });
-    render();
+    document.addEventListener("astro:before-swap", stopRecursion, { once:true });
+    highlightLine(0); render();
   }
 
   document.querySelectorAll<HTMLElement>("[data-stack-demo]").forEach(initStackDemo);
-  document.addEventListener("astro:page-load", () => {
-    document.querySelectorAll<HTMLElement>("[data-stack-demo]").forEach(initStackDemo);
-  });
+  document.addEventListener("astro:page-load", () => document.querySelectorAll<HTMLElement>("[data-stack-demo]").forEach(initStackDemo));
 </script>
