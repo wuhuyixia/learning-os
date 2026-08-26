@@ -16,6 +16,7 @@ const blog = defineCollection({
     imageFit: z.enum(["cover", "contain"]).default("cover"),
     badge: z.string().optional(),
     draft: z.boolean().default(false),
+    demo: z.enum(["stack-memory"]).optional(),
     categories: z
       .array(z.string())
       .refine((items: string[]) => new Set(items).size === items.length, {
