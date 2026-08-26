@@ -5,6 +5,7 @@ import PostFilter from "@components/widgets/PostFilter.astro";
 import PostInfo from "@components/widgets/PostInfo.astro";
 import StackMemoryDemo from "@components/StackMemoryDemo.astro";
 import HeapMemoryDemo from "@components/HeapMemoryDemo.astro";
+import StackHeapPointerDemo from "@components/StackHeapPointerDemo.astro";
 import { DATE_FORMAT } from "@config";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import dayjs from "@utils/dayjs";
@@ -37,6 +38,7 @@ const image = new URL(`/learning-os/og/${blog.id}.png`, Astro.site).toString();
 const url = new URL(`/learning-os/blog/${blog.id}`, Astro.site ?? Astro.url.origin);
 const showStackDemo = blog.data.demo === "stack-memory" || blog.data.demo === "stack-and-heap";
 const showHeapDemo = blog.data.demo === "heap-memory" || blog.data.demo === "stack-and-heap";
+const showPointerDemo = blog.data.demo === "stack-and-heap";
 ---
 
 <BaseLayout
@@ -85,6 +87,16 @@ const showHeapDemo = blog.data.demo === "heap-memory" || blog.data.demo === "sta
               <p class="mt-2 text-sm opacity-70">观察 malloc / free、first-fit 分配、外部碎片以及“总空闲够但连续空间不足”的分配失败。</p>
             </div>
             <HeapMemoryDemo />
+          </section>
+        )}
+
+        {showPointerDemo && (
+          <section class="not-prose mb-10">
+            <div class="mb-3">
+              <h2 class="text-2xl font-bold">3. 栈指针与堆数据</h2>
+              <p class="mt-2 text-sm opacity-70">观察栈中的指针变量如何保存地址，并通过箭头指向堆中真正的数据块。</p>
+            </div>
+            <StackHeapPointerDemo />
           </section>
         )}
 
