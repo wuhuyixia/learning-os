@@ -6,6 +6,7 @@ import PostInfo from "@components/widgets/PostInfo.astro";
 import StackMemoryDemo from "@components/StackMemoryDemo.astro";
 import HeapMemoryDemo from "@components/HeapMemoryDemo.astro";
 import StackHeapPointerDemo from "@components/StackHeapPointerDemo.astro";
+import HeapFitAutoDemo from "@components/HeapFitAutoDemo.astro";
 import { DATE_FORMAT } from "@config";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import dayjs from "@utils/dayjs";
@@ -39,6 +40,7 @@ const url = new URL(`/learning-os/blog/${blog.id}`, Astro.site ?? Astro.url.orig
 const showStackDemo = blog.data.demo === "stack-memory" || blog.data.demo === "stack-and-heap";
 const showHeapDemo = blog.data.demo === "heap-memory" || blog.data.demo === "stack-and-heap";
 const showPointerDemo = blog.data.demo === "stack-and-heap";
+const showHeapFitAutoDemo = blog.data.demo === "stack-and-heap";
 ---
 
 <BaseLayout
@@ -97,6 +99,16 @@ const showPointerDemo = blog.data.demo === "stack-and-heap";
               <p class="mt-2 text-sm opacity-70">观察栈中的指针变量如何保存地址，并通过箭头指向堆中真正的数据块。</p>
             </div>
             <StackHeapPointerDemo />
+          </section>
+        )}
+
+        {showHeapFitAutoDemo && (
+          <section class="not-prose mb-10">
+            <div class="mb-3">
+              <h2 class="text-2xl font-bold">4. 堆的常见分配策略</h2>
+              <p class="mt-2 text-sm opacity-70">三种策略使用相同初始空闲块和相同请求序列自动循环播放，不需要点击即可直接对比。</p>
+            </div>
+            <HeapFitAutoDemo />
           </section>
         )}
 
