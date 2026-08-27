@@ -133,6 +133,49 @@ $$
 
 > 在第 9 个 SCL 高电平期间，检测 SDA 是否为低电平。
 
+## I2C Bus Recovery（总线恢复）
+
+如果主机在传输过程中复位，而从机仍然拉低 SDA，主机重启后可能一直检测到 `BUSY`。常用恢复方法是：**临时将 SCL/SDA 切换为开漏 GPIO，最多产生 9 个 SCL 脉冲，使从机完成当前字节并释放 SDA，然后产生 STOP，再重新初始化 I2C。**
+
+```text
+SCL
+     ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐
+─────┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └────
+      1   2   3   4   5   6   7   8   9
+```
+
+每产生一个时钟都检查 SDA，若已经释放则可以提前结束：
+
+```c
+void I2C_BusRecovery(void)
+{
+    I2C_Cmd(I2C1, DISABLE);
+    I2C_GPIO_OD_Init();          // SCL/SDA 配置为开漏 GPIO
+
+    SDA_RELEASE();
+
+    for (uint8_t i = 0; i < 9 && !SDA_READ(); i++)
+    {
+        SCL_LOW();
+        Delay();
+        SCL_RELEASE();
+        Delay();
+    }
+
+    /* 产生 STOP：SCL 高时 SDA 由低变高 */
+    SDA_LOW();
+    Delay();
+    SCL_RELEASE();
+    Delay();
+    SDA_RELEASE();
+
+    I2C_GPIO_AF_OD_Init();
+    I2C_ReInit();
+}
+```
+
+> `RELEASE` 表示释放开漏线路，由上拉电阻拉高，而不是使用推挽方式强制输出高电平。
+
 ## I2C GPIO 初始化
 
 STM32F1 的 `I2C1` 默认引脚为：
@@ -214,7 +257,6 @@ I2C 根据 SCL 时钟频率可以分为多种速度模式：
 | High-speed mode | 3.4 MHz | 高速 I2C 通信 |
 | Ultra Fast-mode | 5 MHz | 单向传输，使用较少 |
 
-
 ## I2C 时钟信号占空比
 
 I2C 的时钟信号由 **SCL 高电平时间**和**低电平时间**组成：
@@ -229,7 +271,6 @@ I2C 的时钟信号由 **SCL 高电平时间**和**低电平时间**组成：
        <------->
 ```
 
-
 | I2C 模式 | 配置 | $T_{LOW}:T_{HIGH}$ |
 |---|---|---:|
 | Standard Mode | 100 kHz | 1 : 1 |
@@ -237,7 +278,6 @@ I2C 的时钟信号由 **SCL 高电平时间**和**低电平时间**组成：
 | Fast Mode | `I2C_DutyCycle_16_9` | 16 : 9 |
 
 > `I2C_DutyCycle_2` 和 `I2C_DutyCycle_16_9` 主要用于 **Fast Mode**。
-
 
 ## I2C_InitTypeDef 结构体
 
@@ -253,13 +293,9 @@ typedef struct
 } I2C_InitTypeDef;
 ```
 
-
 ## I2C外设收发流程
 
-
 ![I2C外设收发与时钟控制框图](/learning-os/image/STM32/I2C-Peripheral-Transfer-Flow.png)
-
-
 
 通过 `Len` 指定数据长度，同一套函数可以完成 **1 字节或多字节**收发。
 
@@ -405,7 +441,6 @@ void My_I2C_Receive(uint8_t SlaveAddr,
 ---
 
 > 核心思想：**发送端使用循环即可；接收端根据 `Len = 1`、`Len = 2`、`Len ≥ 3` 自动处理最后几个字节的 ACK/NACK 和 STOP。**
-
 
 # STM32 软件 I2C
 
