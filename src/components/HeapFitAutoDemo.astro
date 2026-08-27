@@ -2,402 +2,200 @@
 const strategies = [
   {
     key: "first",
-    name: "First Fit",
-    cn: "首次适配",
-    desc: "从链表头开始，遇到第一个足够大的空闲块就立即分配。速度快，但前部容易逐渐产生小碎片。",
+    name: "First Fit（首次适配）",
+    desc: "从链表头开始向后查找，遇到第一个足够大的空闲块就立即分配。实现最简单、查找通常最快，但长期运行后容易在链表前部留下较多小碎片。",
+    pros: "实现简单，分配速度快",
+    cons: "链表前部容易积累小碎片",
+    code: `// First Fit：找到第一个足够大的空闲块
+void* first_fit_malloc(size_t size) {
+    block_header_t* current = free_list;
+
+    while (current != NULL) {
+        if (current->is_free && current->size >= size) {
+            current->is_free = 0;
+            return (void*)((uint8_t*)current + sizeof(block_header_t));
+        }
+        current = current->next;
+    }
+
+    return NULL;
+}`,
   },
   {
     key: "best",
-    name: "Best Fit",
-    cn: "最佳适配",
-    desc: "遍历全部空闲块，选择最小但仍能满足请求的块。单次剩余更小，但容易留下难以利用的微小碎片。",
+    name: "Best Fit（最佳适配）",
+    desc: "遍历所有空闲块，选择“能够满足申请且大小最小”的那一块。单次分配后的剩余空间更小，但需要完整遍历，并且容易产生难以再次利用的微小碎片。",
+    pros: "单次分配更加贴合请求大小",
+    cons: "查找开销较高，容易留下微小碎片",
+    code: `// Best Fit：找到最小但仍足够大的空闲块
+void* best_fit_malloc(size_t size) {
+    block_header_t* current = free_list;
+    block_header_t* best = NULL;
+    size_t best_size = SIZE_MAX;
+
+    while (current != NULL) {
+        if (current->is_free && current->size >= size &&
+            current->size < best_size) {
+            best = current;
+            best_size = current->size;
+        }
+        current = current->next;
+    }
+
+    if (best != NULL) {
+        best->is_free = 0;
+        return (void*)((uint8_t*)best + sizeof(block_header_t));
+    }
+
+    return NULL;
+}`,
   },
   {
     key: "worst",
-    name: "Worst Fit",
-    cn: "最差适配",
-    desc: "每次选择最大的空闲块，希望分割后的剩余块仍然较大，但会持续消耗最大的连续空间。",
+    name: "Worst Fit（最差适配）",
+    desc: "遍历所有空闲块，优先选择当前最大的空闲块。它希望分割之后仍保留较大的剩余块，但会持续消耗系统中最大的连续空闲空间。",
+    pros: "分割后的剩余块通常仍然较大",
+    cons: "持续切割最大连续空闲块，且需要完整遍历",
+    code: `// Worst Fit：找到最大的空闲块
+void* worst_fit_malloc(size_t size) {
+    block_header_t* current = free_list;
+    block_header_t* worst = NULL;
+    size_t worst_size = 0;
+
+    while (current != NULL) {
+        if (current->is_free && current->size >= size &&
+            current->size > worst_size) {
+            worst = current;
+            worst_size = current->size;
+        }
+        current = current->next;
+    }
+
+    if (worst != NULL) {
+        worst->is_free = 0;
+        return (void*)((uint8_t*)worst + sizeof(block_header_t));
+    }
+
+    return NULL;
+}`,
   },
 ];
 ---
 
 <section class="heap-fit-auto not-prose" data-heap-fit-auto>
-  <div class="heap-fit-auto__intro">
-    <p>
-      使用相同的初始空闲块 <code>12 / 7 / 18 / 9</code>，依次申请
-      <code>A=6</code>、<code>B=8</code>、<code>C=5</code>。三种策略同步循环播放，便于直接比较它们选择空闲块和形成碎片的差异。
-    </p>
+  <div class="heap-fit-auto__common">
+    <strong>统一演示条件</strong>
+    <span>初始空闲块：12 / 7 / 18 / 9</span>
+    <span>申请序列：A=6 → B=8 → C=5</span>
+    <em>下面三种动画会自动循环播放。</em>
   </div>
 
-  <div class="heap-fit-auto__request-line">
-    <span>申请序列</span>
-    <b>A = 6</b>
-    <b>B = 8</b>
-    <b>C = 5</b>
-    <span class="heap-fit-auto__loop">自动循环播放</span>
-  </div>
+  {strategies.map((strategy, index) => (
+    <section class="heap-fit-auto__strategy" data-strategy={strategy.key}>
+      <div class="heap-fit-auto__strategy-title">
+        <span>{index + 1}</span>
+        <h3>{strategy.name}</h3>
+      </div>
 
-  <div class="heap-fit-auto__grid">
-    {strategies.map((strategy) => (
-      <article class="heap-fit-auto__card" data-strategy={strategy.key}>
-        <div class="heap-fit-auto__card-head">
+      <p class="heap-fit-auto__description">{strategy.desc}</p>
+
+      <div class="heap-fit-auto__pros-cons">
+        <div><strong>优点</strong><span>{strategy.pros}</span></div>
+        <div><strong>缺点</strong><span>{strategy.cons}</span></div>
+      </div>
+
+      <div class="heap-fit-auto__code-wrap">
+        <div class="heap-fit-auto__code-title">核心代码</div>
+        <pre><code>{strategy.code}</code></pre>
+      </div>
+
+      <div class="heap-fit-auto__demo">
+        <div class="heap-fit-auto__demo-head">
           <div>
-            <strong>{strategy.name}</strong>
-            <span>{strategy.cn}</span>
+            <strong>自动播放演示</strong>
+            <span data-stage-label>初始状态</span>
           </div>
-          <em data-stage-label>初始状态</em>
-        </div>
-
-        <p class="heap-fit-auto__desc">{strategy.desc}</p>
-
-        <div class="heap-fit-auto__status">
-          <span>当前请求</span>
-          <strong data-request>等待开始</strong>
-          <span>选择</span>
-          <strong data-choice>—</strong>
+          <div class="heap-fit-auto__request">
+            <span>当前请求</span>
+            <b data-request>等待开始</b>
+            <span>选择</span>
+            <b data-choice>—</b>
+          </div>
         </div>
 
         <div class="heap-fit-auto__memory" data-memory></div>
 
-        <div class="heap-fit-auto__footer">
+        <div class="heap-fit-auto__demo-footer">
           <span>当前空闲块</span>
           <strong data-free-list>12, 7, 18, 9</strong>
         </div>
-      </article>
-    ))}
-  </div>
+      </div>
+    </section>
+  ))}
 
-  <div class="heap-fit-auto__takeaway">
-    <strong>观察重点：</strong>
-    First Fit 更偏向速度；Best Fit 倾向“刚好够用”，因此更容易留下很小的剩余块；Worst Fit 则不断切割当前最大的空闲块。
+  <div class="heap-fit-auto__note">
+    这里为了突出“如何选择空闲块”，动画和代码省略了真实分配器中的块头、内存对齐、块分裂细节、空闲链表维护以及相邻空闲块合并等机制。
   </div>
 </section>
 
 <style is:global>
-  .heap-fit-auto {
-    --hfa-border: color-mix(in srgb, currentColor 14%, transparent);
-    --hfa-muted: color-mix(in srgb, currentColor 58%, transparent);
-    margin: 1rem 0 1.8rem;
-  }
-
-  .heap-fit-auto__intro {
-    padding: .78rem .9rem;
-    border-left: 3px solid #3b82f6;
-    border-radius: .45rem;
-    background: color-mix(in srgb, currentColor 3.5%, transparent);
-  }
-  .heap-fit-auto__intro p { margin: 0; font-size: .82rem; line-height: 1.65; }
-  .heap-fit-auto__intro code { font-size: .76rem; }
-
-  .heap-fit-auto__request-line {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: .5rem;
-    margin: .8rem 0;
-    font-size: .74rem;
-  }
-  .heap-fit-auto__request-line > span:first-child { color: var(--hfa-muted); }
-  .heap-fit-auto__request-line b {
-    padding: .35rem .58rem;
-    border: 1px solid var(--hfa-border);
-    border-radius: 999px;
-    font-size: .72rem;
-  }
-  .heap-fit-auto__loop { margin-left: auto; color: var(--hfa-muted); }
-
-  .heap-fit-auto__grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: .75rem;
-  }
-
-  .heap-fit-auto__card {
-    min-width: 0;
-    padding: .8rem;
-    border: 1px solid var(--hfa-border);
-    border-radius: .85rem;
-    color: #e5e7eb;
-    background: #020304;
-    overflow: hidden;
-  }
-
-  .heap-fit-auto__card-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: .5rem;
-  }
-  .heap-fit-auto__card-head > div { display: flex; flex-direction: column; gap: .08rem; }
-  .heap-fit-auto__card-head strong { color: #f8fafc; font-size: .88rem; }
-  .heap-fit-auto__card-head span { color: #94a3b8; font-size: .62rem; }
-  .heap-fit-auto__card-head em {
-    padding: .25rem .42rem;
-    border-radius: .4rem;
-    color: #fde68a;
-    background: rgba(245,158,11,.12);
-    font-size: .58rem;
-    font-style: normal;
-    white-space: nowrap;
-  }
-
-  .heap-fit-auto__desc {
-    min-height: 3.8rem;
-    margin: .55rem 0 0;
-    color: #94a3b8;
-    font-size: .67rem;
-    line-height: 1.55;
-  }
-
-  .heap-fit-auto__status {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: .18rem .45rem;
-    margin-top: .55rem;
-    padding: .5rem .55rem;
-    border-radius: .5rem;
-    background: #0b1220;
-  }
-  .heap-fit-auto__status span { color: #64748b; font-size: .58rem; }
-  .heap-fit-auto__status strong { color: #dbeafe; font-size: .65rem; text-align: right; }
-
-  .heap-fit-auto__memory {
-    display: flex;
-    align-items: stretch;
-    gap: .18rem;
-    height: 92px;
-    margin-top: .65rem;
-  }
-
-  .heap-fit-auto__block {
-    position: relative;
-    min-width: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-    border-radius: .34rem;
-    overflow: hidden;
-    transition: flex-grow 280ms ease, transform 220ms ease, opacity 220ms ease, border-color 220ms ease, background 220ms ease;
-  }
-  .heap-fit-auto__block span {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    color: #f8fafc;
-    font-size: .54rem;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  .heap-fit-auto__block--free {
-    border-color: rgba(34,197,94,.38);
-    background: rgba(34,197,94,.15);
-  }
-  .heap-fit-auto__block--fixed {
-    border-color: rgba(100,116,139,.3);
-    background: rgba(71,85,105,.5);
-  }
-  .heap-fit-auto__block--a { border-color: rgba(14,165,233,.55); background: rgba(14,165,233,.58); }
-  .heap-fit-auto__block--b { border-color: rgba(245,158,11,.55); background: rgba(245,158,11,.56); }
-  .heap-fit-auto__block--c { border-color: rgba(168,85,247,.55); background: rgba(168,85,247,.58); }
-  .heap-fit-auto__block[data-selected="true"] {
-    border-color: #facc15;
-    box-shadow: 0 0 0 2px rgba(250,204,21,.25);
-    transform: translateY(-4px);
-  }
-
-  .heap-fit-auto__footer {
-    display: flex;
-    justify-content: space-between;
-    gap: .5rem;
-    margin-top: .55rem;
-    padding-top: .5rem;
-    border-top: 1px solid rgba(148,163,184,.14);
-  }
-  .heap-fit-auto__footer span { color: #64748b; font-size: .6rem; }
-  .heap-fit-auto__footer strong { color: #cbd5e1; font-size: .62rem; }
-
-  .heap-fit-auto__takeaway {
-    margin-top: .75rem;
-    padding: .7rem .82rem;
-    border-radius: .55rem;
-    color: var(--hfa-muted);
-    background: color-mix(in srgb, currentColor 3%, transparent);
-    font-size: .72rem;
-    line-height: 1.55;
-  }
-
-  @media (max-width: 980px) {
-    .heap-fit-auto__grid { grid-template-columns: 1fr; }
-    .heap-fit-auto__desc { min-height: 0; }
-    .heap-fit-auto__memory { height: 82px; }
-  }
-  @media (max-width: 620px) {
-    .heap-fit-auto__loop { width: 100%; margin-left: 0; }
-  }
+  .heap-fit-auto { --hfa-border: color-mix(in srgb, currentColor 14%, transparent); --hfa-muted: color-mix(in srgb, currentColor 58%, transparent); }
+  .heap-fit-auto__common { display:flex; flex-wrap:wrap; align-items:center; gap:.55rem .85rem; margin-bottom:1rem; padding:.72rem .82rem; border-left:3px solid #3b82f6; border-radius:.48rem; background:color-mix(in srgb,currentColor 3%,transparent); font-size:.75rem; }
+  .heap-fit-auto__common strong{font-size:.8rem}.heap-fit-auto__common span{color:var(--hfa-muted)}.heap-fit-auto__common em{margin-left:auto;color:var(--hfa-muted);font-style:normal}
+  .heap-fit-auto__strategy { margin:0 0 1.55rem; padding:1rem; border:1px solid var(--hfa-border); border-radius:.9rem; }
+  .heap-fit-auto__strategy-title{display:flex;align-items:center;gap:.55rem}.heap-fit-auto__strategy-title>span{display:grid;place-items:center;width:1.55rem;height:1.55rem;border-radius:50%;color:#fff;background:#2563eb;font-size:.68rem;font-weight:800}.heap-fit-auto__strategy-title h3{margin:0;font-size:1rem}
+  .heap-fit-auto__description{margin:.68rem 0 0;color:inherit;font-size:.82rem;line-height:1.7}
+  .heap-fit-auto__pros-cons{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-top:.7rem}.heap-fit-auto__pros-cons>div{display:flex;gap:.5rem;padding:.55rem .65rem;border:1px solid var(--hfa-border);border-radius:.55rem;font-size:.7rem}.heap-fit-auto__pros-cons strong{white-space:nowrap}.heap-fit-auto__pros-cons span{color:var(--hfa-muted)}
+  .heap-fit-auto__code-wrap{margin-top:.8rem;overflow:hidden;border:1px solid rgba(148,163,184,.18);border-radius:.75rem;background:#020304}.heap-fit-auto__code-title{padding:.5rem .7rem;border-bottom:1px solid rgba(148,163,184,.14);color:#94a3b8;font-size:.66rem;font-weight:700}.heap-fit-auto__code-wrap pre{margin:0;padding:.8rem;overflow-x:auto;background:#020304}.heap-fit-auto__code-wrap code{color:#dbeafe;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:.7rem;line-height:1.55;white-space:pre}
+  .heap-fit-auto__demo{margin-top:.8rem;padding:.85rem;border-radius:.75rem;color:#e5e7eb;background:#030712}.heap-fit-auto__demo-head{display:flex;justify-content:space-between;gap:.8rem;align-items:flex-start}.heap-fit-auto__demo-head>div:first-child{display:flex;flex-direction:column;gap:.12rem}.heap-fit-auto__demo-head strong{color:#f8fafc;font-size:.78rem}.heap-fit-auto__demo-head [data-stage-label]{color:#facc15;font-size:.62rem}
+  .heap-fit-auto__request{display:grid;grid-template-columns:auto auto;gap:.12rem .45rem;text-align:right}.heap-fit-auto__request span{color:#64748b;font-size:.56rem}.heap-fit-auto__request b{color:#dbeafe;font-size:.62rem}
+  .heap-fit-auto__memory{display:flex;gap:.2rem;height:88px;margin-top:.72rem}.heap-fit-auto__block{min-width:10px;display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:.35rem;overflow:hidden;transition:flex-grow 260ms ease,transform 220ms ease,background 220ms ease,border-color 220ms ease}.heap-fit-auto__block span{color:#f8fafc;font-size:.57rem;font-weight:700;white-space:nowrap}.heap-fit-auto__block--free{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.17)}.heap-fit-auto__block--fixed{border-color:rgba(100,116,139,.3);background:rgba(71,85,105,.55)}.heap-fit-auto__block--a{border-color:rgba(14,165,233,.6);background:rgba(14,165,233,.58)}.heap-fit-auto__block--b{border-color:rgba(245,158,11,.6);background:rgba(245,158,11,.58)}.heap-fit-auto__block--c{border-color:rgba(168,85,247,.6);background:rgba(168,85,247,.6)}.heap-fit-auto__block[data-selected="true"]{border-color:#facc15;box-shadow:0 0 0 2px rgba(250,204,21,.24);transform:translateY(-4px)}
+  .heap-fit-auto__demo-footer{display:flex;justify-content:space-between;gap:.6rem;margin-top:.55rem;padding-top:.5rem;border-top:1px solid rgba(148,163,184,.14);font-size:.62rem}.heap-fit-auto__demo-footer span{color:#64748b}.heap-fit-auto__demo-footer strong{color:#cbd5e1}
+  .heap-fit-auto__note{padding:.68rem .8rem;border-radius:.55rem;color:var(--hfa-muted);background:color-mix(in srgb,currentColor 3%,transparent);font-size:.7rem;line-height:1.55}
+  @media(max-width:700px){.heap-fit-auto__common em{width:100%;margin-left:0}.heap-fit-auto__pros-cons{grid-template-columns:1fr}.heap-fit-auto__demo-head{flex-direction:column}.heap-fit-auto__request{text-align:left}.heap-fit-auto__memory{overflow-x:auto}}
 </style>
 
 <script>
-  type Segment = {
-    kind: "free" | "fixed" | "a" | "b" | "c";
-    size: number;
-    label: string;
-    selected?: boolean;
-  };
-
-  type Frame = {
-    request: string;
-    choice: string;
-    label: string;
-    freeList: string;
-    segments: Segment[];
-  };
-
-  function initHeapFitAuto(root: HTMLElement): void {
-    if (root.dataset.initialized === "true") return;
-    root.dataset.initialized = "true";
-
-    const layouts: Record<string, Frame[]> = {
-      first: [
-        {
-          request: "等待开始",
-          choice: "—",
-          label: "初始状态",
-          freeList: "12, 7, 18, 9",
-          segments: baseSegments(),
-        },
-        {
-          request: "A = 6",
-          choice: "F1 = 12",
-          label: "找到第一个够大的块",
-          freeList: "12, 7, 18, 9",
-          segments: markBase(0),
-        },
-        {
-          request: "A = 6 完成",
-          choice: "F1 → A6 + R6",
-          label: "分割 F1",
-          freeList: "6, 7, 18, 9",
-          segments: [s("a",6,"A6"), s("free",6,"R6"), fixed(), s("free",7,"F2 7"), fixed(), s("free",18,"F3 18"), fixed(), s("free",9,"F4 9")],
-        },
-        {
-          request: "B = 8",
-          choice: "F3 = 18",
-          label: "跳过 6、7",
-          freeList: "6, 7, 18, 9",
-          segments: [s("a",6,"A6"), s("free",6,"R6"), fixed(), s("free",7,"F2 7"), fixed(), s("free",18,"F3 18",true), fixed(), s("free",9,"F4 9")],
-        },
-        {
-          request: "B = 8 完成",
-          choice: "F3 → B8 + R10",
-          label: "分割 F3",
-          freeList: "6, 7, 10, 9",
-          segments: [s("a",6,"A6"), s("free",6,"R6"), fixed(), s("free",7,"F2 7"), fixed(), s("b",8,"B8"), s("free",10,"R10"), fixed(), s("free",9,"F4 9")],
-        },
-        {
-          request: "C = 5",
-          choice: "R6 = 6",
-          label: "再次命中前部",
-          freeList: "6, 7, 10, 9",
-          segments: [s("a",6,"A6"), s("free",6,"R6",true), fixed(), s("free",7,"F2 7"), fixed(), s("b",8,"B8"), s("free",10,"R10"), fixed(), s("free",9,"F4 9")],
-        },
-        {
-          request: "C = 5 完成",
-          choice: "R6 → C5 + R1",
-          label: "留下 1 的小碎片",
-          freeList: "1, 7, 10, 9",
-          segments: [s("a",6,"A6"), s("c",5,"C5"), s("free",1,"R1"), fixed(), s("free",7,"F2 7"), fixed(), s("b",8,"B8"), s("free",10,"R10"), fixed(), s("free",9,"F4 9")],
-        },
+  type Segment={kind:"free"|"fixed"|"a"|"b"|"c";size:number;label:string;selected?:boolean};
+  type Frame={request:string;choice:string;label:string;freeList:string;segments:Segment[]};
+  function initHeapFitAuto(root:HTMLElement):void{
+    if(root.dataset.initialized==="true")return;root.dataset.initialized="true";
+    const s=(kind:Segment["kind"],size:number,label:string,selected=false):Segment=>({kind,size,label,selected});
+    const fixed=():Segment=>s("fixed",4,"占用");
+    const base=():Segment[]=>[s("free",12,"F1 12"),fixed(),s("free",7,"F2 7"),fixed(),s("free",18,"F3 18"),fixed(),s("free",9,"F4 9")];
+    const selectedBase=(index:number):Segment[]=>base().map((item,i)=>({...item,selected:i===index}));
+    const layouts:Record<string,Frame[]>={
+      first:[
+        {request:"等待开始",choice:"—",label:"初始状态",freeList:"12, 7, 18, 9",segments:base()},
+        {request:"A = 6",choice:"F1 = 12",label:"命中第一个可用块",freeList:"12, 7, 18, 9",segments:selectedBase(0)},
+        {request:"A 完成",choice:"A6 + R6",label:"分割 F1",freeList:"6, 7, 18, 9",segments:[s("a",6,"A6"),s("free",6,"R6"),fixed(),s("free",7,"F2 7"),fixed(),s("free",18,"F3 18"),fixed(),s("free",9,"F4 9")]},
+        {request:"B = 8",choice:"F3 = 18",label:"跳过 6 和 7",freeList:"6, 7, 18, 9",segments:[s("a",6,"A6"),s("free",6,"R6"),fixed(),s("free",7,"F2 7"),fixed(),s("free",18,"F3 18",true),fixed(),s("free",9,"F4 9")]},
+        {request:"B 完成",choice:"B8 + R10",label:"分割 F3",freeList:"6, 7, 10, 9",segments:[s("a",6,"A6"),s("free",6,"R6"),fixed(),s("free",7,"F2 7"),fixed(),s("b",8,"B8"),s("free",10,"R10"),fixed(),s("free",9,"F4 9")]},
+        {request:"C = 5",choice:"R6 = 6",label:"再次命中链表前部",freeList:"6, 7, 10, 9",segments:[s("a",6,"A6"),s("free",6,"R6",true),fixed(),s("free",7,"F2 7"),fixed(),s("b",8,"B8"),s("free",10,"R10"),fixed(),s("free",9,"F4 9")]},
+        {request:"C 完成",choice:"C5 + R1",label:"留下 1 的小碎片",freeList:"1, 7, 10, 9",segments:[s("a",6,"A6"),s("c",5,"C5"),s("free",1,"R1"),fixed(),s("free",7,"F2 7"),fixed(),s("b",8,"B8"),s("free",10,"R10"),fixed(),s("free",9,"F4 9")]}
       ],
-      best: [
-        { request: "等待开始", choice: "—", label: "初始状态", freeList: "12, 7, 18, 9", segments: baseSegments() },
-        { request: "A = 6", choice: "F2 = 7", label: "选择最小可用块", freeList: "12, 7, 18, 9", segments: markBase(2) },
-        { request: "A = 6 完成", choice: "F2 → A6 + R1", label: "留下 1 的碎片", freeList: "12, 1, 18, 9", segments: [s("free",12,"F1 12"), fixed(), s("a",6,"A6"), s("free",1,"R1"), fixed(), s("free",18,"F3 18"), fixed(), s("free",9,"F4 9")] },
-        { request: "B = 8", choice: "F4 = 9", label: "再次选择最小可用块", freeList: "12, 1, 18, 9", segments: [s("free",12,"F1 12"), fixed(), s("a",6,"A6"), s("free",1,"R1"), fixed(), s("free",18,"F3 18"), fixed(), s("free",9,"F4 9",true)] },
-        { request: "B = 8 完成", choice: "F4 → B8 + R1", label: "又留下 1 的碎片", freeList: "12, 1, 18, 1", segments: [s("free",12,"F1 12"), fixed(), s("a",6,"A6"), s("free",1,"R1"), fixed(), s("free",18,"F3 18"), fixed(), s("b",8,"B8"), s("free",1,"R1")] },
-        { request: "C = 5", choice: "F1 = 12", label: "选择当前最小可用块", freeList: "12, 1, 18, 1", segments: [s("free",12,"F1 12",true), fixed(), s("a",6,"A6"), s("free",1,"R1"), fixed(), s("free",18,"F3 18"), fixed(), s("b",8,"B8"), s("free",1,"R1")] },
-        { request: "C = 5 完成", choice: "F1 → C5 + R7", label: "两个 1 难以利用", freeList: "7, 1, 18, 1", segments: [s("c",5,"C5"), s("free",7,"R7"), fixed(), s("a",6,"A6"), s("free",1,"R1"), fixed(), s("free",18,"F3 18"), fixed(), s("b",8,"B8"), s("free",1,"R1")] },
+      best:[
+        {request:"等待开始",choice:"—",label:"初始状态",freeList:"12, 7, 18, 9",segments:base()},
+        {request:"A = 6",choice:"F2 = 7",label:"选择最小可用块",freeList:"12, 7, 18, 9",segments:selectedBase(2)},
+        {request:"A 完成",choice:"A6 + R1",label:"留下 1 的碎片",freeList:"12, 1, 18, 9",segments:[s("free",12,"F1 12"),fixed(),s("a",6,"A6"),s("free",1,"R1"),fixed(),s("free",18,"F3 18"),fixed(),s("free",9,"F4 9")]},
+        {request:"B = 8",choice:"F4 = 9",label:"选择当前最小可用块",freeList:"12, 1, 18, 9",segments:[s("free",12,"F1 12"),fixed(),s("a",6,"A6"),s("free",1,"R1"),fixed(),s("free",18,"F3 18"),fixed(),s("free",9,"F4 9",true)]},
+        {request:"B 完成",choice:"B8 + R1",label:"再次留下 1 的碎片",freeList:"12, 1, 18, 1",segments:[s("free",12,"F1 12"),fixed(),s("a",6,"A6"),s("free",1,"R1"),fixed(),s("free",18,"F3 18"),fixed(),s("b",8,"B8"),s("free",1,"R1")]},
+        {request:"C = 5",choice:"F1 = 12",label:"选择当前最小可用块",freeList:"12, 1, 18, 1",segments:[s("free",12,"F1 12",true),fixed(),s("a",6,"A6"),s("free",1,"R1"),fixed(),s("free",18,"F3 18"),fixed(),s("b",8,"B8"),s("free",1,"R1")]},
+        {request:"C 完成",choice:"C5 + R7",label:"保留 18，但已有两个微小碎片",freeList:"7, 1, 18, 1",segments:[s("c",5,"C5"),s("free",7,"R7"),fixed(),s("a",6,"A6"),s("free",1,"R1"),fixed(),s("free",18,"F3 18"),fixed(),s("b",8,"B8"),s("free",1,"R1")]}
       ],
-      worst: [
-        { request: "等待开始", choice: "—", label: "初始状态", freeList: "12, 7, 18, 9", segments: baseSegments() },
-        { request: "A = 6", choice: "F3 = 18", label: "选择最大空闲块", freeList: "12, 7, 18, 9", segments: markBase(4) },
-        { request: "A = 6 完成", choice: "F3 → A6 + R12", label: "最大块被切小", freeList: "12, 7, 12, 9", segments: [s("free",12,"F1 12"), fixed(), s("free",7,"F2 7"), fixed(), s("a",6,"A6"), s("free",12,"R12"), fixed(), s("free",9,"F4 9")] },
-        { request: "B = 8", choice: "F1 = 12", label: "继续选择最大块", freeList: "12, 7, 12, 9", segments: [s("free",12,"F1 12",true), fixed(), s("free",7,"F2 7"), fixed(), s("a",6,"A6"), s("free",12,"R12"), fixed(), s("free",9,"F4 9")] },
-        { request: "B = 8 完成", choice: "F1 → B8 + R4", label: "又切掉一个大块", freeList: "4, 7, 12, 9", segments: [s("b",8,"B8"), s("free",4,"R4"), fixed(), s("free",7,"F2 7"), fixed(), s("a",6,"A6"), s("free",12,"R12"), fixed(), s("free",9,"F4 9")] },
-        { request: "C = 5", choice: "R12 = 12", label: "再次消耗最大块", freeList: "4, 7, 12, 9", segments: [s("b",8,"B8"), s("free",4,"R4"), fixed(), s("free",7,"F2 7"), fixed(), s("a",6,"A6"), s("free",12,"R12",true), fixed(), s("free",9,"F4 9")] },
-        { request: "C = 5 完成", choice: "R12 → C5 + R7", label: "最大连续块持续缩小", freeList: "4, 7, 7, 9", segments: [s("b",8,"B8"), s("free",4,"R4"), fixed(), s("free",7,"F2 7"), fixed(), s("a",6,"A6"), s("c",5,"C5"), s("free",7,"R7"), fixed(), s("free",9,"F4 9")] },
-      ],
+      worst:[
+        {request:"等待开始",choice:"—",label:"初始状态",freeList:"12, 7, 18, 9",segments:base()},
+        {request:"A = 6",choice:"F3 = 18",label:"选择最大空闲块",freeList:"12, 7, 18, 9",segments:selectedBase(4)},
+        {request:"A 完成",choice:"A6 + R12",label:"最大块被切小",freeList:"12, 7, 12, 9",segments:[s("free",12,"F1 12"),fixed(),s("free",7,"F2 7"),fixed(),s("a",6,"A6"),s("free",12,"R12"),fixed(),s("free",9,"F4 9")]},
+        {request:"B = 8",choice:"F1 = 12",label:"继续选择最大块",freeList:"12, 7, 12, 9",segments:[s("free",12,"F1 12",true),fixed(),s("free",7,"F2 7"),fixed(),s("a",6,"A6"),s("free",12,"R12"),fixed(),s("free",9,"F4 9")]},
+        {request:"B 完成",choice:"B8 + R4",label:"另一个大块继续变小",freeList:"4, 7, 12, 9",segments:[s("b",8,"B8"),s("free",4,"R4"),fixed(),s("free",7,"F2 7"),fixed(),s("a",6,"A6"),s("free",12,"R12"),fixed(),s("free",9,"F4 9")]},
+        {request:"C = 5",choice:"R12 = 12",label:"再次选择最大块",freeList:"4, 7, 12, 9",segments:[s("b",8,"B8"),s("free",4,"R4"),fixed(),s("free",7,"F2 7"),fixed(),s("a",6,"A6"),s("free",12,"R12",true),fixed(),s("free",9,"F4 9")]},
+        {request:"C 完成",choice:"C5 + R7",label:"最大连续空间持续缩小",freeList:"4, 7, 7, 9",segments:[s("b",8,"B8"),s("free",4,"R4"),fixed(),s("free",7,"F2 7"),fixed(),s("a",6,"A6"),s("c",5,"C5"),s("free",7,"R7"),fixed(),s("free",9,"F4 9")]}
+      ]
     };
-
-    function s(kind: Segment["kind"], size: number, label: string, selected = false): Segment {
-      return { kind, size, label, selected };
-    }
-
-    function fixed(): Segment {
-      return s("fixed", 4, "占用");
-    }
-
-    function baseSegments(): Segment[] {
-      return [s("free",12,"F1 12"), fixed(), s("free",7,"F2 7"), fixed(), s("free",18,"F3 18"), fixed(), s("free",9,"F4 9")];
-    }
-
-    function markBase(index: number): Segment[] {
-      return baseSegments().map((segment, i) => ({ ...segment, selected: i === index }));
-    }
-
-    const cards = Array.from(root.querySelectorAll<HTMLElement>("[data-strategy]"));
-    let frame = 0;
-    let timer = 0;
-
-    function renderCard(card: HTMLElement): void {
-      const key = card.dataset.strategy || "first";
-      const frames = layouts[key];
-      const current = frames[frame % frames.length];
-      const requestEl = card.querySelector<HTMLElement>("[data-request]");
-      const choiceEl = card.querySelector<HTMLElement>("[data-choice]");
-      const labelEl = card.querySelector<HTMLElement>("[data-stage-label]");
-      const freeEl = card.querySelector<HTMLElement>("[data-free-list]");
-      const memoryEl = card.querySelector<HTMLElement>("[data-memory]");
-      if (!requestEl || !choiceEl || !labelEl || !freeEl || !memoryEl) return;
-
-      requestEl.textContent = current.request;
-      choiceEl.textContent = current.choice;
-      labelEl.textContent = current.label;
-      freeEl.textContent = current.freeList;
-      memoryEl.replaceChildren();
-
-      for (const segment of current.segments) {
-        const block = document.createElement("div");
-        block.className = `heap-fit-auto__block heap-fit-auto__block--${segment.kind}`;
-        block.style.flexGrow = String(Math.max(segment.size, 1));
-        block.style.flexBasis = "0";
-        if (segment.selected) block.dataset.selected = "true";
-        const text = document.createElement("span");
-        text.textContent = segment.label;
-        block.append(text);
-        memoryEl.append(block);
-      }
-    }
-
-    function render(): void {
-      cards.forEach(renderCard);
-    }
-
-    function stop(): void {
-      if (timer) window.clearInterval(timer);
-      timer = 0;
-    }
-
-    render();
-    timer = window.setInterval(() => {
-      frame = (frame + 1) % 7;
-      render();
-    }, 1350);
-
-    document.addEventListener("astro:before-swap", stop, { once: true });
+    const cards=Array.from(root.querySelectorAll<HTMLElement>("[data-strategy]"));let frame=0;let timer=0;
+    function renderCard(card:HTMLElement):void{const key=card.dataset.strategy||"first";const current=layouts[key][frame%layouts[key].length];const request=card.querySelector<HTMLElement>("[data-request]");const choice=card.querySelector<HTMLElement>("[data-choice]");const stage=card.querySelector<HTMLElement>("[data-stage-label]");const freeList=card.querySelector<HTMLElement>("[data-free-list]");const memory=card.querySelector<HTMLElement>("[data-memory]");if(!request||!choice||!stage||!freeList||!memory)return;request.textContent=current.request;choice.textContent=current.choice;stage.textContent=current.label;freeList.textContent=current.freeList;memory.replaceChildren();for(const segment of current.segments){const block=document.createElement("div");block.className=`heap-fit-auto__block heap-fit-auto__block--${segment.kind}`;block.style.flexGrow=String(Math.max(segment.size,1));block.style.flexBasis="0";if(segment.selected)block.dataset.selected="true";const label=document.createElement("span");label.textContent=segment.label;block.append(label);memory.append(block)}}
+    function render():void{cards.forEach(renderCard)}function stop():void{if(timer)window.clearInterval(timer);timer=0}render();timer=window.setInterval(()=>{frame=(frame+1)%7;render()},1400);document.addEventListener("astro:before-swap",stop,{once:true});
   }
-
-  document.querySelectorAll<HTMLElement>("[data-heap-fit-auto]").forEach(initHeapFitAuto);
-  document.addEventListener("astro:page-load", () => {
-    document.querySelectorAll<HTMLElement>("[data-heap-fit-auto]").forEach(initHeapFitAuto);
-  });
+  document.querySelectorAll<HTMLElement>("[data-heap-fit-auto]").forEach(initHeapFitAuto);document.addEventListener("astro:page-load",()=>{document.querySelectorAll<HTMLElement>("[data-heap-fit-auto]").forEach(initHeapFitAuto)});
 </script>
