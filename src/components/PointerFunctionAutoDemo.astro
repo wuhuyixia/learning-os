@@ -10,20 +10,20 @@
   <div class="pointer-func-demo__board">
     <div class="pointer-func-demo__code">
       <div class="pointer-func-demo__title">C 代码</div>
-      <pre><code><span data-line="0">int *func(void) {</span>
+      <pre><code><span data-line="0">int *func(void) &#123;</span>
 <span data-line="1">    int a = 10;</span>
-<span data-line="2">    return &a;</span>
-<span data-line="3">}</span>
+<span data-line="2">    return &amp;a;</span>
+<span data-line="3">&#125;</span>
 
-<span data-line="4">int *func2(void) {</span>
+<span data-line="4">int *func2(void) &#123;</span>
 <span data-line="5">    int b = 22;</span>
-<span data-line="6">    return &b;</span>
-<span data-line="7">}</span>
+<span data-line="6">    return &amp;b;</span>
+<span data-line="7">&#125;</span>
 
-<span data-line="8">int main(void) {</span>
+<span data-line="8">int main(void) &#123;</span>
 <span data-line="9">    int *pa = func();</span>
 <span data-line="10">    int *pb = func2();</span>
-<span data-line="11">}</span></code></pre>
+<span data-line="11">&#125;</span></code></pre>
     </div>
 
     <div class="pointer-func-demo__memory">
