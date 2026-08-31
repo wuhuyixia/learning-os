@@ -1,0 +1,180 @@
+<section class="pointer-func-demo not-prose" data-pointer-func-demo>
+  <div class="pointer-func-demo__head">
+    <div>
+      <h3>指针函数：返回局部变量地址的风险</h3>
+      <p>自动演示 <code>func()</code> / <code>func2()</code> 返回局部变量地址后，栈空间被复用并形成悬空指针的过程。</p>
+    </div>
+    <span data-stage>1 / 6</span>
+  </div>
+
+  <div class="pointer-func-demo__board">
+    <div class="pointer-func-demo__code">
+      <div class="pointer-func-demo__title">C 代码</div>
+      <pre><code><span data-line="0">int *func(void) {</span>
+<span data-line="1">    int a = 10;</span>
+<span data-line="2">    return &a;</span>
+<span data-line="3">}</span>
+
+<span data-line="4">int *func2(void) {</span>
+<span data-line="5">    int b = 22;</span>
+<span data-line="6">    return &b;</span>
+<span data-line="7">}</span>
+
+<span data-line="8">int main(void) {</span>
+<span data-line="9">    int *pa = func();</span>
+<span data-line="10">    int *pb = func2();</span>
+<span data-line="11">}</span></code></pre>
+    </div>
+
+    <div class="pointer-func-demo__memory">
+      <svg class="pointer-func-demo__svg" viewBox="0 0 760 390" aria-hidden="true">
+        <defs>
+          <marker id="pfd-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#38bdf8" />
+          </marker>
+        </defs>
+
+        <text x="515" y="30" class="pfd-label">Stack</text>
+        <rect x="500" y="50" width="210" height="300" rx="10" class="pfd-stack" />
+
+        <g data-slot="local">
+          <rect x="525" y="95" width="160" height="76" rx="8" class="pfd-local" />
+          <text x="545" y="122" class="pfd-name" data-local-name>a</text>
+          <text x="545" y="148" class="pfd-value" data-local-value>10</text>
+          <text x="545" y="165" class="pfd-address">0x100C</text>
+        </g>
+
+        <g data-slot="pa">
+          <rect x="525" y="205" width="160" height="54" rx="8" class="pfd-pointer" />
+          <text x="540" y="226" class="pfd-name">pa</text>
+          <text x="540" y="246" class="pfd-address" data-pa-value>?</text>
+        </g>
+
+        <g data-slot="pb">
+          <rect x="525" y="275" width="160" height="54" rx="8" class="pfd-pointer" />
+          <text x="540" y="296" class="pfd-name">pb</text>
+          <text x="540" y="316" class="pfd-address" data-pb-value>?</text>
+        </g>
+
+        <path data-arrow="pa" d="M525 232 C460 232, 440 150, 525 133" class="pfd-arrow" marker-end="url(#pfd-arrow)" />
+        <path data-arrow="pb" d="M525 302 C430 302, 420 165, 525 140" class="pfd-arrow" marker-end="url(#pfd-arrow)" />
+
+        <text x="55" y="90" class="pfd-big" data-call>main() 调用 func()</text>
+        <text x="55" y="128" class="pfd-small" data-note>局部变量 a 被压入 func 栈帧</text>
+        <text x="55" y="166" class="pfd-small" data-note2>地址还没有返回给 pa</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="pointer-func-demo__message" data-message>
+    第一步：<code>func()</code> 创建局部变量 <code>a=10</code>，它只在当前函数栈帧内有效。
+  </div>
+</section>
+
+<style is:global>
+  .pointer-func-demo { margin: 1rem 0 1.8rem; }
+  .pointer-func-demo__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.75rem; }
+  .pointer-func-demo__head h3 { margin:0; font-size:1rem; }
+  .pointer-func-demo__head p { margin:.25rem 0 0; font-size:.75rem; opacity:.68; line-height:1.55; }
+  .pointer-func-demo__head > span { font-size:.7rem; opacity:.55; white-space:nowrap; }
+  .pointer-func-demo__board { display:grid; grid-template-columns:minmax(300px,.9fr) minmax(440px,1.2fr); gap:.8rem; padding:.8rem; border-radius:.85rem; background:#020304; color:#e5e7eb; }
+  .pointer-func-demo__code { overflow:hidden; border:1px solid rgba(56,189,248,.35); border-radius:.7rem; background:#030712; }
+  .pointer-func-demo__title { padding:.5rem .65rem; border-bottom:1px solid rgba(148,163,184,.12); color:#94a3b8; font-size:.65rem; font-weight:700; }
+  .pointer-func-demo__code pre { margin:0; padding:.7rem; overflow:auto; background:transparent; }
+  .pointer-func-demo__code code { font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:.7rem; line-height:1.55; color:#dbeafe; }
+  .pointer-func-demo__code [data-line] { display:block; padding:.03rem .22rem; border-radius:.25rem; }
+  .pointer-func-demo__code [data-active="true"] { color:#fef08a; background:rgba(250,204,21,.12); outline:1px solid rgba(250,204,21,.45); }
+  .pointer-func-demo__memory { border:1px solid rgba(148,163,184,.16); border-radius:.7rem; overflow:hidden; background:#030712; }
+  .pointer-func-demo__svg { width:100%; height:auto; display:block; min-height:310px; }
+  .pfd-stack { fill:#05070d; stroke:#64748b; stroke-width:2; }
+  .pfd-local { fill:rgba(34,197,94,.18); stroke:#22c55e; stroke-width:2; }
+  .pfd-pointer { fill:rgba(37,99,235,.17); stroke:#3b82f6; stroke-width:2; }
+  .pfd-local[data-invalid="true"] { fill:rgba(107,114,128,.18); stroke:#6b7280; stroke-dasharray:7 5; }
+  .pfd-label,.pfd-name,.pfd-value,.pfd-address,.pfd-big,.pfd-small { font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; }
+  .pfd-label { fill:#cbd5e1; font-size:18px; font-weight:700; }
+  .pfd-name { fill:#e2e8f0; font-size:16px; font-weight:700; }
+  .pfd-value { fill:#f8fafc; font-size:22px; font-weight:800; }
+  .pfd-address { fill:#7dd3fc; font-size:13px; }
+  .pfd-big { fill:#f8fafc; font-size:22px; font-weight:800; }
+  .pfd-small { fill:#94a3b8; font-size:15px; }
+  .pfd-arrow { fill:none; stroke:#38bdf8; stroke-width:3; opacity:.95; }
+  .pfd-arrow[data-hidden="true"] { opacity:0; }
+  .pointer-func-demo__message { margin-top:.65rem; padding:.68rem .78rem; border-left:3px solid #3b82f6; border-radius:.45rem; background:color-mix(in srgb,currentColor 3%,transparent); font-size:.74rem; line-height:1.6; }
+  @media (max-width:900px) { .pointer-func-demo__board { grid-template-columns:1fr; } }
+</style>
+
+<script>
+  type Frame = {
+    line: number;
+    localName: string;
+    localValue: string;
+    localInvalid: boolean;
+    pa: string;
+    pb: string;
+    paArrow: boolean;
+    pbArrow: boolean;
+    call: string;
+    note: string;
+    note2: string;
+    message: string;
+  };
+
+  const frames: Frame[] = [
+    { line:1, localName:"a", localValue:"10", localInvalid:false, pa:"?", pb:"?", paArrow:false, pbArrow:false, call:"main() 调用 func()", note:"局部变量 a 进入 func 栈帧", note2:"a 地址 = 0x100C", message:"第一步：func() 创建局部变量 a=10，它只在当前函数栈帧内有效。" },
+    { line:2, localName:"a", localValue:"10", localInvalid:false, pa:"0x100C", pb:"?", paArrow:true, pbArrow:false, call:"return &a", note:"把 a 的地址返回给 main", note2:"pa = 0x100C", message:"第二步：return &a 把局部变量 a 的地址交给 pa。此时 pa 指向 a。" },
+    { line:3, localName:"已失效", localValue:"原 a 栈空间", localInvalid:true, pa:"0x100C", pb:"?", paArrow:true, pbArrow:false, call:"func() 返回", note:"func 栈帧生命周期结束", note2:"pa 仍保存旧地址", message:"第三步：func() 返回后 a 的生命周期已经结束，但 pa 仍保存 0x100C，于是 pa 成为悬空指针。" },
+    { line:5, localName:"b", localValue:"22", localInvalid:false, pa:"0x100C", pb:"?", paArrow:true, pbArrow:false, call:"main() 调用 func2()", note:"新的栈帧复用同一地址", note2:"b 地址再次是 0x100C", message:"第四步：func2() 的局部变量 b=22 复用了同一块栈空间，因此 pa 的旧地址现在碰巧落在 b 上。" },
+    { line:6, localName:"b", localValue:"22", localInvalid:false, pa:"0x100C", pb:"0x100C", paArrow:true, pbArrow:true, call:"return &b", note:"pb 接收到同一个地址", note2:"pa = pb = 0x100C", message:"第五步：pb 得到 &b。此时 pa 和 pb 数值相同，但 pa 并没有重新赋值，只是旧地址被新栈帧复用了。" },
+    { line:7, localName:"已失效", localValue:"原 b 栈空间", localInvalid:true, pa:"0x100C", pb:"0x100C", paArrow:true, pbArrow:true, call:"func2() 返回", note:"b 生命周期结束", note2:"两个指针都悬空", message:"第六步：func2() 返回后 b 也失效。地址还在，不代表对象还有效；解引用 pa 或 pb 都属于未定义行为。" },
+  ];
+
+  function initPointerFunctionDemo(root: HTMLElement): void {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+    const q = <T extends Element>(selector: string): T | null => root.querySelector<T>(selector);
+    const lines = Array.from(root.querySelectorAll<HTMLElement>("[data-line]"));
+    const local = q<SVGElement>('[data-slot="local"] .pfd-local');
+    const localName = q<SVGTextElement>("[data-local-name]");
+    const localValue = q<SVGTextElement>("[data-local-value]");
+    const paValue = q<SVGTextElement>("[data-pa-value]");
+    const pbValue = q<SVGTextElement>("[data-pb-value]");
+    const paArrow = q<SVGPathElement>('[data-arrow="pa"]');
+    const pbArrow = q<SVGPathElement>('[data-arrow="pb"]');
+    const call = q<SVGTextElement>("[data-call]");
+    const note = q<SVGTextElement>("[data-note]");
+    const note2 = q<SVGTextElement>("[data-note2]");
+    const message = q<HTMLElement>("[data-message]");
+    const stage = q<HTMLElement>("[data-stage]");
+    if (!local || !localName || !localValue || !paValue || !pbValue || !paArrow || !pbArrow || !call || !note || !note2 || !message || !stage) return;
+
+    let index = 0;
+    let timer = 0;
+
+    const render = (): void => {
+      const frame = frames[index];
+      lines.forEach((line, i) => line.dataset.active = i === frame.line ? "true" : "false");
+      local.dataset.invalid = frame.localInvalid ? "true" : "false";
+      localName.textContent = frame.localName;
+      localValue.textContent = frame.localValue;
+      paValue.textContent = frame.pa;
+      pbValue.textContent = frame.pb;
+      paArrow.dataset.hidden = frame.paArrow ? "false" : "true";
+      pbArrow.dataset.hidden = frame.pbArrow ? "false" : "true";
+      call.textContent = frame.call;
+      note.textContent = frame.note;
+      note2.textContent = frame.note2;
+      message.textContent = frame.message;
+      stage.textContent = `${index + 1} / ${frames.length}`;
+    };
+
+    const stop = (): void => { if (timer) window.clearInterval(timer); timer = 0; };
+    render();
+    timer = window.setInterval(() => { index = (index + 1) % frames.length; render(); }, 1700);
+    document.addEventListener("astro:before-swap", stop, { once: true });
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-pointer-func-demo]").forEach(initPointerFunctionDemo);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll<HTMLElement>("[data-pointer-func-demo]").forEach(initPointerFunctionDemo);
+  });
+</script>
