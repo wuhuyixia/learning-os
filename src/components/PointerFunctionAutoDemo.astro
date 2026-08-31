@@ -2,7 +2,7 @@
   <div class="pointer-func-demo__head">
     <div>
       <h3>指针函数：返回局部变量地址的风险</h3>
-      <p>自动演示 <code>func()</code> / <code>func2()</code> 返回局部变量地址后，栈空间被复用并形成悬空指针的过程。</p>
+      <p>点击“下一步”，逐步观察 <code>func()</code> / <code>func2()</code> 返回局部变量地址、栈空间复用以及悬空指针的形成过程。</p>
     </div>
     <span data-stage>1 / 6</span>
   </div>
@@ -69,6 +69,12 @@
   <div class="pointer-func-demo__message" data-message>
     第一步：<code>func()</code> 创建局部变量 <code>a=10</code>，它只在当前函数栈帧内有效。
   </div>
+
+  <div class="pointer-func-demo__controls">
+    <button type="button" data-action="prev">上一步</button>
+    <button type="button" data-action="next">下一步</button>
+    <button type="button" data-action="reset">重置</button>
+  </div>
 </section>
 
 <style is:global>
@@ -100,6 +106,10 @@
   .pfd-arrow { fill:none; stroke:#38bdf8; stroke-width:3; opacity:.95; }
   .pfd-arrow[data-hidden="true"] { opacity:0; }
   .pointer-func-demo__message { margin-top:.65rem; padding:.68rem .78rem; border-left:3px solid #3b82f6; border-radius:.45rem; background:color-mix(in srgb,currentColor 3%,transparent); font-size:.74rem; line-height:1.6; }
+  .pointer-func-demo__controls { display:flex; gap:.55rem; margin-top:.7rem; }
+  .pointer-func-demo__controls button { padding:.48rem .75rem; border:1px solid color-mix(in srgb,currentColor 16%,transparent); border-radius:.55rem; background:transparent; color:inherit; font-size:.72rem; cursor:pointer; }
+  .pointer-func-demo__controls button:hover { background:color-mix(in srgb,currentColor 7%,transparent); }
+  .pointer-func-demo__controls button:disabled { opacity:.4; cursor:not-allowed; }
   @media (max-width:900px) { .pointer-func-demo__board { grid-template-columns:1fr; } }
 </style>
 
@@ -145,10 +155,12 @@
     const note2 = q<SVGTextElement>("[data-note2]");
     const message = q<HTMLElement>("[data-message]");
     const stage = q<HTMLElement>("[data-stage]");
-    if (!local || !localName || !localValue || !paValue || !pbValue || !paArrow || !pbArrow || !call || !note || !note2 || !message || !stage) return;
+    const prev = q<HTMLButtonElement>('[data-action="prev"]');
+    const next = q<HTMLButtonElement>('[data-action="next"]');
+    const reset = q<HTMLButtonElement>('[data-action="reset"]');
+    if (!local || !localName || !localValue || !paValue || !pbValue || !paArrow || !pbArrow || !call || !note || !note2 || !message || !stage || !prev || !next || !reset) return;
 
     let index = 0;
-    let timer = 0;
 
     const render = (): void => {
       const frame = frames[index];
@@ -165,12 +177,26 @@
       note2.textContent = frame.note2;
       message.textContent = frame.message;
       stage.textContent = `${index + 1} / ${frames.length}`;
+      prev.disabled = index === 0;
+      next.disabled = index === frames.length - 1;
     };
 
-    const stop = (): void => { if (timer) window.clearInterval(timer); timer = 0; };
+    prev.addEventListener("click", () => {
+      index = Math.max(0, index - 1);
+      render();
+    });
+
+    next.addEventListener("click", () => {
+      index = Math.min(frames.length - 1, index + 1);
+      render();
+    });
+
+    reset.addEventListener("click", () => {
+      index = 0;
+      render();
+    });
+
     render();
-    timer = window.setInterval(() => { index = (index + 1) % frames.length; render(); }, 1700);
-    document.addEventListener("astro:before-swap", stop, { once: true });
   }
 
   document.querySelectorAll<HTMLElement>("[data-pointer-func-demo]").forEach(initPointerFunctionDemo);
