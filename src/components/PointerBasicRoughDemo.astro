@@ -1,0 +1,97 @@
+<section class="pointer-basic-rough not-prose" data-pointer-basic-rough>
+  <div class="pointer-basic-rough__head">
+    <div>
+      <h3>指针的基本含义</h3>
+      <p><code>p</code> 保存 <code>a</code> 的地址，<code>*p</code> 访问该地址中的数据。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="pointer-basic-rough__paper">
+    <svg viewBox="0 0 1040 500" role="img" aria-label="基础指针关系手绘图">
+      <g data-rough-layer></g>
+      <g class="pointer-basic-rough__labels">
+        <text x="55" y="58" class="pbr-code">int a = 10;</text>
+        <text x="55" y="94" class="pbr-code">int *p = &amp;a;</text>
+
+        <text x="105" y="165" class="pbr-note">普通变量</text>
+        <text x="425" y="165" class="pbr-note">指针变量</text>
+        <text x="735" y="165" class="pbr-note">关系</text>
+
+        <text x="132" y="292" class="pbr-red">10</text>
+        <text x="92" y="352" class="pbr-small">地址：0x1000</text>
+        <text x="140" y="392" class="pbr-code">a</text>
+
+        <text x="455" y="292" class="pbr-blue">0x1000</text>
+        <text x="430" y="352" class="pbr-small">保存 a 的地址</text>
+        <text x="495" y="392" class="pbr-code">p</text>
+
+        <text x="720" y="230" class="pbr-code">&amp;a = 0x1000</text>
+        <text x="720" y="273" class="pbr-code">p  = 0x1000</text>
+        <text x="720" y="316" class="pbr-code">*p = 10</text>
+        <text x="720" y="378" class="pbr-code">*p = 20 ⇔ a = 20</text>
+
+        <text x="95" y="455" class="pbr-note">p 保存地址；*p 解引用后访问的就是 a 中的数据。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .pointer-basic-rough { margin:1rem 0 2rem; }
+  .pointer-basic-rough__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.7rem; }
+  .pointer-basic-rough__head h3 { margin:0; font-size:1rem; }
+  .pointer-basic-rough__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.68; line-height:1.55; }
+  .pointer-basic-rough__head button { flex:none; padding:.44rem .7rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.55rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .pointer-basic-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.85rem; background:#fbfaf5; }
+  .pointer-basic-rough__paper svg { display:block; width:100%; min-width:780px; height:auto; }
+  .pointer-basic-rough__labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .pbr-code { font-size:22px; }
+  .pbr-small { font-size:17px; }
+  .pbr-note { font-size:20px; }
+  .pbr-red { font-size:34px; font-weight:700; fill:#cf3e32 !important; }
+  .pbr-blue { font-size:27px; font-weight:700; fill:#2577b8 !important; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+
+  async function initPointerBasicRough(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+
+    const roughModule = await import(roughUrl);
+    const rough = roughModule.default;
+    let seed = 12;
+
+    const draw = () => {
+      layer.replaceChildren();
+      const rc = rough.svg(svg);
+      const base = { stroke:"#333", strokeWidth:1.6, roughness:1.5, bowing:1.1, seed };
+      const add = (node) => layer.appendChild(node);
+
+      add(rc.rectangle(90, 205, 155, 120, { ...base, stroke:"#d24b3f", fill:"#fde9e5", fillStyle:"hachure", hachureGap:8 }));
+      add(rc.rectangle(405, 205, 215, 120, { ...base, stroke:"#2d7fbd", fill:"#e8f2fb", fillStyle:"hachure", hachureGap:8 }));
+      add(rc.rectangle(690, 195, 285, 210, { ...base, stroke:"#666", fill:"#fffdf8", fillStyle:"solid" }));
+
+      add(rc.path("M 620 262 C 680 245, 700 205, 630 170 C 520 112, 315 120, 245 225", { ...base, stroke:"#2d7fbd", strokeWidth:2.3 }));
+      add(rc.line(245, 225, 260, 236, { ...base, stroke:"#2d7fbd", strokeWidth:2.3 }));
+      add(rc.line(245, 225, 264, 219, { ...base, stroke:"#2d7fbd", strokeWidth:2.3 }));
+
+      seed += 1;
+    };
+
+    draw();
+    redraw.addEventListener("click", draw);
+  }
+
+  document.querySelectorAll("[data-pointer-basic-rough]").forEach(initPointerBasicRough);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll("[data-pointer-basic-rough]").forEach(initPointerBasicRough);
+  });
+</script>
