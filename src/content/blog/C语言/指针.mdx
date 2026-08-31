@@ -12,6 +12,8 @@ tags:
   - 栈
 ---
 
+import PointerBasicRoughDemo from "@components/PointerBasicRoughDemo.astro";
+import PointerToPointerRoughDemo from "@components/PointerToPointerRoughDemo.astro";
 import PointerArrayRoughDemo from "@components/PointerArrayRoughDemo.astro";
 import PointerPassByValueRoughDemo from "@components/PointerPassByValueRoughDemo.astro";
 
@@ -26,12 +28,7 @@ int a = 10;
 int *p = &a;
 ```
 
-可以理解为：
-
-```text
-p ─────→ a
-         10
-```
+<PointerBasicRoughDemo />
 
 其中：
 
@@ -50,6 +47,44 @@ p ─────→ a
 ```c
 a = 20;
 ```
+
+## 指向指针的指针（二级指针）
+
+指针本身也是变量，因此它也有自己的内存地址。于是可以再定义一个指针，专门保存另一个指针的地址，这就是**二级指针**。
+
+```c
+int x = 5;
+int *p = &x;
+int **q = &p;
+```
+
+三者关系为：
+
+```text
+q → p → x
+```
+
+<PointerToPointerRoughDemo />
+
+其中：
+
+- `p` 保存 `x` 的地址，`*p` 访问 `x`；
+- `q` 保存 `p` 的地址，`*q` 得到 `p`；
+- `**q` 最终访问到 `x` 中的数据。
+
+例如：
+
+```c
+**q = 8;
+```
+
+等价于：
+
+```c
+x = 8;
+```
+
+因此二级指针可以简单理解为：**先通过 `q` 找到 `p`，再通过 `p` 找到真正的数据。**
 
 ## 1. 指针函数
 
@@ -323,6 +358,7 @@ int *func(void)
 int *func(void);    函数 → 返回 int *
 int (*pa)(int);     指针 → 指向函数
 int *pa;            指针 → 指向 int
+int **q;            二级指针 → 指向 int *
 int (*pArr)[3];     指针 → 指向 int[3]
 ```
 
