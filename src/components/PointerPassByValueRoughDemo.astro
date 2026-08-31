@@ -1,0 +1,129 @@
+<section class="pointer-pass-rough not-prose" data-pointer-pass-rough>
+  <div class="pointer-pass-rough__head">
+    <div>
+      <h3>值传递：为什么 swap(a, b) 没有交换 main 中的变量</h3>
+      <p>函数参数会得到实参值的副本。下面用手绘内存图观察 main 与 swap 的两个独立栈帧。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="pointer-pass-rough__paper">
+    <svg viewBox="0 0 1040 540" role="img" aria-label="C 语言值传递与 swap 函数栈内存手绘图">
+      <g data-rough-layer></g>
+      <g class="pointer-pass-rough__labels">
+        <text x="55" y="55" class="pvr-code">void swap(int x, int y) &#123;</text>
+        <text x="82" y="85" class="pvr-code">int temp = x;</text>
+        <text x="82" y="115" class="pvr-code">x = y;</text>
+        <text x="82" y="145" class="pvr-code">y = temp;</text>
+        <text x="55" y="175" class="pvr-code">&#125;</text>
+
+        <text x="620" y="55" class="pvr-code">int a = 10;</text>
+        <text x="620" y="85" class="pvr-code">int b = 20;</text>
+        <text x="620" y="115" class="pvr-code">swap(a, b);</text>
+        <text x="620" y="145" class="pvr-code">// a 仍为 10，b 仍为 20</text>
+
+        <text x="90" y="305" class="pvr-red">10</text>
+        <text x="67" y="365" class="pvr-small">0x1000</text>
+        <text x="62" y="402" class="pvr-code">main: int a = 10;</text>
+
+        <text x="300" y="305" class="pvr-red">20</text>
+        <text x="277" y="365" class="pvr-small">0x1004</text>
+        <text x="270" y="402" class="pvr-code">main: int b = 20;</text>
+
+        <text x="555" y="305" class="pvr-blue">20</text>
+        <text x="522" y="365" class="pvr-small">0x1089</text>
+        <text x="510" y="402" class="pvr-code">swap: x（副本）</text>
+
+        <text x="795" y="305" class="pvr-gold">10</text>
+        <text x="762" y="365" class="pvr-small">0x1290</text>
+        <text x="750" y="402" class="pvr-code">swap: y（副本）</text>
+
+        <text x="245" y="475" class="pvr-note">进入 swap 时：x = a 的值，y = b 的值，但它们拥有新的存储地址</text>
+        <text x="245" y="508" class="pvr-note">因此交换 x、y 只改变副本，不会修改 main 中的 a、b</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .pointer-pass-rough { margin:1rem 0 2rem; }
+  .pointer-pass-rough__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.7rem; }
+  .pointer-pass-rough__head h3 { margin:0; font-size:1rem; }
+  .pointer-pass-rough__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.68; line-height:1.55; }
+  .pointer-pass-rough__head button { flex:none; padding:.44rem .7rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.55rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .pointer-pass-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.85rem; background:#fbfaf5; }
+  .pointer-pass-rough__paper svg { display:block; width:100%; min-width:780px; height:auto; }
+  .pointer-pass-rough__labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .pvr-code { font-size:20px; }
+  .pvr-small { font-size:16px; }
+  .pvr-note { font-size:18px; }
+  .pvr-red { font-size:30px; font-weight:700; fill:#c93d32 !important; }
+  .pvr-blue { font-size:30px; font-weight:700; fill:#2377b8 !important; }
+  .pvr-gold { font-size:30px; font-weight:700; fill:#d88909 !important; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+
+  async function initPointerPassRough(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+
+    const roughModule = await import(roughUrl);
+    const rough = roughModule.default;
+    let seed = 30;
+
+    const draw = () => {
+      layer.replaceChildren();
+      const rc = rough.svg(svg);
+      const ink = "#333333";
+      const red = "#c94a43";
+      const green = "#78a56f";
+      const blue = "#2f7db7";
+      const gold = "#d89a27";
+      const base = { stroke:ink, strokeWidth:1.6, roughness:1.55, bowing:1.15, seed };
+      const add = (node) => layer.appendChild(node);
+
+      // 抽象连续内存带
+      add(rc.rectangle(35, 230, 960, 105, { ...base, fill:"#fffdf8", fillStyle:"solid" }));
+      for (let x = 75; x < 980; x += 40) {
+        add(rc.line(x, 230, x, 335, { ...base, strokeWidth:1 }));
+      }
+
+      // main 栈帧中的 a / b
+      add(rc.rectangle(70, 236, 100, 93, { ...base, stroke:red, fill:"#fde9e6", fillStyle:"hachure", hachureGap:7 }));
+      add(rc.rectangle(280, 236, 100, 93, { ...base, stroke:green, fill:"#eef5ea", fillStyle:"hachure", hachureGap:7 }));
+
+      // swap 栈帧中的 x / y 副本
+      add(rc.rectangle(520, 236, 120, 93, { ...base, stroke:blue, fill:"#e7f1fa", fillStyle:"hachure", hachureGap:7 }));
+      add(rc.rectangle(760, 236, 120, 93, { ...base, stroke:gold, fill:"#fff4d9", fillStyle:"hachure", hachureGap:7 }));
+
+      // 从实参到形参副本的虚线箭头
+      add(rc.path("M 120 224 C 220 190, 410 190, 575 224", { ...base, stroke:blue, strokeWidth:2, strokeLineDash:[7,6] }));
+      add(rc.line(575, 224, 559, 216, { ...base, stroke:blue, strokeWidth:2 }));
+      add(rc.line(575, 224, 562, 236, { ...base, stroke:blue, strokeWidth:2 }));
+
+      add(rc.path("M 330 224 C 455 170, 650 175, 820 224", { ...base, stroke:gold, strokeWidth:2, strokeLineDash:[7,6] }));
+      add(rc.line(820, 224, 803, 215, { ...base, stroke:gold, strokeWidth:2 }));
+      add(rc.line(820, 224, 806, 236, { ...base, stroke:gold, strokeWidth:2 }));
+
+      // 分隔 main / swap 的教学标记
+      add(rc.line(430, 220, 430, 350, { ...base, stroke:"#777", strokeWidth:1.4, strokeLineDash:[5,5] }));
+
+      seed += 1;
+    };
+
+    draw();
+    redraw.addEventListener("click", draw);
+  }
+
+  document.querySelectorAll("[data-pointer-pass-rough]").forEach(initPointerPassRough);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll("[data-pointer-pass-rough]").forEach(initPointerPassRough);
+  });
+</script>
