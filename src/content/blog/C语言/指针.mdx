@@ -1,6 +1,6 @@
 ---
 title: 指针
-description: 从地址、解引用到指针函数、函数指针、数组指针与悬空指针，结合内存模型理解 C 语言指针
+description: 从地址、解引用到指针函数、函数指针、数组指针、参数传递与悬空指针，结合内存模型理解 C 语言指针
 pubDate: 2026-08-31
 draft: false
 demo: pointer-function
@@ -13,6 +13,7 @@ tags:
 ---
 
 import PointerArrayRoughDemo from "@components/PointerArrayRoughDemo.astro";
+import PointerPassByValueRoughDemo from "@components/PointerPassByValueRoughDemo.astro";
 
 # 指针
 
@@ -203,7 +204,90 @@ arr + 1      // 跳到 arr[1]
 
 > **地址相同，不代表类型相同；指针运算的步长由指针类型决定。**
 
-## 4. 悬空指针
+## 4. 值传递与 swap
+
+C 语言函数参数默认采用**值传递**。调用函数时，形参会得到实参当前值的一份副本，它们并不是同一个变量。
+
+例如：
+
+```c
+void swap(int x, int y)
+{
+    int temp = x;
+    x = y;
+    y = temp;
+}
+
+int main(void)
+{
+    int a = 10;
+    int b = 20;
+
+    swap(a, b);
+
+    printf("a = %d\n", a);  // 10
+    printf("b = %d\n", b);  // 20
+}
+```
+
+调用 `swap(a, b)` 时，可以理解为：
+
+```text
+main 栈帧                 swap 栈帧
+
+a = 10    ──复制数值──→   x = 10
+b = 20    ──复制数值──→   y = 20
+```
+
+因此 `swap()` 内部交换的是 `x` 和 `y` 两个副本。即使函数内部已经变成：
+
+```text
+x = 20
+y = 10
+```
+
+`main()` 中原来的：
+
+```text
+a = 10
+b = 20
+```
+
+仍然没有发生变化。
+
+<PointerPassByValueRoughDemo />
+
+这也是为什么在 C 语言中如果希望函数真正修改调用者中的变量，通常需要传入变量地址：
+
+```c
+void swap(int *x, int *y)
+{
+    int temp = *x;
+    *x = *y;
+    *y = temp;
+}
+
+int main(void)
+{
+    int a = 10;
+    int b = 20;
+
+    swap(&a, &b);
+}
+```
+
+此时形参虽然依然是值传递，但传递的值变成了**地址**：
+
+```text
+&a ──→ x ──→ a
+&b ──→ y ──→ b
+```
+
+所以 `*x` 和 `*y` 最终访问的仍是 `main()` 中真正的 `a` 和 `b`。
+
+> **C 语言没有把普通参数“按引用传递”；所谓通过指针修改变量，本质仍然是“把地址这个值传进去”。**
+
+## 5. 悬空指针
 
 悬空指针（Dangling Pointer）指的是：指针仍然保存一个地址，但该地址对应的对象已经失效。
 
@@ -225,7 +309,7 @@ int *func(void)
 
 `static` 局部变量不会随着函数返回而销毁，因此返回它的地址是有效的。
 
-## 5. 一句话理解
+## 6. 一句话理解
 
 ```text
 普通变量：保存数据
@@ -242,4 +326,11 @@ int *pa;            指针 → 指向 int
 int (*pArr)[3];     指针 → 指向 int[3]
 ```
 
-真正需要记住的是：**先看变量名，再看它首先和谁结合；同时始终关注指针的目标类型。**
+参数传递还可以这样记：
+
+```text
+swap(a, b)      → 复制 10、20，改的是副本
+swap(&a, &b)    → 复制地址，通过 * 解引用修改原变量
+```
+
+真正需要记住的是：**先看变量名，再看它首先和谁结合；同时始终关注指针的目标类型，以及函数参数实际传进去的到底是“数据值”还是“地址值”。**
