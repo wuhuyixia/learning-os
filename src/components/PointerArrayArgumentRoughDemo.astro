@@ -1,0 +1,124 @@
+<section class="pointer-array-arg-rough not-prose" data-pointer-array-arg-rough>
+  <div class="pointer-array-arg-rough__head">
+    <h3>数组作为函数参数</h3>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="pointer-array-arg-rough__paper">
+    <svg viewBox="0 0 1180 620" role="img" aria-label="数组作为函数参数的手绘内存图">
+      <g data-rough-layer></g>
+      <g class="paar-labels">
+        <text x="36" y="56" class="paar-code">int SumOfElements(int A[])</text>
+        <text x="36" y="88" class="paar-code">&#123;</text>
+        <text x="68" y="120" class="paar-code">int i, sum = 0;</text>
+        <text x="68" y="152" class="paar-code">for (i = 0; i &lt; 5; i++)</text>
+        <text x="68" y="184" class="paar-code">sum += A[i];</text>
+        <text x="68" y="216" class="paar-code">return sum;</text>
+        <text x="36" y="248" class="paar-code">&#125;</text>
+
+        <text x="36" y="312" class="paar-code">int main(void)</text>
+        <text x="36" y="344" class="paar-code">&#123;</text>
+        <text x="68" y="376" class="paar-code">int A[] = &#123;1, 2, 3, 4, 5&#125;;</text>
+        <text x="68" y="408" class="paar-code">int total = SumOfElements(A);</text>
+        <text x="36" y="440" class="paar-code">&#125;</text>
+
+        <text x="500" y="66" class="paar-title">main() 栈帧</text>
+        <text x="520" y="120" class="paar-small">A[0]</text>
+        <text x="592" y="120" class="paar-small">A[1]</text>
+        <text x="664" y="120" class="paar-small">A[2]</text>
+        <text x="736" y="120" class="paar-small">A[3]</text>
+        <text x="808" y="120" class="paar-small">A[4]</text>
+
+        <text x="540" y="198" class="paar-red">1</text>
+        <text x="612" y="198" class="paar-red">2</text>
+        <text x="684" y="198" class="paar-red">3</text>
+        <text x="756" y="198" class="paar-red">4</text>
+        <text x="828" y="198" class="paar-red">5</text>
+
+        <text x="520" y="252" class="paar-small">0x2000</text>
+        <text x="592" y="252" class="paar-small">0x2004</text>
+        <text x="664" y="252" class="paar-small">0x2008</text>
+        <text x="736" y="252" class="paar-small">0x200C</text>
+        <text x="808" y="252" class="paar-small">0x2010</text>
+        <text x="560" y="300" class="paar-note">A 的起始地址 = 0x2000</text>
+
+        <text x="900" y="66" class="paar-title">SumOfElements() 栈帧</text>
+        <text x="915" y="146" class="paar-blue">A = 0x2000</text>
+        <text x="915" y="196" class="paar-code">A 实际上是 int *</text>
+        <text x="915" y="232" class="paar-code">不是完整数组副本</text>
+        <text x="915" y="278" class="paar-code">A[i] = *(A + i)</text>
+
+        <text x="360" y="520" class="paar-note">调用 SumOfElements(A) 时，传入的是数组首元素地址，而不是整个数组。</text>
+        <text x="360" y="554" class="paar-note">函数参数中的 int A[] 本质上等价于 int *A。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .pointer-array-arg-rough { margin:1rem 0 2rem; }
+  .pointer-array-arg-rough__head { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:.7rem; }
+  .pointer-array-arg-rough__head h3 { margin:0; font-size:1rem; }
+  .pointer-array-arg-rough__head button { flex:none; padding:.44rem .7rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.55rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .pointer-array-arg-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.85rem; background:#fbfaf5; }
+  .pointer-array-arg-rough__paper svg { display:block; width:100%; min-width:900px; height:auto; }
+  .paar-labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .paar-code { font-size:22px; }
+  .paar-title { font-size:26px; font-weight:700; }
+  .paar-small { font-size:16px; }
+  .paar-note { font-size:20px; }
+  .paar-red { font-size:30px; font-weight:700; fill:#d14334 !important; }
+  .paar-blue { font-size:24px; font-weight:700; fill:#2563eb !important; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+
+  async function initPointerArrayArgRough(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+
+    const roughModule = await import(roughUrl);
+    const rough = roughModule.default;
+    let seed = 41;
+
+    const draw = () => {
+      layer.replaceChildren();
+      const rc = rough.svg(svg);
+      const add = (node) => layer.appendChild(node);
+      const base = { stroke:"#333", strokeWidth:1.6, roughness:1.5, bowing:1.1, seed };
+
+      add(rc.rectangle(480, 86, 390, 240, { ...base, stroke:"#16a34a", fill:"#f7fff8", fillStyle:"solid" }));
+
+      [520, 592, 664, 736, 808].forEach((x) => {
+        add(rc.rectangle(x, 140, 58, 78, { ...base, stroke:"#d14334", fill:"#fde9e5", fillStyle:"hachure", hachureGap:7 }));
+      });
+
+      add(rc.rectangle(890, 92, 235, 220, { ...base, stroke:"#2563eb", fill:"#eff6ff", fillStyle:"solid" }));
+      add(rc.rectangle(930, 116, 150, 48, { ...base, stroke:"#2563eb", fill:"#dbeafe", fillStyle:"hachure", hachureGap:7 }));
+
+      add(rc.path("M 930 140 C 900 120, 860 105, 820 128 C 760 162, 680 160, 548 178", { ...base, stroke:"#2563eb", strokeWidth:2.4 }));
+      add(rc.line(548, 178, 564, 166, { ...base, stroke:"#2563eb", strokeWidth:2.4 }));
+      add(rc.line(548, 178, 568, 182, { ...base, stroke:"#2563eb", strokeWidth:2.4 }));
+
+      add(rc.path("M 305 404 C 395 404, 435 388, 498 312", { ...base, stroke:"#7c3aed", strokeWidth:2.2 }));
+      add(rc.line(498, 312, 487, 329, { ...base, stroke:"#7c3aed", strokeWidth:2.2 }));
+      add(rc.line(498, 312, 506, 329, { ...base, stroke:"#7c3aed", strokeWidth:2.2 }));
+
+      seed += 1;
+    };
+
+    draw();
+    redraw.addEventListener("click", draw);
+  }
+
+  document.querySelectorAll("[data-pointer-array-arg-rough]").forEach(initPointerArrayArgRough);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll("[data-pointer-array-arg-rough]").forEach(initPointerArrayArgRough);
+  });
+</script>
