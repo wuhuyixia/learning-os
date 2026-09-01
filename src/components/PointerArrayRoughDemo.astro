@@ -2,7 +2,6 @@
   <div class="pointer-array-rough__head">
     <div>
       <h3>数组与指针：同一个起始地址，不同的含义</h3>
-      <p>下面用 Rough.js 画一个手绘内存模型。示例地址仅用于说明关系。</p>
     </div>
     <button type="button" data-redraw>重新手绘</button>
   </div>
@@ -45,7 +44,6 @@
   .pointer-array-rough { margin: 1rem 0 2rem; }
   .pointer-array-rough__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.7rem; }
   .pointer-array-rough__head h3 { margin:0; font-size:1rem; }
-  .pointer-array-rough__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.68; line-height:1.55; }
   .pointer-array-rough__head button { flex:none; padding:.44rem .7rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.55rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
   .pointer-array-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.85rem; background:#fbfaf5; }
   .pointer-array-rough__paper svg { display:block; width:100%; min-width:760px; height:auto; }
@@ -83,13 +81,11 @@
 
       const add = (node) => layer.appendChild(node);
 
-      // 整条抽象内存带
       add(rc.rectangle(42, 145, 900, 105, { ...base, fill: "#fffdf8", fillStyle: "solid" }));
       for (let x = 82; x < 930; x += 40) {
         add(rc.line(x, 145, x, 250, { ...base, strokeWidth: 1.1 }));
       }
 
-      // 普通变量 a，占用一个示意 int 块
       add(rc.rectangle(102, 151, 80, 93, {
         ...base,
         stroke: red,
@@ -98,7 +94,6 @@
         hachureGap: 7,
       }));
 
-      // arr[0..2] 三个连续 int
       [390, 480, 570].forEach((x) => {
         add(rc.rectangle(x, 151, 90, 93, {
           ...base,
@@ -114,7 +109,6 @@
         strokeWidth: 2.2,
       }));
 
-      // pa 保存 arr[0] 地址
       add(rc.rectangle(778, 151, 122, 93, {
         ...base,
         stroke: blue,
@@ -123,7 +117,6 @@
         hachureGap: 7,
       }));
 
-      // pa -> arr[0] 的手绘箭头
       add(rc.path("M 840 250 C 790 330, 620 322, 438 246", {
         ...base,
         stroke: blue,
@@ -132,7 +125,6 @@
       add(rc.line(438, 246, 456, 258, { ...base, stroke: blue, strokeWidth: 2.2 }));
       add(rc.line(438, 246, 459, 239, { ...base, stroke: blue, strokeWidth: 2.2 }));
 
-      // 标注 arr、&arr[0]、&arr 都落在同一物理起点
       add(rc.line(390, 251, 390, 304, { ...base, stroke: blue }));
       add(rc.line(380, 304, 400, 304, { ...base, stroke: blue }));
 
