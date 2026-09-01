@@ -15,6 +15,7 @@ tags:
 import PointerBasicRoughDemo from "@components/PointerBasicRoughDemo.astro";
 import PointerToPointerRoughDemo from "@components/PointerToPointerRoughDemo.astro";
 import PointerArrayRoughDemo from "@components/PointerArrayRoughDemo.astro";
+import PointerArrayArgumentRoughDemo from "@components/PointerArrayArgumentRoughDemo.astro";
 import PointerPassByValueRoughDemo from "@components/PointerPassByValueRoughDemo.astro";
 
 # 指针
@@ -238,6 +239,39 @@ arr + 1      // 跳到 arr[1]
 因此，理解数组与指针时最重要的是：
 
 > **地址相同，不代表类型相同；指针运算的步长由指针类型决定。**
+
+## 数组作为函数参数
+
+当数组作为函数参数传递时，传进去的不是整个数组副本，而是**数组首元素的地址**。
+
+```c
+int SumOfElements(int A[])
+{
+    int sum = 0;
+
+    for (int i = 0; i < 5; i++)
+        sum += A[i];
+
+    return sum;
+}
+
+int main(void)
+{
+    int A[] = {1, 2, 3, 4, 5};
+    int total = SumOfElements(A);
+}
+```
+
+<PointerArrayArgumentRoughDemo />
+
+这里需要注意：
+
+- `main()` 中的 `A` 是真正的数组；
+- 调用 `SumOfElements(A)` 时，`A` 在该表达式中转换为首元素指针；
+- 函数参数中的 `int A[]` 会调整为 `int *A`；
+- `A[i]` 等价于 `*(A + i)`，因此函数仍然访问的是原数组元素。
+
+> 注意：在函数参数中，`sizeof(A)` 得到的是指针大小，而不是调用者整个数组的大小，因此数组长度通常需要另外传入。
 
 ## 4. 值传递与 swap
 
