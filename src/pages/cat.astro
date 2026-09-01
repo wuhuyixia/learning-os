@@ -1,0 +1,30 @@
+---
+import fs from "node:fs";
+import path from "node:path";
+import CatDome from "@/components/CatDome.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { BASE_PATH } from "@config";
+
+const catDir = path.resolve("public/image/cat");
+const supported = /\.(avif|gif|jpe?g|png|webp)$/i;
+
+const catFiles = fs.existsSync(catDir)
+  ? fs
+      .readdirSync(catDir)
+      .filter((name) => supported.test(name))
+      .sort((a, b) => a.localeCompare(b, "zh-CN", { numeric: true }))
+  : [];
+
+const images = catFiles.map(
+  (name) => `${BASE_PATH}/image/cat/${encodeURIComponent(name)}`,
+);
+---
+
+<BaseLayout
+  title="Cat"
+  description="猫咪照片的交互式 3D 穹顶画廊。"
+  showTOC={false}
+  isIndexed={false}
+>
+  <CatDome images={images} />
+</BaseLayout>
