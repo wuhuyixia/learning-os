@@ -28,3 +28,74 @@ const images = catFiles.map(
 >
   <CatDome images={images} />
 </BaseLayout>
+
+<script>
+  function setupCatClickFix() {
+    const stage = document.getElementById("cat-dome-stage");
+    const viewer = document.getElementById("cat-dome-viewer") as HTMLDialogElement | null;
+    const viewerImage = document.getElementById("cat-dome-viewer-image") as HTMLImageElement | null;
+
+    if (!stage || !viewer || !viewerImage) return;
+    if (stage.dataset.clickFix === "1") return;
+    stage.dataset.clickFix = "1";
+
+    let pressedSrc = "";
+    let startX = 0;
+    let startY = 0;
+    let suppressClick = false;
+
+    const openImage = (src: string) => {
+      if (!src) return;
+      viewerImage.src = src;
+      if (!viewer.open) viewer.showModal();
+    };
+
+    stage.addEventListener("pointerdown", (event) => {
+      const target = event.target as HTMLElement | null;
+      const tile = target?.closest<HTMLElement>("[data-cat-src]");
+      pressedSrc = tile?.dataset.catSrc ?? "";
+      startX = event.clientX;
+      startY = event.clientY;
+    });
+
+    stage.addEventListener("pointerup", (event) => {
+      if (!pressedSrc) return;
+
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
+      const distance = Math.hypot(dx, dy);
+      const src = pressedSrc;
+      pressedSrc = "";
+
+      // A short press is a photo click; a real drag only rotates the dome.
+      if (distance <= 8) {
+        suppressClick = true;
+        openImage(src);
+        window.setTimeout(() => {
+          suppressClick = false;
+        }, 0);
+      }
+    });
+
+    stage.addEventListener("pointercancel", () => {
+      pressedSrc = "";
+    });
+
+    // CatDome captures the pointer for dragging. That can retarget the native
+    // click event to the stage instead of the photo button. We open on
+    // pointerup above and suppress the follow-up click to avoid double-open.
+    stage.addEventListener(
+      "click",
+      (event) => {
+        if (!suppressClick) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        suppressClick = false;
+      },
+      true,
+    );
+  }
+
+  document.addEventListener("astro:page-load", setupCatClickFix);
+  setupCatClickFix();
+</script>
