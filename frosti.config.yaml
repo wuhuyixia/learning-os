@@ -53,6 +53,11 @@ site:
       href: /learning-os/friend
       svg: "material-symbols:link-rounded"
       target: _self
+    - id: cat
+      text: Cat
+      href: /learning-os/cat
+      svg: "mdi:cat"
+      target: _self
     - id: contact
       text: 联系
       href: "mailto:2470794599@qq.com"
