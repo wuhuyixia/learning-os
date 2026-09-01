@@ -1,0 +1,299 @@
+---
+interface Props {
+  images?: string[];
+}
+
+const { images = [] } = Astro.props as Props;
+const repeated = images.length > 0 ? Array.from({ length: 30 }, (_, i) => images[i % images.length]) : [];
+---
+
+<section class="cat-dome" id="cat-dome">
+  <div class="cat-dome__hint">拖动旋转 · 点击照片查看大图</div>
+
+  {
+    repeated.length > 0 ? (
+      <div class="cat-dome__stage" id="cat-dome-stage" aria-label="Cat photo dome gallery">
+        <div class="cat-dome__sphere" id="cat-dome-sphere">
+          {repeated.map((src, index) => {
+            const cols = 10;
+            const rows = 3;
+            const col = index % cols;
+            const row = Math.floor(index / cols) % rows;
+            const yaw = (360 / cols) * col + (row % 2) * 18;
+            const pitch = -34 + row * 34;
+            return (
+              <button
+                class="cat-dome__tile"
+                type="button"
+                data-cat-src={src}
+                style={`--yaw:${yaw}deg;--pitch:${pitch}deg;--radius:510px;`}
+                aria-label={`Open cat photo ${index + 1}`}
+              >
+                <img src={src} alt={`Cat photo ${index + 1}`} loading={index < 8 ? "eager" : "lazy"} draggable="false" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    ) : (
+      <div class="cat-dome__empty">
+        <div class="cat-dome__empty-icon">🐈</div>
+        <h2>Cat Gallery</h2>
+        <p>猫咪照片还没有加入仓库。</p>
+        <p class="cat-dome__empty-path">将照片放到 <code>public/image/cat/</code> 后即可展示。</p>
+      </div>
+    )
+  }
+
+  <dialog class="cat-dome__viewer" id="cat-dome-viewer">
+    <button type="button" class="cat-dome__close" id="cat-dome-close" aria-label="Close">×</button>
+    <img id="cat-dome-viewer-image" alt="Cat photo preview" />
+  </dialog>
+</section>
+
+<script>
+  function setupCatDome() {
+    const stage = document.getElementById("cat-dome-stage");
+    const sphere = document.getElementById("cat-dome-sphere");
+    const viewer = document.getElementById("cat-dome-viewer") as HTMLDialogElement | null;
+    const viewerImage = document.getElementById("cat-dome-viewer-image") as HTMLImageElement | null;
+    const close = document.getElementById("cat-dome-close");
+
+    if (!stage || !sphere) return;
+    if (stage.dataset.ready === "1") return;
+    stage.dataset.ready = "1";
+
+    let rotationX = -5;
+    let rotationY = 0;
+    let pointerDown = false;
+    let moved = false;
+    let lastX = 0;
+    let lastY = 0;
+    let velocityX = 0;
+    let velocityY = 0;
+    let raf = 0;
+
+    const render = () => {
+      sphere.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
+    };
+    render();
+
+    const animate = () => {
+      if (!pointerDown) {
+        rotationY += velocityX;
+        rotationX = Math.max(-42, Math.min(42, rotationX - velocityY));
+        velocityX *= 0.94;
+        velocityY *= 0.94;
+        render();
+      }
+      raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+
+    stage.addEventListener("pointerdown", (event) => {
+      pointerDown = true;
+      moved = false;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      stage.setPointerCapture(event.pointerId);
+    });
+
+    stage.addEventListener("pointermove", (event) => {
+      if (!pointerDown) return;
+      const dx = event.clientX - lastX;
+      const dy = event.clientY - lastY;
+      if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
+      rotationY += dx * 0.16;
+      rotationX = Math.max(-42, Math.min(42, rotationX - dy * 0.12));
+      velocityX = dx * 0.018;
+      velocityY = dy * 0.014;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      render();
+    });
+
+    const stopPointer = () => {
+      pointerDown = false;
+    };
+    stage.addEventListener("pointerup", stopPointer);
+    stage.addEventListener("pointercancel", stopPointer);
+
+    stage.querySelectorAll<HTMLElement>("[data-cat-src]").forEach((tile) => {
+      tile.addEventListener("click", () => {
+        if (moved || !viewer || !viewerImage) return;
+        const src = tile.dataset.catSrc;
+        if (!src) return;
+        viewerImage.src = src;
+        viewer.showModal();
+      });
+    });
+
+    close?.addEventListener("click", () => viewer?.close());
+    viewer?.addEventListener("click", (event) => {
+      if (event.target === viewer) viewer.close();
+    });
+
+    document.addEventListener(
+      "astro:before-swap",
+      () => cancelAnimationFrame(raf),
+      { once: true },
+    );
+  }
+
+  document.addEventListener("astro:page-load", setupCatDome);
+  setupCatDome();
+</script>
+
+<style>
+  .cat-dome {
+    position: relative;
+    width: 100%;
+    min-height: 680px;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    background:
+      radial-gradient(circle at 50% 48%, rgba(55, 48, 77, 0.34), transparent 42%),
+      radial-gradient(circle at 50% 50%, #17131e 0%, #0b0910 64%, #050407 100%);
+    box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.55), 0 20px 50px rgba(0, 0, 0, 0.15);
+    isolation: isolate;
+  }
+
+  .cat-dome::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, transparent 50%, rgba(0, 0, 0, 0.72) 100%);
+    z-index: 5;
+  }
+
+  .cat-dome__hint {
+    position: absolute;
+    z-index: 8;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.8rem;
+    backdrop-filter: blur(10px);
+    white-space: nowrap;
+  }
+
+  .cat-dome__stage {
+    position: relative;
+    width: 100%;
+    height: 680px;
+    perspective: 780px;
+    perspective-origin: 50% 50%;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .cat-dome__stage:active { cursor: grabbing; }
+
+  .cat-dome__sphere {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transform-origin: 50% 50%;
+    will-change: transform;
+  }
+
+  .cat-dome__tile {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 118px;
+    height: 94px;
+    margin-left: -59px;
+    margin-top: -47px;
+    padding: 0;
+    border: 0;
+    border-radius: 24px;
+    overflow: hidden;
+    background: #111;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    transform-style: preserve-3d;
+    transform: rotateY(var(--yaw)) rotateX(var(--pitch)) translateZ(calc(var(--radius) * -1)) rotateX(calc(var(--pitch) * -1)) rotateY(calc(var(--yaw) * -1));
+    transition: filter 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+    filter: grayscale(1) contrast(0.92) brightness(0.9);
+  }
+
+  .cat-dome__tile:hover {
+    filter: grayscale(0) contrast(1) brightness(1.06);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
+    z-index: 10;
+  }
+
+  .cat-dome__tile img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+
+  .cat-dome__empty {
+    min-height: 680px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    color: rgba(255,255,255,.82);
+  }
+
+  .cat-dome__empty-icon { font-size: 4rem; margin-bottom: .5rem; }
+  .cat-dome__empty h2 { margin: .25rem 0; font-size: 2rem; }
+  .cat-dome__empty p { margin: .25rem 0; color: rgba(255,255,255,.6); }
+  .cat-dome__empty-path code { color: #fff; }
+
+  .cat-dome__viewer {
+    width: min(92vw, 1050px);
+    max-width: none;
+    padding: 0;
+    border: 0;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    background: #09070c;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  }
+  .cat-dome__viewer::backdrop { background: rgba(0,0,0,.82); backdrop-filter: blur(6px); }
+  .cat-dome__viewer img { display: block; width: 100%; max-height: 84vh; object-fit: contain; background: #050407; }
+  .cat-dome__close {
+    position: absolute;
+    z-index: 2;
+    top: .75rem;
+    right: .75rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(0,0,0,.58);
+    color: #fff;
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  @media (max-width: 768px) {
+    .cat-dome, .cat-dome__stage, .cat-dome__empty { min-height: 560px; height: 560px; }
+    .cat-dome__tile {
+      width: 92px;
+      height: 76px;
+      margin-left: -46px;
+      margin-top: -38px;
+      border-radius: 18px;
+      --radius: 390px !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cat-dome__tile { transition: none; }
+  }
+</style>
