@@ -1,0 +1,54 @@
+---
+interface Props {
+  chart: string;
+  title?: string;
+}
+
+const { chart, title } = Astro.props;
+---
+
+<section class="mermaid-diagram not-prose" data-mermaid-diagram>
+  {title && <div class="mermaid-diagram__title">{title}</div>}
+  <pre class="mermaid">{chart}</pre>
+</section>
+
+<style is:global>
+  .mermaid-diagram { margin: 1.1rem 0 1.8rem; padding: 1rem; border: 1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius: .9rem; overflow-x: auto; background: color-mix(in srgb,currentColor 2%,transparent); }
+  .mermaid-diagram__title { margin-bottom: .65rem; font-size: .82rem; font-weight: 700; opacity: .78; }
+  .mermaid-diagram .mermaid { margin: 0; display: flex; justify-content: center; min-width: 620px; background: transparent; }
+  .mermaid-diagram svg { max-width: 100%; height: auto; }
+</style>
+
+<script is:inline type="module">
+  const mermaidUrl = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  async function getMermaid() {
+    if (!window.__learningOsMermaid) {
+      window.__learningOsMermaid = import(mermaidUrl).then((mod) => {
+        const mermaid = mod.default;
+        mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "neutral" });
+        return mermaid;
+      });
+    }
+    return window.__learningOsMermaid;
+  }
+
+  async function renderMermaid(root) {
+    if (root.dataset.rendered === "true") return;
+    const node = root.querySelector(".mermaid");
+    if (!node) return;
+    root.dataset.rendered = "true";
+    try {
+      const mermaid = await getMermaid();
+      await mermaid.run({ nodes: [node] });
+    } catch (error) {
+      root.dataset.rendered = "false";
+      console.error("Mermaid render failed", error);
+    }
+  }
+
+  document.querySelectorAll("[data-mermaid-diagram]").forEach(renderMermaid);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll("[data-mermaid-diagram]").forEach(renderMermaid);
+  });
+</script>
