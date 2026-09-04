@@ -1,0 +1,117 @@
+<section class="mem-rough not-prose" data-memory-layout-rough>
+  <div class="mem-rough__head">
+    <div>
+      <h3>程序内存布局：Flash 与 RAM</h3>
+      <p>以典型 MCU 为例，把链接后的只读段与运行期 RAM 区域分开看。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="mem-rough__paper">
+    <svg viewBox="0 0 1180 760" role="img" aria-label="程序内存布局手绘图">
+      <g data-rough-layer></g>
+      <g class="mem-rough__labels">
+        <text x="105" y="58" class="mr-title">Flash / ROM</text>
+        <text x="118" y="135" class="mr-code">.text</text>
+        <text x="102" y="235" class="mr-code">.rodata</text>
+        <text x="78" y="335" class="mr-small">.data 初始值</text>
+        <text x="69" y="380" class="mr-note">上电后复制到 RAM</text>
+
+        <text x="535" y="58" class="mr-title">RAM（运行时）</text>
+        <text x="570" y="130" class="mr-code">Stack</text>
+        <text x="548" y="178" class="mr-note">局部变量 / 返回地址</text>
+        <text x="560" y="292" class="mr-code">Heap</text>
+        <text x="535" y="340" class="mr-note">malloc / new 动态申请</text>
+        <text x="565" y="455" class="mr-code">.bss</text>
+        <text x="505" y="500" class="mr-note">未初始化 / 零初始化的全局、static</text>
+        <text x="560" y="592" class="mr-code">.data</text>
+        <text x="505" y="637" class="mr-note">非零初始化的全局、static</text>
+
+        <text x="890" y="117" class="mr-note">高地址</text>
+        <text x="890" y="660" class="mr-note">低地址</text>
+        <text x="835" y="265" class="mr-bad">Stack ↓</text>
+        <text x="835" y="355" class="mr-good">Heap ↑</text>
+        <text x="805" y="410" class="mr-small">只是常见模型，实际由链接脚本决定</text>
+
+        <text x="65" y="714" class="mr-caption">关键：.bss 在镜像里不存一大串 0；启动代码只根据段大小把对应 RAM 区域清零。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .mem-rough { margin:1.2rem 0 2rem; }
+  .mem-rough__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.7rem; }
+  .mem-rough__head h3 { margin:0; font-size:1rem; }
+  .mem-rough__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.72; line-height:1.55; }
+  .mem-rough__head button { flex:none; padding:.44rem .72rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .mem-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.9rem; background:#fbfaf5; }
+  .mem-rough__paper svg { display:block; width:100%; min-width:900px; height:auto; }
+  .mem-rough__labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .mr-title { font-size:27px; font-weight:700; }
+  .mr-code { font-size:27px; font-weight:700; }
+  .mr-small { font-size:18px; }
+  .mr-note { font-size:20px; }
+  .mr-caption { font-size:19px; }
+  .mr-good { font-size:22px; fill:#277a43 !important; font-weight:700; }
+  .mr-bad { font-size:22px; fill:#c44439 !important; font-weight:700; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+
+  async function initMemoryLayoutRough(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+
+    const roughModule = await import(roughUrl);
+    const rough = roughModule.default;
+    let seed = 41;
+
+    const arrow = (rc, x1, y1, x2, y2, color, dash = false) => {
+      const opts = { stroke: color, strokeWidth: 2.2, roughness: 1.5, bowing: 1.1, seed, strokeLineDash: dash ? [7,6] : undefined };
+      layer.appendChild(rc.line(x1,y1,x2,y2,opts));
+      const angle = Math.atan2(y2-y1,x2-x1);
+      const a = 14;
+      layer.appendChild(rc.line(x2,y2,x2-a*Math.cos(angle-.55),y2-a*Math.sin(angle-.55),opts));
+      layer.appendChild(rc.line(x2,y2,x2-a*Math.cos(angle+.55),y2-a*Math.sin(angle+.55),opts));
+    };
+
+    const draw = () => {
+      layer.replaceChildren();
+      const rc = rough.svg(svg);
+      const base = { stroke:"#333", strokeWidth:1.8, roughness:1.6, bowing:1.15, seed };
+      const add = (n) => layer.appendChild(n);
+
+      add(rc.rectangle(66,82,255,90,{...base,stroke:"#2584c7",fill:"#e7f3fd",fillStyle:"hachure",hachureGap:9}));
+      add(rc.rectangle(66,182,255,90,{...base,stroke:"#d5a824",fill:"#fff7d8",fillStyle:"hachure",hachureGap:9}));
+      add(rc.rectangle(66,282,255,120,{...base,stroke:"#d56831",fill:"#fff0e7",fillStyle:"hachure",hachureGap:9}));
+
+      add(rc.rectangle(485,82,305,120,{...base,stroke:"#46a33c",fill:"#edf8e9",fillStyle:"hachure",hachureGap:9}));
+      add(rc.rectangle(485,242,305,120,{...base,stroke:"#e15c50",fill:"#fde9e5",fillStyle:"hachure",hachureGap:9}));
+      add(rc.rectangle(485,407,305,110,{...base,stroke:"#e1ad24",fill:"#fff3cc",fillStyle:"hachure",hachureGap:9}));
+      add(rc.rectangle(485,542,305,110,{...base,stroke:"#c76b18",fill:"#f7e5d2",fillStyle:"hachure",hachureGap:9}));
+
+      arrow(rc,322,342,482,595,"#c76b18",true);
+      arrow(rc,940,145,940,642,"#555");
+      arrow(rc,832,206,832,255,"#c44439");
+      arrow(rc,832,365,832,318,"#277a43");
+
+      add(rc.line(470,221,804,221,{...base,stroke:"#777",strokeWidth:1.2,strokeLineDash:[6,6]}));
+      add(rc.text ? rc.text : rc.line(0,0,0,0,base));
+
+      seed += 1;
+    };
+
+    draw();
+    redraw.addEventListener("click", draw);
+  }
+
+  document.querySelectorAll("[data-memory-layout-rough]").forEach(initMemoryLayoutRough);
+  document.addEventListener("astro:page-load", () => document.querySelectorAll("[data-memory-layout-rough]").forEach(initMemoryLayoutRough));
+</script>
