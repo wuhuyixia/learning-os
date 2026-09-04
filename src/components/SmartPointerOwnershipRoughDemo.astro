@@ -1,0 +1,118 @@
+<section class="smart-pointer-rough not-prose" data-smart-pointer-rough>
+  <div class="smart-pointer-rough__head">
+    <div>
+      <h3>智能指针的所有权关系</h3>
+      <p>用“谁拥有资源、谁只观察资源”来理解 <code>unique_ptr</code>、<code>shared_ptr</code> 与 <code>weak_ptr</code>。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="smart-pointer-rough__paper">
+    <svg viewBox="0 0 1120 650" role="img" aria-label="C++ 智能指针所有权关系手绘图">
+      <g data-rough-layer></g>
+      <g class="smart-pointer-rough__labels">
+        <text x="70" y="58" class="spr-title">① unique_ptr：独占所有权</text>
+        <text x="105" y="144" class="spr-code">p</text>
+        <text x="80" y="177" class="spr-small">unique_ptr&lt;T&gt;</text>
+        <text x="295" y="144" class="spr-code">T 对象</text>
+        <text x="290" y="177" class="spr-small">Heap</text>
+        <text x="91" y="245" class="spr-note">std::move(p)</text>
+        <text x="300" y="245" class="spr-note">所有权只能有一个</text>
+        <text x="92" y="292" class="spr-small">移动后：p = nullptr，q 接管对象</text>
+
+        <text x="70" y="372" class="spr-title">② shared_ptr：共享所有权 + 控制块</text>
+        <text x="96" y="465" class="spr-code">sp1</text>
+        <text x="96" y="527" class="spr-code">sp2</text>
+        <text x="345" y="455" class="spr-code">Control Block</text>
+        <text x="355" y="493" class="spr-red">strong = 2</text>
+        <text x="355" y="527" class="spr-blue">weak = 1</text>
+        <text x="685" y="476" class="spr-code">T 对象</text>
+        <text x="683" y="510" class="spr-small">strong → 0 时析构</text>
+        <text x="888" y="465" class="spr-code">wp</text>
+        <text x="861" y="501" class="spr-small">weak_ptr&lt;T&gt;</text>
+        <text x="826" y="548" class="spr-note">只观察，不增加 strong</text>
+
+        <text x="70" y="610" class="spr-note">记忆：unique_ptr = 唯一主人；shared_ptr = 多个主人；weak_ptr = 观察者。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .smart-pointer-rough { margin:1.2rem 0 2rem; }
+  .smart-pointer-rough__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.7rem; }
+  .smart-pointer-rough__head h3 { margin:0; font-size:1rem; }
+  .smart-pointer-rough__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.7; line-height:1.55; }
+  .smart-pointer-rough__head button { flex:none; padding:.44rem .72rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .smart-pointer-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.9rem; background:#fbfaf5; }
+  .smart-pointer-rough__paper svg { display:block; width:100%; min-width:820px; height:auto; }
+  .smart-pointer-rough__labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .spr-title { font-size:24px; font-weight:700; }
+  .spr-code { font-size:23px; font-weight:700; }
+  .spr-small { font-size:17px; }
+  .spr-note { font-size:19px; }
+  .spr-red { font-size:21px; font-weight:700; fill:#cf3e32 !important; }
+  .spr-blue { font-size:21px; font-weight:700; fill:#2577b8 !important; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+
+  async function initSmartPointerRough(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+
+    const roughModule = await import(roughUrl);
+    const rough = roughModule.default;
+    let seed = 31;
+
+    const arrow = (rc, x1, y1, x2, y2, opts = {}) => {
+      const base = { stroke:"#333", strokeWidth:2, roughness:1.5, bowing:1.2, seed, ...opts };
+      layer.appendChild(rc.line(x1, y1, x2, y2, base));
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      const a = 13;
+      layer.appendChild(rc.line(x2, y2, x2 - a * Math.cos(angle - .55), y2 - a * Math.sin(angle - .55), base));
+      layer.appendChild(rc.line(x2, y2, x2 - a * Math.cos(angle + .55), y2 - a * Math.sin(angle + .55), base));
+    };
+
+    const draw = () => {
+      layer.replaceChildren();
+      const rc = rough.svg(svg);
+      const base = { stroke:"#333", strokeWidth:1.7, roughness:1.6, bowing:1.15, seed };
+      const add = (node) => layer.appendChild(node);
+
+      add(rc.rectangle(68, 92, 135, 105, { ...base, stroke:"#2d7fbd", fill:"#e8f2fb", fillStyle:"hachure", hachureGap:8 }));
+      add(rc.rectangle(272, 92, 170, 105, { ...base, stroke:"#d24b3f", fill:"#fde9e5", fillStyle:"hachure", hachureGap:8 }));
+      arrow(rc, 205, 143, 270, 143, { stroke:"#2d7fbd" });
+      add(rc.path("M 110 224 C 155 252, 210 260, 268 233", { ...base, stroke:"#7b61a8", strokeWidth:2.2 }));
+      add(rc.line(267, 233, 252, 230, { ...base, stroke:"#7b61a8", strokeWidth:2.2 }));
+      add(rc.line(267, 233, 258, 246, { ...base, stroke:"#7b61a8", strokeWidth:2.2 }));
+
+      add(rc.rectangle(66, 416, 140, 66, { ...base, stroke:"#2d7fbd", fill:"#e8f2fb", fillStyle:"hachure", hachureGap:8 }));
+      add(rc.rectangle(66, 493, 140, 66, { ...base, stroke:"#2d7fbd", fill:"#e8f2fb", fillStyle:"hachure", hachureGap:8 }));
+      add(rc.rectangle(319, 408, 245, 142, { ...base, stroke:"#7b61a8", fill:"#f2ecfb", fillStyle:"hachure", hachureGap:9 }));
+      add(rc.rectangle(653, 416, 185, 112, { ...base, stroke:"#d24b3f", fill:"#fde9e5", fillStyle:"hachure", hachureGap:8 }));
+      add(rc.rectangle(862, 416, 166, 112, { ...base, stroke:"#5a8c59", fill:"#edf7ec", fillStyle:"hachure", hachureGap:8 }));
+
+      arrow(rc, 208, 449, 317, 449, { stroke:"#2d7fbd" });
+      arrow(rc, 208, 526, 317, 511, { stroke:"#2d7fbd" });
+      arrow(rc, 566, 477, 651, 477, { stroke:"#d24b3f" });
+      arrow(rc, 861, 472, 566, 525, { stroke:"#5a8c59", strokeWidth:1.7, strokeLineDash:[6,6] });
+
+      seed += 1;
+    };
+
+    draw();
+    redraw.addEventListener("click", draw);
+  }
+
+  document.querySelectorAll("[data-smart-pointer-rough]").forEach(initSmartPointerRough);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll("[data-smart-pointer-rough]").forEach(initSmartPointerRough);
+  });
+</script>
