@@ -1,0 +1,824 @@
+---
+title: C++ 智能指针
+description: 从 RAII、所有权语义到 unique_ptr、shared_ptr、weak_ptr 的完整使用方法，结合代码、手绘关系图和动态演示理解对象生命周期与循环引用。
+pubDate: 2026-09-04
+draft: false
+categories:
+  - C/C++
+tags:
+  - C++
+  - 智能指针
+  - RAII
+  - 内存管理
+  - unique_ptr
+  - shared_ptr
+  - weak_ptr
+---
+
+import SmartPointerOwnershipRoughDemo from "@components/SmartPointerOwnershipRoughDemo.astro";
+import SmartPointerLifecycleDemo from "@components/SmartPointerLifecycleDemo.astro";
+
+# C++ 智能指针
+
+在 C++ 中，动态对象通常创建在堆上：
+
+```cpp
+int* p = new int(10);
+```
+
+使用完后需要手动释放：
+
+```cpp
+delete p;
+p = nullptr;
+```
+
+这种方式的问题不在于 `new` / `delete` 本身，而在于**对象生命周期需要程序员手动维护**。一旦代码路径变复杂，就容易出现：
+
+- 忘记 `delete`，产生内存泄漏；
+- 对同一地址重复 `delete`；
+- 对象已经释放，但指针还在继续使用，形成悬空指针；
+- 函数中途 `return` 或抛出异常后，清理逻辑没有执行。
+
+智能指针就是为了解决这类“资源生命周期管理”问题。
+
+## 1. 智能指针的本质：RAII
+
+智能指针并不是特殊类型的“指针语法”，而是一个**封装原始指针的类模板**。
+
+它的核心思想来自 RAII：
+
+> Resource Acquisition Is Initialization，资源获取即初始化。
+
+简单理解就是：
+
+```text
+对象创建  →  获取资源
+对象存活  →  管理资源
+对象析构  →  自动释放资源
+```
+
+例如：
+
+```cpp
+#include <memory>
+
+int main()
+{
+    std::unique_ptr<int> p = std::make_unique<int>(10);
+
+    // 不需要 delete
+}
+```
+
+当 `p` 离开作用域时，其析构函数会自动释放堆上的 `int` 对象。
+
+因此，智能指针真正解决的是：
+
+```text
+“谁负责释放这个对象？”
+```
+
+而不同智能指针的区别，就是它们对“所有权”给出了不同答案。
+
+<SmartPointerOwnershipRoughDemo />
+
+## 2. unique_ptr：独占所有权
+
+`std::unique_ptr<T>` 表示：
+
+> **这个资源只能有一个所有者。**
+
+基本用法：
+
+```cpp
+#include <memory>
+
+int main()
+{
+    std::unique_ptr<int> p = std::make_unique<int>(10);
+
+    std::cout << *p << std::endl;
+}
+```
+
+这里：
+
+```text
+p ─────→ int(10)
+```
+
+只有 `p` 负责管理该对象。
+
+### 2.1 为什么 unique_ptr 不能复制
+
+下面的代码不能通过编译：
+
+```cpp
+std::unique_ptr<int> p1 = std::make_unique<int>(10);
+std::unique_ptr<int> p2 = p1;    // 错误
+```
+
+原因很直接。
+
+如果允许复制：
+
+```text
+p1 ─┐
+    ├──→ object
+p2 ─┘
+```
+
+那么就无法再称为“独占所有权”。
+
+因此 `unique_ptr` 禁止复制构造和复制赋值。
+
+### 2.2 使用 std::move 转移所有权
+
+虽然不能复制，但可以转移：
+
+```cpp
+std::unique_ptr<int> p1 = std::make_unique<int>(10);
+std::unique_ptr<int> p2 = std::move(p1);
+```
+
+执行前：
+
+```text
+p1 ───→ object
+p2      empty
+```
+
+执行后：
+
+```text
+p1      nullptr
+p2 ───→ object
+```
+
+这里转移的是**所有权**，不是把对象本身复制一份。
+
+### 2.3 get()
+
+`get()` 返回内部保存的原始指针：
+
+```cpp
+std::unique_ptr<int> p = std::make_unique<int>(10);
+
+int* raw = p.get();
+```
+
+此时：
+
+```text
+p   ───→ object
+raw ───→ object
+```
+
+但是 `raw` **没有所有权**。
+
+因此不要这样做：
+
+```cpp
+delete raw;   // 错误
+```
+
+否则 `unique_ptr` 之后还会再次释放同一对象。
+
+### 2.4 release()
+
+`release()` 会放弃所有权，并返回原始指针：
+
+```cpp
+std::unique_ptr<int> p = std::make_unique<int>(10);
+
+int* raw = p.release();
+```
+
+执行后：
+
+```text
+p = nullptr
+raw ───→ object
+```
+
+注意：对象**不会被释放**。
+
+因此之后需要自己负责：
+
+```cpp
+delete raw;
+```
+
+### 2.5 reset()
+
+`reset()` 会释放当前对象：
+
+```cpp
+std::unique_ptr<int> p = std::make_unique<int>(10);
+p.reset();
+```
+
+执行后：
+
+```text
+p = nullptr
+object destroyed
+```
+
+也可以让它接管一个新的对象：
+
+```cpp
+p.reset(new int(20));
+```
+
+不过现代 C++ 中通常更推荐直接重新赋值：
+
+```cpp
+p = std::make_unique<int>(20);
+```
+
+### 2.6 unique_ptr 管理数组
+
+可以写成：
+
+```cpp
+std::unique_ptr<int[]> arr = std::make_unique<int[]>(10);
+
+arr[0] = 1;
+arr[1] = 2;
+```
+
+销毁时会自动使用数组对应的删除方式。
+
+### 2.7 unique_ptr 适合什么场景
+
+如果资源只有一个明确拥有者，应优先使用 `unique_ptr`。
+
+常见场景：
+
+```text
+类内部独占成员
+工厂函数返回对象
+树节点的子节点
+驱动对象独占某个资源
+某模块唯一持有的上下文对象
+```
+
+例如：
+
+```cpp
+class Device
+{
+private:
+    std::unique_ptr<Driver> driver_;
+};
+```
+
+这种关系非常清晰：
+
+```text
+Device 唯一拥有 Driver
+```
+
+## 3. shared_ptr：共享所有权
+
+有些对象天然需要被多个模块共同使用。
+
+这时可以使用：
+
+```cpp
+std::shared_ptr<T>
+```
+
+例如：
+
+```cpp
+std::shared_ptr<int> p1 = std::make_shared<int>(10);
+std::shared_ptr<int> p2 = p1;
+```
+
+此时：
+
+```text
+p1 ─┐
+    ├──→ object
+p2 ─┘
+```
+
+两个智能指针共同拥有同一个对象。
+
+### 3.1 引用计数
+
+`shared_ptr` 通常通过控制块维护引用计数。
+
+创建：
+
+```cpp
+std::shared_ptr<int> p1 = std::make_shared<int>(10);
+```
+
+此时：
+
+```text
+strong count = 1
+```
+
+再复制一个：
+
+```cpp
+std::shared_ptr<int> p2 = p1;
+```
+
+此时：
+
+```text
+strong count = 2
+```
+
+如果：
+
+```cpp
+p1.reset();
+```
+
+则：
+
+```text
+strong count = 1
+```
+
+对象仍然存在，因为 `p2` 还拥有它。
+
+等 `p2` 也释放后：
+
+```text
+strong count = 0
+```
+
+对象才真正析构。
+
+### 3.2 use_count()
+
+可以查看当前共享所有者数量：
+
+```cpp
+std::shared_ptr<int> p1 = std::make_shared<int>(10);
+std::shared_ptr<int> p2 = p1;
+
+std::cout << p1.use_count() << std::endl;
+```
+
+结果通常为：
+
+```text
+2
+```
+
+不过实际工程中，`use_count()` 更适合调试和观察，不建议用它作为核心业务逻辑判断条件。
+
+### 3.3 为什么推荐 make_shared
+
+可以写：
+
+```cpp
+std::shared_ptr<int> p(new int(10));
+```
+
+但更推荐：
+
+```cpp
+std::shared_ptr<int> p = std::make_shared<int>(10);
+```
+
+或者：
+
+```cpp
+class Person
+{
+public:
+    Person(int age) : age_(age) {}
+
+private:
+    int age_;
+};
+
+std::shared_ptr<Person> p = std::make_shared<Person>(20);
+```
+
+原因主要有两个：
+
+- 写法更简洁；
+- `make_shared` 通常可以把对象和控制块的内存分配进行更紧凑的组织。
+
+### 3.4 一个非常危险的错误
+
+不要让两个独立的 `shared_ptr` 分别接管同一个原始指针：
+
+```cpp
+int* raw = new int(10);
+
+std::shared_ptr<int> p1(raw);
+std::shared_ptr<int> p2(raw);   // 危险
+```
+
+虽然：
+
+```text
+p1 ───→ raw
+p2 ───→ raw
+```
+
+但它们拥有**不同控制块**。
+
+最终两边都会认为自己应该释放该对象，就可能产生重复释放。
+
+正确做法是：
+
+```cpp
+std::shared_ptr<int> p1 = std::make_shared<int>(10);
+std::shared_ptr<int> p2 = p1;
+```
+
+## 4. weak_ptr：观察，不拥有
+
+`std::weak_ptr<T>` 一般与 `shared_ptr` 配合使用。
+
+它最关键的性质是：
+
+> **weak_ptr 可以指向 shared_ptr 管理的对象，但不会增加强引用计数。**
+
+例如：
+
+```cpp
+std::shared_ptr<int> sp = std::make_shared<int>(10);
+std::weak_ptr<int> wp = sp;
+```
+
+此时可以理解成：
+
+```text
+sp ─────→ object      strong = 1
+wp - - -> object      weak observer
+```
+
+`wp` 只是观察者。
+
+### 4.1 weak_ptr 不能直接解引用
+
+不能直接：
+
+```cpp
+*wp;   // 不允许
+```
+
+因为对象可能已经被销毁。
+
+必须先检查是否还能获得有效对象。
+
+### 4.2 expired()
+
+```cpp
+if (wp.expired())
+{
+    std::cout << "object destroyed" << std::endl;
+}
+```
+
+如果对象已经被释放，`expired()` 返回 `true`。
+
+### 4.3 lock()
+
+更常用的方法是：
+
+```cpp
+if (auto sp2 = wp.lock())
+{
+    std::cout << *sp2 << std::endl;
+}
+```
+
+`lock()` 的行为可以理解为：
+
+```text
+对象还活着
+    ↓
+临时获得 shared_ptr
+    ↓
+安全访问对象
+```
+
+如果对象已经销毁：
+
+```cpp
+wp.lock()
+```
+
+会返回空的 `shared_ptr`。
+
+<SmartPointerLifecycleDemo />
+
+## 5. 为什么 weak_ptr 能解决循环引用
+
+这是智能指针中最重要的问题之一。
+
+假设有两个类：
+
+```cpp
+class B;
+
+class A
+{
+public:
+    std::shared_ptr<B> b;
+};
+
+class B
+{
+public:
+    std::shared_ptr<A> a;
+};
+```
+
+然后：
+
+```cpp
+auto pa = std::make_shared<A>();
+auto pb = std::make_shared<B>();
+
+pa->b = pb;
+pb->a = pa;
+```
+
+关系就变成：
+
+```text
+pa ───→ A ───→ pb/B
+         ↑       │
+         └───────┘
+```
+
+更准确地说，是：
+
+```text
+shared_ptr<A> pa
+      │
+      ▼
+      A ──shared_ptr──→ B
+      ▲                 │
+      └──shared_ptr─────┘
+```
+
+问题在于：
+
+即使外部的：
+
+```cpp
+pa.reset();
+pb.reset();
+```
+
+执行了，`A` 和 `B` 内部仍然互相保存 `shared_ptr`。
+
+于是强引用计数无法降到 0。
+
+对象就不会析构。
+
+这就是循环引用。
+
+### 5.1 改成 weak_ptr
+
+通常只需要让其中一个方向变成弱引用：
+
+```cpp
+class B;
+
+class A
+{
+public:
+    std::shared_ptr<B> b;
+};
+
+class B
+{
+public:
+    std::weak_ptr<A> a;
+};
+```
+
+于是关系变成：
+
+```text
+A ──shared_ptr──→ B
+↑                 │
+└ - - weak_ptr - -┘
+```
+
+因为 `weak_ptr` 不增加 strong count，所以外部所有者消失后，资源能够正常释放。
+
+## 6. shared_ptr 与线程安全
+
+需要特别区分两个概念。
+
+`shared_ptr` 的引用计数控制本身支持多个独立的 `shared_ptr` 实例在不同线程中安全地增减引用计数。
+
+但是：
+
+```cpp
+sp->data
+```
+
+所指向的对象本身并不会自动变成线程安全。
+
+例如两个线程同时修改：
+
+```cpp
+sp->value++;
+```
+
+仍然可能出现数据竞争。
+
+所以：
+
+```text
+shared_ptr 的生命周期管理线程安全
+≠
+被管理对象的业务数据线程安全
+```
+
+## 7. 自定义删除器
+
+智能指针不仅可以管理 `new` 出来的对象，也可以管理其他需要“成对释放”的资源。
+
+例如：
+
+```cpp
+FILE* fp = fopen("test.txt", "r");
+```
+
+可以让 `unique_ptr` 自动调用 `fclose`：
+
+```cpp
+#include <cstdio>
+#include <memory>
+
+int main()
+{
+    auto fileCloser = [](FILE* fp)
+    {
+        if (fp)
+            fclose(fp);
+    };
+
+    std::unique_ptr<FILE, decltype(fileCloser)> file(
+        fopen("test.txt", "r"),
+        fileCloser
+    );
+}
+```
+
+这就把：
+
+```text
+fopen / fclose
+```
+
+也纳入了 RAII。
+
+同理，嵌入式或系统开发中常见的：
+
+```text
+句柄
+socket
+互斥锁
+文件描述符
+第三方 C 库资源
+```
+
+也都可以用类似思路封装。
+
+## 8. auto_ptr 为什么不再使用
+
+早期 C++ 曾经提供：
+
+```cpp
+std::auto_ptr
+```
+
+它同样试图实现自动资源管理，但其复制行为会发生所有权转移，语义非常容易造成误解。
+
+后来 C++11 引入了更清晰的移动语义和 `unique_ptr`。
+
+因此：
+
+```text
+auto_ptr  → 历史方案
+unique_ptr → 现代独占所有权方案
+```
+
+在现代 C++ 中应使用 `unique_ptr`，`auto_ptr` 已在 C++17 中移除。
+
+## 9. 三种智能指针怎么选
+
+可以按下面的判断顺序：
+
+```text
+这个对象只需要一个所有者吗？
+        │
+       是
+        │
+        ▼
+   unique_ptr
+
+        否
+        │
+        ▼
+是否真的需要多个地方共同拥有？
+        │
+       是
+        │
+        ▼
+   shared_ptr
+        │
+        ▼
+是否存在“只观察、不延长生命周期”的关系？
+        │
+       是
+        │
+        ▼
+    weak_ptr
+```
+
+实际工程中通常遵循：
+
+> **能用 `unique_ptr` 就优先不用 `shared_ptr`。只有确实存在共享所有权时才使用 `shared_ptr`。**
+
+## 10. 常用接口速查
+
+### unique_ptr
+
+```cpp
+std::make_unique<T>()
+std::move()
+get()
+release()
+reset()
+operator*()
+operator->()
+```
+
+### shared_ptr
+
+```cpp
+std::make_shared<T>()
+get()
+reset()
+use_count()
+operator*()
+operator->()
+```
+
+### weak_ptr
+
+```cpp
+expired()
+lock()
+reset()
+use_count()
+```
+
+## 11. 面试中如何快速回答
+
+如果面试官问：
+
+> unique_ptr、shared_ptr、weak_ptr 有什么区别？
+
+可以直接回答：
+
+```text
+unique_ptr 表示独占所有权，不能复制，只能通过 move 转移；
+shared_ptr 通过引用计数实现共享所有权，最后一个 shared_ptr 销毁时对象释放；
+weak_ptr 不增加强引用计数，只用于观察 shared_ptr 管理的对象，常用于解决循环引用。
+```
+
+如果继续追问：
+
+> 为什么优先使用 unique_ptr？
+
+可以回答：
+
+```text
+因为 unique_ptr 的所有权关系最清晰，没有引用计数开销，也更容易推断对象生命周期；只有确实存在共享所有权需求时才使用 shared_ptr。
+```
+
+## 12. 最后记住一句话
+
+```text
+unique_ptr：我一个人拥有
+shared_ptr：我们共同拥有
+weak_ptr：我只看，不拥有
+```
+
+真正理解智能指针，不是记 API，而是先判断：
+
+> **这个资源到底应该由谁负责释放？**
