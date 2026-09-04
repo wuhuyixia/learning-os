@@ -1,0 +1,762 @@
+---
+title: IPC（进程间通信方式的介绍）
+description: 系统讲解 Linux 进程间通信 IPC，包括管道、FIFO、消息队列、共享内存、信号、信号量与 Socket，并结合代码、手绘图、流程图、时序图和动态演示理解数据路径与同步机制。
+pubDate: 2026-08-02
+updated: 2026-09-04
+categories:
+  - Linux
+tags:
+  - Linux
+  - IPC
+  - 进程间通信
+  - Embedded Linux
+draft: false
+---
+
+import IPCRoughOverviewDemo from "@components/IPCRoughOverviewDemo.astro";
+import IPCLifecycleDemo from "@components/IPCLifecycleDemo.astro";
+import MermaidDiagram from "@components/MermaidDiagram.astro";
+
+# IPC：进程间通信
+
+Linux 中每个进程通常拥有相互独立的虚拟地址空间。进程 A 中的普通变量，进程 B 不能直接通过同一个地址去读取。因此，当两个进程需要交换数据、通知事件或者协调执行顺序时，就需要 **IPC（Inter-Process Communication，进程间通信）**。
+
+可以先把 IPC 理解成三个问题：
+
+1. **数据放在哪里？** 是内核缓冲区、共享内存，还是网络协议栈？
+2. **数据怎样从 A 到 B？** 是复制、映射，还是只发送一个通知？
+3. **A 与 B 如何协调？** 谁先写、谁后读，数据会不会被同时修改？
+
+不同 IPC 机制，本质上就是对这三个问题给出了不同答案。
+
+<IPCRoughOverviewDemo />
+
+## 1. 为什么进程不能直接共享普通变量？
+
+假设有两个独立进程：
+
+```text
+Process A                     Process B
+
+int data = 100;               int data = 200;
+0x7ffd1234                     0x7ffd1234
+```
+
+即使两个进程打印出的虚拟地址恰好一样，也不意味着它们访问的是同一块物理内存。操作系统通过虚拟内存机制，把不同进程的地址空间隔离起来。
+
+因此：
+
+```text
+A 修改 data
+    ↓
+不会自动影响
+    ↓
+B 的 data
+```
+
+这种隔离可以提高系统稳定性和安全性，但也意味着跨进程交换数据必须经过操作系统提供的机制。
+
+<MermaidDiagram
+  title="进程隔离与 IPC 的基本关系"
+  chart={`flowchart LR
+    A[Process A\n独立虚拟地址空间] -->|IPC| K[Kernel / Shared Resource]
+    K -->|IPC| B[Process B\n独立虚拟地址空间]
+    A -. 普通变量不可直接访问 .- B`}
+/>
+
+## 2. IPC 可以分成哪几类？
+
+从使用目的看，常见 IPC 大致可以分为：
+
+| 类型 | 典型机制 | 主要作用 |
+| :--- | :--- | :--- |
+| 字节流通信 | Pipe、FIFO、TCP Socket、Unix Domain Socket | 连续传输数据 |
+| 消息通信 | Message Queue、UDP Socket | 一条一条传递消息 |
+| 共享数据 | Shared Memory、`mmap` | 多进程访问同一片内存 |
+| 异步通知 | Signal | 通知某件事发生 |
+| 同步/互斥 | Semaphore | 控制执行顺序和并发访问 |
+
+需要特别注意：**信号和信号量虽然通常和 IPC 一起学习，但它们的主要职责不是搬运大块数据。**
+
+下面逐个分析。
+
+# 3. 匿名管道 Pipe
+
+管道是 Linux 中最基础的 IPC 方式之一。可以把它理解成内核中的一段 FIFO 字节流缓冲区：一个进程写入，另一个进程读取。
+
+```text
+Process A        Kernel Pipe Buffer        Process B
+
+ write()   --->  [ H e l l o ... ]  --->  read()
+```
+
+匿名管道通常用于存在亲缘关系的进程，例如 `fork()` 之后的父子进程。原因是父进程创建管道后，子进程会继承对应的文件描述符。
+
+## 3.1 创建管道
+
+```c
+#include <unistd.h>
+
+int fd[2];
+pipe(fd);
+```
+
+其中：
+
+```text
+fd[0] → 读端
+fd[1] → 写端
+```
+
+最典型的父子进程通信如下：
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+int main(void)
+{
+    int fd[2];
+    char buf[64] = {0};
+
+    if (pipe(fd) == -1)
+        return 1;
+
+    pid_t pid = fork();
+
+    if (pid == 0) {
+        close(fd[1]);
+        read(fd[0], buf, sizeof(buf));
+        printf("child recv: %s\n", buf);
+        close(fd[0]);
+    } else {
+        close(fd[0]);
+        const char *msg = "hello child";
+        write(fd[1], msg, strlen(msg) + 1);
+        close(fd[1]);
+        wait(NULL);
+    }
+
+    return 0;
+}
+```
+
+这里最值得理解的不是 API，而是**关闭不使用的管道端**。如果父进程一直保留写端，读端可能永远观察不到“所有写端已经关闭”的 EOF 条件。
+
+<MermaidDiagram
+  title="匿名管道的父子进程通信过程"
+  chart={`sequenceDiagram
+    participant P as Parent
+    participant K as Pipe Buffer
+    participant C as Child
+    P->>K: pipe(fd)
+    P->>C: fork()
+    P->>K: write(fd[1], data)
+    K->>C: read(fd[0], data)
+    P->>P: close(fd[1])
+    C->>C: close(fd[0])`}
+/>
+
+## 3.2 管道的特点
+
+管道传输的是**字节流**，它不会自动帮你保留“结构体 A”“消息 B”的业务边界。因此如果连续写入：
+
+```text
+ABC
+DEF
+```
+
+接收端看到的本质仍是一串连续字节：
+
+```text
+ABCDEF
+```
+
+应用层如果需要区分消息，需要自己设计长度字段、分隔符或者固定包长。
+
+# 4. 命名管道 FIFO
+
+匿名管道最大的限制是：通信双方通常需要通过 `fork()` 等方式继承同一个管道文件描述符。
+
+FIFO（Named Pipe，命名管道）把管道挂到文件系统中的一个名字上，因此两个彼此没有亲缘关系的进程也可以分别 `open()` 同一个 FIFO。
+
+创建 FIFO：
+
+```bash
+mkfifo /tmp/my_fifo
+```
+
+也可以在 C 中创建：
+
+```c
+#include <sys/stat.h>
+
+mkfifo("/tmp/my_fifo", 0666);
+```
+
+进程 A：
+
+```c
+int fd = open("/tmp/my_fifo", O_WRONLY);
+write(fd, "hello", 6);
+close(fd);
+```
+
+进程 B：
+
+```c
+int fd = open("/tmp/my_fifo", O_RDONLY);
+char buf[64] = {0};
+read(fd, buf, sizeof(buf));
+close(fd);
+```
+
+从数据路径看，FIFO 和 Pipe 很像：数据仍然经过内核缓冲区；区别主要在于**如何找到这个通信通道**。
+
+```text
+匿名管道：靠继承 fd
+FIFO：靠文件路径找到
+```
+
+# 5. 消息队列 Message Queue
+
+如果业务天然是一条条离散消息，例如：
+
+```text
+CMD_START
+CMD_STOP
+SENSOR_READY
+ERROR_12
+```
+
+使用纯字节流时，程序还需要自己处理消息边界。消息队列则直接提供“消息”这个抽象。
+
+可以把它理解为内核维护的一个队列：
+
+```text
+          Kernel Message Queue
+
+A ---> [ msg1 ][ msg2 ][ msg3 ] ---> B
+```
+
+发送者把消息放进去，接收者可以稍后再取；双方不必像共享内存那样同时操作同一块数据。
+
+## 5.1 System V 消息队列示例
+
+```c
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <string.h>
+
+struct msgbuf {
+    long mtype;
+    char data[64];
+};
+
+int main(void)
+{
+    int qid = msgget(1234, IPC_CREAT | 0666);
+
+    struct msgbuf msg = {
+        .mtype = 1
+    };
+
+    strcpy(msg.data, "hello message queue");
+
+    msgsnd(qid, &msg, strlen(msg.data) + 1, 0);
+    return 0;
+}
+```
+
+接收端：
+
+```c
+struct msgbuf msg;
+
+msgrcv(qid, &msg, sizeof(msg.data), 1, 0);
+printf("recv: %s\n", msg.data);
+```
+
+这里的 `mtype` 可以用于消息分类。例如：
+
+```text
+1 → 控制命令
+2 → 状态信息
+3 → 错误事件
+```
+
+相比 Pipe，消息队列最直观的优点是**有消息边界，并且天然支持排队**；代价是消息需要由内核对象管理，一般不适合拿它搬运非常大的高频数据块。
+
+# 6. 共享内存 Shared Memory
+
+共享内存是理解 IPC 时最重要的机制之一。
+
+前面的管道和消息队列基本都遵循：
+
+```text
+Process A
+    ↓ copy
+Kernel
+    ↓ copy
+Process B
+```
+
+共享内存的思路不同：让两个进程的虚拟地址都映射到**同一组物理内存页**。
+
+```text
+Process A virtual memory
+        │
+        ├──────────┐
+        │          ↓
+        │     Shared Physical Pages
+        │          ↑
+        └──────────┤
+                   │
+Process B virtual memory
+```
+
+因此 A 写入共享区之后，B 可以直接从映射到同一物理页的地址读取。
+
+<MermaidDiagram
+  title="共享内存映射关系"
+  chart={`flowchart TB
+    VA[Process A\nVirtual Address] --> PHY[Shared Physical Pages]
+    VB[Process B\nVirtual Address] --> PHY
+    S[Semaphore / Mutex / Atomic] -. 协调访问 .-> VA
+    S -. 协调访问 .-> VB`}
+/>
+
+## 6.1 System V 共享内存示例
+
+创建并挂载：
+
+```c
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <string.h>
+
+int shmid = shmget(1234, 4096, IPC_CREAT | 0666);
+char *addr = shmat(shmid, NULL, 0);
+
+strcpy(addr, "shared data");
+```
+
+另一个进程只要取得相同的共享内存对象并执行 `shmat()`，就能访问同一片共享数据。
+
+使用完成后：
+
+```c
+shmdt(addr);
+shmctl(shmid, IPC_RMID, NULL);
+```
+
+## 6.2 `mmap()` 共享映射
+
+Linux 中也经常通过 `mmap()` 建立共享映射：
+
+```c
+void *addr = mmap(
+    NULL,
+    size,
+    PROT_READ | PROT_WRITE,
+    MAP_SHARED,
+    fd,
+    0
+);
+```
+
+当两个进程映射同一个文件或共享对象时，就能以类似方式访问共享内容。
+
+## 6.3 为什么共享内存快，但更容易写错？
+
+因为数据本身不需要每次都在两个进程之间来回复制，但代价是：**两个进程真的在操作同一份数据。**
+
+例如：
+
+```text
+初始 counter = 10
+
+Process A              Process B
+读取 10                 读取 10
++1                      +1
+写 11                   写 11
+```
+
+期望结果是 12，实际可能变成 11，这就是典型的竞争条件。
+
+所以实际工程中，共享内存通常要和下面的同步机制搭配：
+
+```text
+shared memory + semaphore
+shared memory + process-shared mutex
+shared memory + atomic
+```
+
+# 7. 信号 Signal
+
+信号可以理解为 Linux 给进程发送的一种**异步事件通知**。
+
+它更像：
+
+```text
+“有事情发生了！”
+```
+
+而不是：
+
+```text
+“这里有一大块业务数据，请接收。”
+```
+
+常见信号包括：
+
+| 信号 | 常见含义 |
+| :--- | :--- |
+| `SIGINT` | 终端 Ctrl+C |
+| `SIGTERM` | 请求终止进程 |
+| `SIGKILL` | 强制终止，不能捕获 |
+| `SIGCHLD` | 子进程状态变化 |
+| `SIGALRM` | 定时器到期 |
+| `SIGUSR1/SIGUSR2` | 用户自定义用途 |
+
+## 7.1 捕获信号
+
+推荐使用 `sigaction()`：
+
+```c
+#include <signal.h>
+#include <stdio.h>
+#include <unistd.h>
+
+static void handler(int sig)
+{
+    const char msg[] = "signal received\n";
+    write(STDOUT_FILENO, msg, sizeof(msg) - 1);
+}
+
+int main(void)
+{
+    struct sigaction sa = {0};
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+
+    sigaction(SIGUSR1, &sa, NULL);
+
+    while (1)
+        pause();
+}
+```
+
+发送：
+
+```bash
+kill -USR1 PID
+```
+
+信号处理函数运行在异步上下文中，因此不要在 handler 中随意调用所有普通库函数。工程上常见做法是：handler 只修改一个 `sig_atomic_t` 标志，或者向 pipe/eventfd 写入通知，把复杂逻辑留给主循环处理。
+
+# 8. 信号量 Semaphore
+
+名字里虽然有“信号”，但信号量和 Signal 完全不是一回事。
+
+Semaphore 的核心是一个**计数器**，用于控制资源数量或协调执行顺序。
+
+最简单的二值信号量可以理解为：
+
+```text
+1 → 可以进入临界区
+0 → 需要等待
+```
+
+典型流程：
+
+```text
+Process A                 Process B
+
+sem_wait()                sem_wait()
+   ↓                         ↓
+获得资源                  阻塞等待
+   ↓
+修改共享内存
+   ↓
+sem_post()
+                             ↓
+                          获得资源
+```
+
+<MermaidDiagram
+  title="共享内存与信号量协作"
+  chart={`sequenceDiagram
+    participant A as Process A
+    participant S as Semaphore
+    participant M as Shared Memory
+    participant B as Process B
+    A->>S: sem_wait()
+    S-->>A: 获取访问权
+    A->>M: write data
+    A->>S: sem_post()
+    B->>S: sem_wait()
+    S-->>B: 获取访问权
+    B->>M: read data
+    B->>S: sem_post()`}
+/>
+
+POSIX 信号量常见接口：
+
+```c
+sem_wait(&sem);
+
+/* critical section */
+
+sem_post(&sem);
+```
+
+如果希望多个进程共享一个匿名 POSIX semaphore，可以把 semaphore 本身放在共享内存中，并使用支持跨进程的初始化方式。
+
+# 9. Socket
+
+Socket 是最通用的 IPC 接口之一。
+
+它不仅可以用于：
+
+```text
+同一台机器：Process A ↔ Process B
+```
+
+还可以用于：
+
+```text
+设备 A ↔ 网络 ↔ 设备 B
+```
+
+因此如果系统未来可能从单机程序演化成分布式程序，Socket 往往具有更强的扩展性。
+
+## 9.1 TCP Socket
+
+服务端典型流程：
+
+<MermaidDiagram
+  title="TCP Server 的基本调用流程"
+  chart={`flowchart TD
+    A[socket] --> B[bind]
+    B --> C[listen]
+    C --> D[accept]
+    D --> E[recv / send]
+    E --> F[close]`}
+/>
+
+客户端：
+
+<MermaidDiagram
+  title="TCP Client 的基本调用流程"
+  chart={`flowchart TD
+    A[socket] --> B[connect]
+    B --> C[send / recv]
+    C --> D[close]`}
+/>
+
+TCP 是**可靠字节流**。这句话里最容易被忽略的是“字节流”：
+
+```c
+send(fd, "ABC", 3, 0);
+send(fd, "DEF", 3, 0);
+```
+
+接收端不保证正好两次 `recv()` 分别得到 `ABC` 和 `DEF`，因此网络协议通常必须自己设计包格式，例如：
+
+```text
++----------+----------+------------------+
+| Magic    | Length   | Payload          |
++----------+----------+------------------+
+| 2 bytes  | 2 bytes  | Length bytes     |
++----------+----------+------------------+
+```
+
+## 9.2 UDP Socket
+
+UDP 是面向数据报的。一次发送的数据报通常作为一条报文被接收，因此它具有消息边界，但不提供 TCP 那种可靠、有序、面向连接的传输语义。
+
+适合：
+
+```text
+实时性优先
+允许少量丢包
+消息较短
+应用自己处理可靠性
+```
+
+例如视频、遥测、广播发现等场景。
+
+## 9.3 Unix Domain Socket
+
+如果通信双方都在同一台 Linux 机器上，但又希望使用 Socket 的编程模型，可以使用 Unix Domain Socket。
+
+它不需要 IP 地址和端口，而是可以通过文件系统路径建立通信端点，例如：
+
+```text
+/tmp/app.sock
+```
+
+在本地服务、守护进程、桌面程序和容器内部服务中非常常见。
+
+# 10. 动态比较：同一份数据换不同 IPC 会怎样？
+
+下面这个演示把最容易混淆的几个问题放到一起：数据是否经过内核复制、有没有消息边界、能不能跨主机、共享内存是否需要额外同步。
+
+<IPCLifecycleDemo />
+
+# 11. 生产者—消费者：IPC 中最经典的模型
+
+很多 IPC 问题最终都可以抽象成生产者—消费者模型。
+
+```text
+Producer                   Consumer
+   │                           │
+   ├── produce data            │
+   │                           │
+   ├── IPC channel ───────────>│
+   │                           ├── consume data
+```
+
+如果使用消息队列：
+
+```text
+Producer → queue → Consumer
+```
+
+队列本身天然提供缓存。
+
+如果使用共享内存环形缓冲区：
+
+```text
+Producer → shared ring buffer ← Consumer
+                ↑
+          semaphore / atomic
+```
+
+性能通常更高，但你必须额外设计：
+
+```text
+write_index
+read_index
+buffer full
+buffer empty
+memory ordering
+```
+
+因此“性能高”并不代表“开发成本低”。
+
+# 12. 如何选择 IPC？
+
+选择 IPC 时，不要先问“哪一种最好”，而是先问需求。
+
+| 需求 | 更常见的选择 | 原因 |
+| :--- | :--- | :--- |
+| 父子进程简单传数据 | Pipe | API 简单，天然继承 fd |
+| 无亲缘进程的简单字节流 | FIFO | 可通过路径打开 |
+| 一条条命令、事件 | Message Queue | 保留消息边界，支持排队 |
+| 本机高频大数据 | Shared Memory | 减少数据搬运 |
+| 共享内存同步 | Semaphore / Mutex / Atomic | 避免竞争条件 |
+| 异步事件通知 | Signal | 轻量、由内核投递 |
+| 跨主机通信 | TCP/UDP Socket | 网络通信标准接口 |
+| 同机服务化通信 | Unix Domain Socket | 保留 Socket 模型，适合本地服务 |
+
+可以用下面的判断流程快速选择：
+
+<MermaidDiagram
+  title="IPC 选择思路"
+  chart={`flowchart TD
+    A{是否跨主机?} -->|是| B{需要可靠字节流?}
+    B -->|是| TCP[TCP Socket]
+    B -->|否| UDP[UDP Socket]
+    A -->|否| C{是否传输大块高频数据?}
+    C -->|是| SHM[Shared Memory + Sync]
+    C -->|否| D{是否天然是一条条消息?}
+    D -->|是| MQ[Message Queue]
+    D -->|否| E{是否只是事件通知?}
+    E -->|是| SIG[Signal / Semaphore]
+    E -->|否| F{进程是否有亲缘关系?}
+    F -->|是| PIPE[Pipe]
+    F -->|否| G[FIFO / Unix Domain Socket]`}
+/>
+
+# 13. 嵌入式 Linux 中常见的组合方式
+
+实际嵌入式系统很少只使用一种 IPC。
+
+例如一个设备程序可能包含：
+
+```text
+Sensor Process
+     │
+     │ shared memory
+     ▼
+Algorithm Process
+     │
+     │ message queue
+     ▼
+Control Process
+     │
+     │ Unix Domain Socket
+     ▼
+UI / Service
+```
+
+同时再配合：
+
+```text
+Semaphore → 保护共享缓冲区
+Signal → 通知退出或重载配置
+Socket → 对外通信
+```
+
+这也是理解 IPC 的关键：**数据通道和同步机制往往是组合使用的。**
+
+例如一个高频采集系统可以设计成：
+
+```text
+共享内存：存传感器大块数据
+信号量：通知“新数据已写完”
+Unix Domain Socket：发送低频控制命令
+Signal：处理 SIGTERM 优雅退出
+```
+
+相比“所有内容都塞进一个 Socket”或者“所有内容都放进共享内存”，这种职责拆分通常更清晰。
+
+# 14. 面试中需要真正讲清楚的几个问题
+
+## Pipe 和 FIFO 有什么区别？
+
+两者本质上都可以提供内核维护的字节流通道。匿名 Pipe 通常依赖文件描述符继承，更适合父子等有亲缘关系的进程；FIFO 在文件系统中有名字，因此无亲缘关系进程也能分别打开。
+
+## 消息队列和管道有什么区别？
+
+管道更像连续字节流，应用层通常需要自己确定消息边界；消息队列直接管理一条条独立消息，并支持排队和按类型接收，但内核管理开销更明显。
+
+## 为什么共享内存性能高？
+
+因为通信双方映射到同一组物理页，传递大块数据时不需要像传统内核缓冲型 IPC 那样反复复制整个数据块。但它只解决“共享数据”的问题，没有自动解决并发同步。
+
+## Signal 和 Semaphore 有什么区别？
+
+Signal 是异步事件通知机制；Semaphore 是同步原语，本质是计数器，用于互斥、资源计数和进程执行顺序控制。它们不是同一种东西。
+
+## TCP Socket 为什么还要应用层协议？
+
+因为 TCP 提供的是可靠字节流，不保留 `send()` 调用之间的业务消息边界。应用通常需要额外设计长度字段、包头、分隔符或 TLV 等协议格式来完成拆包和粘包处理。
+
+## IPC 最重要的理解是什么？
+
+不要只背 API。真正需要掌握的是：
+
+```text
+数据在哪里？
+数据怎么移动？
+谁负责同步？
+有没有消息边界？
+是否支持跨主机？
+```
+
+只要能围绕这几个问题分析，一个新的 IPC 机制也很容易快速理解。
