@@ -1,0 +1,95 @@
+<section class="ipc-rough not-prose" data-ipc-rough>
+  <div class="ipc-rough__head">
+    <div>
+      <h3>IPC 机制总览：数据到底走哪条路？</h3>
+      <p>手绘视角区分“内核转发”“共享内存”“内核消息对象”和“网络协议栈”。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+  <div class="ipc-rough__paper">
+    <svg viewBox="0 0 1160 690" role="img" aria-label="Linux IPC 机制总览手绘图">
+      <g data-layer></g>
+      <g class="ipc-labels">
+        <text x="70" y="65" class="ipc-title">Process A</text>
+        <text x="930" y="65" class="ipc-title">Process B</text>
+        <text x="482" y="65" class="ipc-title">Kernel</text>
+
+        <text x="85" y="165" class="ipc-note">pipe / FIFO</text>
+        <text x="420" y="165" class="ipc-note">内核缓冲区</text>
+        <text x="870" y="165" class="ipc-small">读写字节流</text>
+
+        <text x="85" y="295" class="ipc-note">message queue</text>
+        <text x="405" y="295" class="ipc-note">消息队列对象</text>
+        <text x="880" y="295" class="ipc-small">带消息边界</text>
+
+        <text x="85" y="435" class="ipc-note">shared memory</text>
+        <text x="415" y="435" class="ipc-note">共享物理页</text>
+        <text x="870" y="435" class="ipc-small">几乎不搬数据</text>
+
+        <text x="85" y="565" class="ipc-note">socket</text>
+        <text x="405" y="565" class="ipc-note">协议栈 / socket buffer</text>
+        <text x="870" y="565" class="ipc-small">本机或跨主机</text>
+
+        <text x="70" y="645" class="ipc-foot">信号 signal 更像“异步通知”，信号量 semaphore 更像“同步/互斥工具”，它们通常不负责承载大块数据。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .ipc-rough { margin: 1.2rem 0 2rem; }
+  .ipc-rough__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.7rem; }
+  .ipc-rough__head h3 { margin:0; font-size:1rem; }
+  .ipc-rough__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.7; }
+  .ipc-rough__head button { flex:none; padding:.44rem .72rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .ipc-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.9rem; background:#fbfaf5; }
+  .ipc-rough__paper svg { display:block; width:100%; min-width:860px; height:auto; }
+  .ipc-labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .ipc-title { font-size:24px; font-weight:700; }
+  .ipc-note { font-size:22px; font-weight:700; }
+  .ipc-small { font-size:18px; }
+  .ipc-foot { font-size:18px; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+  async function init(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+    const mod = await import(roughUrl);
+    const rough = mod.default;
+    let seed = 71;
+    const arrow = (rc, x1, y1, x2, y2, stroke) => {
+      const opt = { stroke, strokeWidth:2.1, roughness:1.5, bowing:1.1, seed };
+      layer.appendChild(rc.line(x1,y1,x2,y2,opt));
+      const ang = Math.atan2(y2-y1,x2-x1), a=14;
+      layer.appendChild(rc.line(x2,y2,x2-a*Math.cos(ang-.55),y2-a*Math.sin(ang-.55),opt));
+      layer.appendChild(rc.line(x2,y2,x2-a*Math.cos(ang+.55),y2-a*Math.sin(ang+.55),opt));
+    };
+    const draw = () => {
+      layer.replaceChildren();
+      const rc = rough.svg(svg);
+      const base = { stroke:"#333", strokeWidth:1.7, roughness:1.6, bowing:1.15, seed };
+      const add = n => layer.appendChild(n);
+      add(rc.rectangle(45,25,260,590,{...base,stroke:"#2d7fbd",fill:"#e8f2fb",fillStyle:"hachure",hachureGap:10}));
+      add(rc.rectangle(855,25,260,590,{...base,stroke:"#d24b3f",fill:"#fde9e5",fillStyle:"hachure",hachureGap:10}));
+      add(rc.rectangle(350,25,455,590,{...base,stroke:"#7b61a8",fill:"#f4effb",fillStyle:"hachure",hachureGap:11}));
+      [128,258,398,528].forEach((y,i)=>{
+        const strokes=["#2d7fbd","#7b61a8","#5a8c59","#b36b24"];
+        add(rc.rectangle(395,y-35,360,70,{...base,stroke:strokes[i],fill:"#fffdf8",fillStyle:"solid"}));
+        arrow(rc,305,y,395,y,strokes[i]);
+        arrow(rc,755,y,855,y,strokes[i]);
+      });
+      add(rc.path("M 310 405 C 420 365, 650 365, 850 405",{...base,stroke:"#5a8c59",strokeWidth:2.3}));
+      seed += 1;
+    };
+    draw();
+    redraw.addEventListener("click", draw);
+  }
+  document.querySelectorAll("[data-ipc-rough]").forEach(init);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-ipc-rough]").forEach(init));
+</script>
