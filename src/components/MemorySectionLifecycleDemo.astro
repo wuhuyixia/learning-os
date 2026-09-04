@@ -1,0 +1,151 @@
+<section class="mem-demo not-prose" data-memory-section-demo>
+  <div class="mem-demo__head">
+    <div>
+      <h3>变量到底放在哪一段？</h3>
+      <p>点击不同声明，观察它通常落入哪个段，以及程序启动前后发生了什么。</p>
+    </div>
+  </div>
+
+  <div class="mem-demo__tabs" role="tablist">
+    <button class="is-active" data-case="bss">未初始化全局</button>
+    <button data-case="data">非零初始化全局</button>
+    <button data-case="rodata">const 全局</button>
+    <button data-case="stack">局部变量</button>
+    <button data-case="heap">malloc</button>
+  </div>
+
+  <div class="mem-demo__grid">
+    <div class="mem-demo__code">
+      <div class="mem-demo__label">代码</div>
+      <pre data-code></pre>
+    </div>
+
+    <div class="mem-demo__visual">
+      <div class="memory-column">
+        <div class="seg seg-stack" data-seg="stack">Stack</div>
+        <div class="seg seg-heap" data-seg="heap">Heap</div>
+        <div class="seg seg-bss" data-seg="bss">.bss</div>
+        <div class="seg seg-data" data-seg="data">.data</div>
+        <div class="seg seg-rodata" data-seg="rodata">.rodata</div>
+        <div class="seg seg-text" data-seg="text">.text</div>
+      </div>
+      <div class="mem-demo__arrow" data-arrow>→</div>
+      <div class="mem-demo__explain">
+        <strong data-title></strong>
+        <p data-desc></p>
+        <div class="mem-demo__chips">
+          <span data-storage></span>
+          <span data-init></span>
+          <span data-lifetime></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  .mem-demo { margin:1.25rem 0 2rem; border:1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius:1rem; padding:1rem; }
+  .mem-demo__head h3 { margin:0; font-size:1rem; }
+  .mem-demo__head p { margin:.25rem 0 .8rem; font-size:.76rem; opacity:.72; }
+  .mem-demo__tabs { display:flex; gap:.45rem; flex-wrap:wrap; margin-bottom:.9rem; }
+  .mem-demo__tabs button { border:1px solid color-mix(in srgb,currentColor 18%,transparent); background:transparent; color:inherit; border-radius:999px; padding:.42rem .68rem; font-size:.72rem; cursor:pointer; }
+  .mem-demo__tabs button.is-active { font-weight:700; background:color-mix(in srgb,currentColor 9%,transparent); }
+  .mem-demo__grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.45fr); gap:1rem; }
+  .mem-demo__code,.mem-demo__visual { border:1px solid color-mix(in srgb,currentColor 12%,transparent); border-radius:.8rem; padding:.9rem; }
+  .mem-demo__label { font-size:.7rem; opacity:.65; margin-bottom:.45rem; }
+  .mem-demo__code pre { margin:0; white-space:pre-wrap; font-size:.78rem; line-height:1.55; background:transparent; }
+  .mem-demo__visual { display:grid; grid-template-columns:135px 42px 1fr; align-items:center; gap:.55rem; }
+  .memory-column { display:flex; flex-direction:column; width:135px; }
+  .seg { padding:.52rem .45rem; border:1px solid rgba(100,116,139,.28); text-align:center; font-size:.72rem; opacity:.55; transition:.2s ease; }
+  .seg + .seg { border-top:none; }
+  .seg.is-active { opacity:1; transform:scale(1.04); font-weight:800; box-shadow:0 0 0 2px color-mix(in srgb,currentColor 12%,transparent); }
+  .seg-stack{background:#eef8e9}.seg-heap{background:#fde9e5}.seg-bss{background:#fff3cc}.seg-data{background:#f7e5d2}.seg-rodata{background:#fff8dc}.seg-text{background:#e7f3fd}
+  .mem-demo__arrow { font-size:1.8rem; text-align:center; }
+  .mem-demo__explain strong { display:block; margin-bottom:.35rem; }
+  .mem-demo__explain p { font-size:.78rem; line-height:1.55; margin:.2rem 0 .65rem; }
+  .mem-demo__chips { display:flex; gap:.35rem; flex-wrap:wrap; }
+  .mem-demo__chips span { font-size:.68rem; padding:.3rem .5rem; border-radius:999px; background:color-mix(in srgb,currentColor 8%,transparent); }
+  @media (max-width:780px){.mem-demo__grid{grid-template-columns:1fr}.mem-demo__visual{grid-template-columns:120px 34px 1fr}.memory-column{width:120px}}
+</style>
+
+<script is:inline>
+  function initMemorySectionDemo(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const cases = {
+      bss: {
+        code: "int global_a;\nstatic int global_b = 0;\nstatic int table[128];",
+        seg: "bss",
+        title: ".bss：零初始化 / 未初始化的静态存储期对象",
+        desc: "链接镜像只需要记录这段区域的地址和大小，通常不会真的把大量 0 存进镜像。启动代码会在进入 main() 前把对应 RAM 清零。",
+        storage: "RAM",
+        init: "启动时清零",
+        lifetime: "整个程序生命周期"
+      },
+      data: {
+        code: "int global_a = 1;\nstatic int global_b = 2;\nint table[3] = {10,20,30};",
+        seg: "data",
+        title: ".data：非零初始化的全局 / static",
+        desc: "变量运行时位于 RAM，但初始值必须保存在程序镜像中。典型 MCU 启动时会把 .data 的初始值从 Flash 复制到 RAM。",
+        storage: "RAM + Flash 初值",
+        init: "启动时复制",
+        lifetime: "整个程序生命周期"
+      },
+      rodata: {
+        code: "const int limit = 100;\nstatic const char msg[] = \"OK\";",
+        seg: "rodata",
+        title: ".rodata：只读常量数据",
+        desc: "只读常量通常放在只读段。在 MCU 中常直接驻留于 Flash；在通用操作系统中则由加载器映射为只读页。",
+        storage: "通常 Flash / 只读页",
+        init: "链接时确定",
+        lifetime: "整个程序生命周期"
+      },
+      stack: {
+        code: "void foo(void)\n{\n    int local = 10;\n    char buf[32];\n}",
+        seg: "stack",
+        title: "Stack：自动存储期局部对象",
+        desc: "普通局部变量通常随函数调用进入栈帧，函数返回后对应栈帧被回收。它还承载返回地址、保存寄存器等调用现场。",
+        storage: "RAM",
+        init: "进入函数时",
+        lifetime: "当前作用域 / 栈帧"
+      },
+      heap: {
+        code: "uint8_t *buf = malloc(256);\n/* use buf */\nfree(buf);",
+        seg: "heap",
+        title: "Heap：动态分配区域",
+        desc: "堆在运行时由分配器管理。对象何时创建、何时释放不由作用域自动决定，因此更容易出现泄漏、碎片和悬空指针。",
+        storage: "RAM",
+        init: "运行时申请",
+        lifetime: "直到 free / delete"
+      }
+    };
+
+    const code = root.querySelector("[data-code]");
+    const title = root.querySelector("[data-title]");
+    const desc = root.querySelector("[data-desc]");
+    const storage = root.querySelector("[data-storage]");
+    const init = root.querySelector("[data-init]");
+    const lifetime = root.querySelector("[data-lifetime]");
+    const tabs = [...root.querySelectorAll("[data-case]")];
+    const segs = [...root.querySelectorAll("[data-seg]")];
+
+    function render(key){
+      const item = cases[key];
+      code.textContent = item.code;
+      title.textContent = item.title;
+      desc.textContent = item.desc;
+      storage.textContent = item.storage;
+      init.textContent = item.init;
+      lifetime.textContent = item.lifetime;
+      tabs.forEach((b)=>b.classList.toggle("is-active", b.dataset.case===key));
+      segs.forEach((s)=>s.classList.toggle("is-active", s.dataset.seg===item.seg));
+    }
+
+    tabs.forEach((b)=>b.addEventListener("click",()=>render(b.dataset.case)));
+    render("bss");
+  }
+
+  document.querySelectorAll("[data-memory-section-demo]").forEach(initMemorySectionDemo);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-memory-section-demo]").forEach(initMemorySectionDemo));
+</script>
