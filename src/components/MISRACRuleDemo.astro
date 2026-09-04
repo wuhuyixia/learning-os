@@ -1,0 +1,139 @@
+<section class="misra-rule-demo not-prose" data-misra-rule-demo>
+  <div class="misra-rule-demo__head">
+    <div>
+      <h3>MISRA-C 规则动态演示</h3>
+      <p>切换不同场景，观察危险写法为什么难以审查，以及更符合安全编码思想的改写方式。</p>
+    </div>
+    <button type="button" data-reset>重置</button>
+  </div>
+
+  <div class="misra-rule-demo__tabs">
+    <button type="button" data-case="conversion" class="is-active">隐式转换</button>
+    <button type="button" data-case="macro">宏副作用</button>
+    <button type="button" data-case="switch">switch</button>
+    <button type="button" data-case="pointer">指针</button>
+    <button type="button" data-case="dynamic">动态内存</button>
+  </div>
+
+  <div class="misra-rule-demo__grid">
+    <div class="mrd-panel mrd-bad">
+      <div class="mrd-label">风险写法</div>
+      <pre><code data-bad-code></code></pre>
+    </div>
+    <div class="mrd-arrow">→</div>
+    <div class="mrd-panel mrd-good">
+      <div class="mrd-label">更易审查的写法</div>
+      <pre><code data-good-code></code></pre>
+    </div>
+  </div>
+
+  <div class="misra-rule-demo__meta">
+    <span>风险类型：<b data-risk></b></span>
+    <span>检查重点：<b data-focus></b></span>
+  </div>
+
+  <div class="misra-rule-demo__actions">
+    <button type="button" data-show-risk>解释风险</button>
+    <button type="button" data-show-fix>解释改法</button>
+  </div>
+
+  <div class="misra-rule-demo__log" data-log>当前：隐式类型转换场景。</div>
+</section>
+
+<style is:global>
+  .misra-rule-demo { margin:1.2rem 0 2rem; border:1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius:1rem; padding:1rem; }
+  .misra-rule-demo__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+  .misra-rule-demo__head h3 { margin:0; font-size:1rem; }
+  .misra-rule-demo__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.7; }
+  .misra-rule-demo button { border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; padding:.46rem .7rem; cursor:pointer; }
+  .misra-rule-demo__tabs { display:flex; flex-wrap:wrap; gap:.5rem; margin:1rem 0; }
+  .misra-rule-demo__tabs .is-active { font-weight:700; background:color-mix(in srgb,currentColor 10%,transparent); }
+  .misra-rule-demo__grid { display:grid; grid-template-columns:minmax(0,1fr) 42px minmax(0,1fr); gap:.7rem; align-items:center; }
+  .mrd-panel { min-height:240px; border-radius:.85rem; padding:.9rem; border:1px solid color-mix(in srgb,currentColor 16%,transparent); overflow:auto; }
+  .mrd-bad { background:color-mix(in srgb,#df6658 8%,transparent); }
+  .mrd-good { background:color-mix(in srgb,#55a86b 8%,transparent); }
+  .mrd-label { font-size:.78rem; font-weight:700; margin-bottom:.55rem; }
+  .mrd-panel pre { margin:0; white-space:pre-wrap; font-size:.78rem; line-height:1.65; background:transparent; }
+  .mrd-arrow { text-align:center; font-size:1.8rem; opacity:.65; }
+  .misra-rule-demo__meta { display:flex; flex-wrap:wrap; gap:1rem; margin-top:.85rem; padding:.7rem 0; border-top:1px dashed color-mix(in srgb,currentColor 14%,transparent); border-bottom:1px dashed color-mix(in srgb,currentColor 14%,transparent); font-size:.78rem; }
+  .misra-rule-demo__actions { display:flex; gap:.55rem; flex-wrap:wrap; margin-top:.8rem; }
+  .misra-rule-demo__log { margin-top:.8rem; padding:.75rem; border-radius:.7rem; background:color-mix(in srgb,currentColor 5%,transparent); font-size:.8rem; line-height:1.6; }
+  @media (max-width:760px) { .misra-rule-demo__grid { grid-template-columns:1fr; } .mrd-arrow { transform:rotate(90deg); } }
+</style>
+
+<script is:inline>
+  function initMisraRuleDemo(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const cases = {
+      conversion: {
+        bad: `uint8_t speed = 250U;\nint8_t delta = -20;\n\nspeed = speed + delta;`,
+        good: `uint8_t speed = 250U;\nint8_t delta = -20;\nint16_t next = (int16_t)speed + (int16_t)delta;\n\nif ((next >= 0) && (next <= UINT8_MAX)) {\n    speed = (uint8_t)next;\n}`,
+        risk: "有符号/无符号混合",
+        focus: "essential type 与显式边界检查",
+        riskText: "整数提升和有符号/无符号转换可能让结果与直觉不同；仅看一行表达式很难判断目标平台上的最终类型和范围。",
+        fixText: "先提升到能覆盖运算范围的明确类型，完成边界检查后再显式收窄，审查者能直接看到作者的意图。"
+      },
+      macro: {
+        bad: `#define MAX(a,b) ((a) > (b) ? (a) : (b))\n\nint y = MAX(i++, 10);`,
+        good: `static int32_t max_i32(int32_t a, int32_t b)\n{\n    return (a > b) ? a : b;\n}\n\nint32_t y = max_i32(i, 10);\ni++;`,
+        risk: "宏参数可能重复求值",
+        focus: "预处理器副作用与单一求值",
+        riskText: "函数式宏只是文本替换，带副作用的实参可能被求值多次，造成难以察觉的状态变化。",
+        fixText: "用类型明确的函数替代复杂宏，并把副作用拆成独立语句，执行顺序与次数都更清晰。"
+      },
+      switch: {
+        bad: `switch (state) {\ncase 0:\n    start();\ncase 1:\n    run();\n    break;\n}`,
+        good: `switch (state) {\ncase 0:\n    start();\n    break;\ncase 1:\n    run();\n    break;\ndefault:\n    safe_state();\n    break;\n}`,
+        risk: "隐式 fall-through / 未覆盖分支",
+        focus: "控制流必须显式",
+        riskText: "缺少 break 时可能意外贯穿；缺少 default 时，非法状态可能悄悄被忽略。",
+        fixText: "每个分支的结束方式显式化，并为异常状态提供确定行为。"
+      },
+      pointer: {
+        bad: `uint32_t *p = get_ptr();\n*p = 1U;`,
+        good: `uint32_t *p = get_ptr();\n\nif (p != NULL) {\n    *p = 1U;\n}`,
+        risk: "空指针 / 生命周期不明确",
+        focus: "指针有效性与访问前置条件",
+        riskText: "裸指针本身不表达是否允许为空，也不表达对象是否仍然有效；直接解引用把前置条件隐藏起来。",
+        fixText: "在使用点显式验证必要条件，并尽量缩短指针有效性依赖的范围。"
+      },
+      dynamic: {
+        bad: `uint8_t *buf = malloc(size);\nif (buf != NULL) {\n    use(buf);\n}\nfree(buf);`,
+        good: `static uint8_t buf[128];\n\nif (size <= sizeof(buf)) {\n    use(buf);\n}`,
+        risk: "动态分配的不确定性",
+        focus: "确定性、碎片与失败路径",
+        riskText: "在资源受限系统中，malloc/free 会带来分配失败、碎片和执行时间不可预测等问题。",
+        fixText: "对容量可界定的场景，优先静态或预分配资源，使内存上界和运行时行为更可预测。"
+      }
+    };
+
+    const tabs = [...root.querySelectorAll("[data-case]")];
+    const bad = root.querySelector("[data-bad-code]");
+    const good = root.querySelector("[data-good-code]");
+    const risk = root.querySelector("[data-risk]");
+    const focus = root.querySelector("[data-focus]");
+    const log = root.querySelector("[data-log]");
+    let current = "conversion";
+
+    function render() {
+      const item = cases[current];
+      bad.textContent = item.bad;
+      good.textContent = item.good;
+      risk.textContent = item.risk;
+      focus.textContent = item.focus;
+      log.textContent = `当前：${tabs.find(x => x.dataset.case === current)?.textContent ?? current} 场景。`;
+      tabs.forEach(btn => btn.classList.toggle("is-active", btn.dataset.case === current));
+    }
+
+    tabs.forEach(btn => btn.addEventListener("click", () => { current = btn.dataset.case; render(); }));
+    root.querySelector("[data-show-risk]")?.addEventListener("click", () => { log.textContent = cases[current].riskText; });
+    root.querySelector("[data-show-fix]")?.addEventListener("click", () => { log.textContent = cases[current].fixText; });
+    root.querySelector("[data-reset]")?.addEventListener("click", () => { current = "conversion"; render(); });
+    render();
+  }
+
+  document.querySelectorAll("[data-misra-rule-demo]").forEach(initMisraRuleDemo);
+  document.addEventListener("astro:page-load", () => document.querySelectorAll("[data-misra-rule-demo]").forEach(initMisraRuleDemo));
+</script>
