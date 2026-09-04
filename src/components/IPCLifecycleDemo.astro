@@ -1,0 +1,117 @@
+<section class="ipc-demo not-prose" data-ipc-demo>
+  <div class="ipc-demo__head">
+    <div>
+      <h3>IPC 动态演示</h3>
+      <p>切换不同机制，观察数据路径、同步方式与适用范围。</p>
+    </div>
+    <button type="button" data-reset>重置</button>
+  </div>
+
+  <div class="ipc-demo__tabs" role="tablist">
+    <button type="button" data-mode="pipe" class="is-active">Pipe/FIFO</button>
+    <button type="button" data-mode="mq">Message Queue</button>
+    <button type="button" data-mode="shm">Shared Memory</button>
+    <button type="button" data-mode="signal">Signal/Semaphore</button>
+    <button type="button" data-mode="socket">Socket</button>
+  </div>
+
+  <div class="ipc-demo__scene">
+    <div class="ipc-node" data-a><strong>Process A</strong><span data-a-state>写入数据</span></div>
+    <div class="ipc-arrow" data-left>→</div>
+    <div class="ipc-core" data-core><strong data-core-title>Kernel Buffer</strong><span data-core-state>等待数据</span></div>
+    <div class="ipc-arrow" data-right>→</div>
+    <div class="ipc-node" data-b><strong>Process B</strong><span data-b-state>等待读取</span></div>
+  </div>
+
+  <div class="ipc-demo__meta">
+    <span>数据复制：<b data-copy>通常有</b></span>
+    <span>消息边界：<b data-boundary>无</b></span>
+    <span>跨主机：<b data-remote>否</b></span>
+    <span>额外同步：<b data-sync>通常不需要</b></span>
+  </div>
+
+  <div class="ipc-demo__actions">
+    <button type="button" data-step="1">发送 / 写入</button>
+    <button type="button" data-step="2">接收 / 读取</button>
+    <button type="button" data-info>为什么？</button>
+  </div>
+
+  <div class="ipc-demo__log" data-log>Pipe/FIFO：字节流先进入内核缓冲区，再被另一进程读取。</div>
+</section>
+
+<style is:global>
+  .ipc-demo { margin:1.2rem 0 2rem; border:1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius:1rem; padding:1rem; }
+  .ipc-demo__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+  .ipc-demo__head h3 { margin:0; font-size:1rem; }
+  .ipc-demo__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.7; }
+  .ipc-demo button { border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; padding:.48rem .72rem; cursor:pointer; }
+  .ipc-demo__tabs { display:flex; gap:.5rem; flex-wrap:wrap; margin:1rem 0; }
+  .ipc-demo__tabs .is-active { font-weight:700; background:color-mix(in srgb,currentColor 10%,transparent); }
+  .ipc-demo__scene { display:grid; grid-template-columns:minmax(140px,1fr) 46px minmax(180px,1.25fr) 46px minmax(140px,1fr); align-items:center; gap:.5rem; min-height:200px; }
+  .ipc-node,.ipc-core { min-height:105px; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.9rem; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.35rem; padding:.8rem; text-align:center; transition:.25s ease; }
+  .ipc-node { background:color-mix(in srgb,#4f8fd8 10%,transparent); }
+  .ipc-core { background:color-mix(in srgb,#8c6fc4 10%,transparent); }
+  .ipc-arrow { text-align:center; font-size:1.8rem; transition:.2s ease; opacity:.8; }
+  .ipc-demo__meta { display:flex; flex-wrap:wrap; gap:1rem; padding:.7rem 0; border-top:1px dashed color-mix(in srgb,currentColor 14%,transparent); border-bottom:1px dashed color-mix(in srgb,currentColor 14%,transparent); font-size:.78rem; }
+  .ipc-demo__actions { display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.85rem; }
+  .ipc-demo__log { margin-top:.85rem; font-size:.8rem; line-height:1.6; padding:.75rem; border-radius:.7rem; background:color-mix(in srgb,currentColor 5%,transparent); }
+  .ipc-dim { opacity:.3; transform:scale(.98); }
+  .ipc-hot { box-shadow:0 0 0 3px color-mix(in srgb,currentColor 12%,transparent); }
+  @media (max-width:760px) {
+    .ipc-demo__scene { grid-template-columns:1fr; }
+    .ipc-arrow { transform:rotate(90deg); }
+  }
+</style>
+
+<script is:inline>
+  function initIPCDemo(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+    const q = (s) => root.querySelector(s);
+    const tabs = [...root.querySelectorAll("[data-mode]")];
+    const a = q("[data-a]"), b = q("[data-b]"), core = q("[data-core]");
+    const left = q("[data-left]"), right = q("[data-right]");
+    const aState = q("[data-a-state]"), bState = q("[data-b-state]");
+    const coreTitle = q("[data-core-title]"), coreState = q("[data-core-state]");
+    const copy = q("[data-copy]"), boundary = q("[data-boundary]"), remote = q("[data-remote]"), sync = q("[data-sync]");
+    const log = q("[data-log]");
+    const step1 = q('[data-step="1"]'), step2 = q('[data-step="2"]'), info = q("[data-info]"), reset = q("[data-reset]");
+    let mode = "pipe", step = 0;
+
+    const modes = {
+      pipe: { title:"Kernel Buffer", copy:"通常有", boundary:"无（字节流）", remote:"否", sync:"通常不需要", base:"Pipe/FIFO：字节流先进入内核缓冲区，再由另一进程读取。", send:"A 写入字节流，数据进入内核 pipe buffer。", recv:"B 从内核缓冲区读取；读取端拿到的是字节序列。", why:"管道强调顺序字节流。匿名管道常用于有亲缘关系的进程，FIFO 通过文件名让无亲缘关系进程也能打开。" },
+      mq: { title:"Message Queue", copy:"有", boundary:"有", remote:"否", sync:"队列本身提供排队", base:"消息队列：内核保存一条条消息，接收端按消息读取。", send:"A 发送一条消息，消息作为独立单元进入内核队列。", recv:"B 接收一条完整消息，不需要自己从字节流里重新切包。", why:"消息队列适合离散命令或事件。代价是内核管理和数据复制开销通常高于共享内存。" },
+      shm: { title:"Shared Physical Pages", copy:"最少", boundary:"由应用定义", remote:"否", sync:"需要", base:"共享内存：A、B 的虚拟地址映射到同一组物理页。", send:"A 直接修改共享区域中的数据，不需要先把整块数据送进内核队列。", recv:"B 直接读取同一片共享内存；真正难点变成并发同步。", why:"共享内存通常是本机大数据量 IPC 中性能很高的方案，但必须配合信号量、互斥锁、原子操作等解决竞争。" },
+      signal: { title:"Kernel Notification", copy:"几乎无数据", boundary:"不适用", remote:"否", sync:"本身就是通知/同步", base:"Signal/Semaphore：更偏控制与同步，而不是承载大块业务数据。", send:"A 触发信号或改变信号量状态，用于通知、唤醒或互斥。", recv:"B 收到异步通知，或等待到信号量条件满足后继续运行。", why:"signal 适合异步事件通知；semaphore 适合计数、互斥、生产者-消费者同步。二者通常和真正的数据通道配合使用。" },
+      socket: { title:"Socket Buffer / Protocol Stack", copy:"通常有", boundary:"取决于类型", remote:"是", sync:"协议负责传输语义", base:"Socket：统一了本机与跨主机通信接口。", send:"A 通过 send/write 把数据交给 socket buffer 与协议栈。", recv:"B 通过 recv/read 取得数据；TCP 是字节流，UDP 保留报文边界。", why:"需要跨主机时通常优先 socket。本机也可使用 Unix Domain Socket，避免网络寻址并保留 socket 编程模型。" }
+    };
+
+    function render() {
+      [a,b,core].forEach(el => el.classList.remove("ipc-dim","ipc-hot"));
+      left.textContent = "→"; right.textContent = "→";
+      const m = modes[mode];
+      coreTitle.textContent = m.title; copy.textContent = m.copy; boundary.textContent = m.boundary; remote.textContent = m.remote; sync.textContent = m.sync;
+      aState.textContent = "准备发送"; bState.textContent = "等待接收"; coreState.textContent = "空闲"; log.textContent = m.base;
+      if (step === 1) {
+        a.classList.add("ipc-hot"); core.classList.add("ipc-hot"); b.classList.add("ipc-dim");
+        aState.textContent = mode === "shm" ? "写共享区" : "已发送"; coreState.textContent = mode === "shm" ? "共享页已更新" : "持有数据/状态"; log.textContent = m.send;
+      } else if (step === 2) {
+        b.classList.add("ipc-hot"); core.classList.add("ipc-hot"); a.classList.add("ipc-dim");
+        bState.textContent = mode === "signal" ? "被唤醒/继续执行" : "已读取"; coreState.textContent = mode === "shm" ? "仍为同一共享页" : "完成传递"; log.textContent = m.recv;
+      }
+    }
+
+    tabs.forEach(btn => btn.addEventListener("click", () => {
+      mode = btn.dataset.mode; step = 0;
+      tabs.forEach(x => x.classList.toggle("is-active", x === btn));
+      render();
+    }));
+    step1.addEventListener("click",()=>{step=1;render();});
+    step2.addEventListener("click",()=>{step=2;render();});
+    info.addEventListener("click",()=>{log.textContent=modes[mode].why;});
+    reset.addEventListener("click",()=>{step=0;render();});
+    render();
+  }
+  document.querySelectorAll("[data-ipc-demo]").forEach(initIPCDemo);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-ipc-demo]").forEach(initIPCDemo));
+</script>
