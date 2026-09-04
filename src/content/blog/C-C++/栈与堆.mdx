@@ -1,0 +1,656 @@
+---
+title: 栈与堆
+description: 从程序内存布局出发，讲解 .text、.rodata、.data、.bss、Stack 与 Heap 的作用、变量归属、启动初始化过程以及嵌入式系统中的内存管理风险。
+pubDate: 2026-08-26
+updated: 2026-09-04
+image: /image/stack-heap-cover.svg
+imageFit: cover
+demo: stack-and-heap
+categories:
+  - C/C++
+tags:
+  - 内存管理
+  - 栈
+  - 堆
+  - bss
+  - data
+  - rodata
+---
+
+import MemoryLayoutRoughDemo from "@components/MemoryLayoutRoughDemo.astro";
+import MemorySectionLifecycleDemo from "@components/MemorySectionLifecycleDemo.astro";
+
+# 栈与堆：从程序内存布局理解运行时内存
+
+很多人学习“栈与堆”时，只记住一句话：
+
+```text
+局部变量在栈上
+malloc 出来的对象在堆上
+```
+
+这句话并没有错，但它只覆盖了程序内存的一部分。
+
+一个完整的 C/C++ 程序通常还会涉及：
+
+```text
+.text
+.rodata
+.data
+.bss
+Heap
+Stack
+```
+
+真正理解这些区域之后，下面这些问题才会变得清楚：
+
+- 全局变量到底存在哪里？
+- `static` 局部变量为什么函数退出后还存在？
+- `const` 为什么通常不能修改？
+- `.bss` 为什么不会让固件文件变得特别大？
+- `malloc()` 到底从哪里拿内存？
+- 为什么栈溢出和堆碎片是两种完全不同的问题？
+
+<MemoryLayoutRoughDemo />
+
+---
+
+## 1. 先区分“程序镜像”和“运行时内存”
+
+对于典型 MCU，可以先建立两个概念：
+
+```text
+Flash / ROM
+    ↓
+保存程序代码和需要长期保存的初始数据
+
+RAM
+    ↓
+程序运行时真正需要读写的工作区
+```
+
+因此不能简单理解为：
+
+```text
+.text / .rodata / .data / .bss / heap / stack
+全部都一直在 RAM
+```
+
+更常见的情况是：
+
+```text
+Flash
+├── .text
+├── .rodata
+└── .data 的初始值
+
+RAM
+├── .data
+├── .bss
+├── Heap
+└── Stack
+```
+
+其中 `.data` 比较特殊：
+
+> **运行时变量本体在 RAM，但它的非零初始值通常保存在 Flash 中。**
+
+MCU 启动时，启动代码会在进入 `main()` 之前，把 `.data` 的初始内容复制到 RAM。
+
+---
+
+# 2. `.text`：程序指令
+
+`.text` 主要保存机器指令，也就是编译后的程序代码。
+
+例如：
+
+```c
+int add(int a, int b)
+{
+    return a + b;
+}
+```
+
+最终会被编译成机器指令并进入 `.text`。
+
+在大多数 MCU 中，`.text` 通常直接放在 Flash 中执行；在 Linux 等通用操作系统中，则通常由加载器把可执行文件中的代码段映射进进程虚拟地址空间，并设置为只读、可执行。
+
+所以 `.text` 的典型属性可以理解为：
+
+```text
+代码
+只读
+可执行
+编译/链接阶段确定
+```
+
+---
+
+# 3. `.rodata`：只读常量数据
+
+`.rodata` 通常保存只读数据。
+
+例如：
+
+```c
+const int max_speed = 3000;
+static const char msg[] = "motor ready";
+```
+
+这些内容在运行期间不应该被修改，因此通常被放到只读区域。
+
+在 MCU 中，经常直接驻留在 Flash；在操作系统环境中，则可能被映射为只读内存页。
+
+典型用途包括：
+
+```text
+字符串常量
+查找表
+const 全局变量
+只读配置表
+状态名称表
+```
+
+例如：
+
+```c
+static const uint16_t sine_table[4] = {
+    0U, 707U, 1000U, 707U
+};
+```
+
+如果这些数据不会修改，把它们作为只读对象更有利于节省 RAM，也能减少误写风险。
+
+---
+
+# 4. `.data`：非零初始化的全局和 static 变量
+
+下面这些变量通常属于 `.data`：
+
+```c
+int global_a = 1;
+static int global_b = 2;
+int array[3] = {10, 20, 30};
+```
+
+它们有两个共同点：
+
+```text
+具有静态存储期
+并且初始值不是全 0
+```
+
+这里的“静态存储期”不等于“必须写 static”。
+
+全局变量本身也具有静态存储期。
+
+例如：
+
+```c
+int global_data = 5;
+```
+
+和：
+
+```c
+static int file_data = 5;
+```
+
+虽然作用域不同，但生命周期都贯穿整个程序运行过程。
+
+## 4.1 `.data` 为什么既涉及 Flash，又涉及 RAM？
+
+因为程序启动前必须知道：
+
+```text
+global_data 初始值应该是 5
+```
+
+所以这个 `5` 必须保存在固件镜像里。
+
+典型启动过程：
+
+```text
+Flash 中保存 .data 初始镜像
+          ↓
+Reset_Handler / startup code
+          ↓
+复制到 RAM 的 .data 区域
+          ↓
+进入 main()
+```
+
+也就是说：
+
+```text
+Flash：保存初始值
+RAM：保存运行时可修改的变量
+```
+
+---
+
+# 5. `.bss`：未初始化或零初始化的全局和 static 变量
+
+下面这些变量通常进入 `.bss`：
+
+```c
+int global_a;
+int global_b = 0;
+
+static int global_c;
+static int global_d = 0;
+
+int array_a[4096];
+static int array_b[4096] = {0};
+```
+
+函数内部的 `static` 变量也一样：
+
+```c
+void foo(void)
+{
+    static int local_a;
+    static int local_b = 0;
+}
+```
+
+它们虽然写在函数里，但并不是普通栈变量。
+
+因为 `static` 局部变量拥有整个程序生命周期，所以通常也进入 `.bss` 或 `.data`。
+
+## 5.1 `.bss` 最重要的特点：不需要在镜像里存很多个 0
+
+假设定义：
+
+```c
+static uint8_t buffer[1024 * 100];
+```
+
+如果它没有显式非零初始化，那么程序镜像通常不需要真的保存 100 KB 的零字节。
+
+链接器只需要记录：
+
+```text
+.bss 起始地址
+.bss 结束地址
+```
+
+启动时做类似：
+
+```c
+for (p = bss_start; p < bss_end; ++p)
+{
+    *p = 0;
+}
+```
+
+因此 `.bss` 的本质是：
+
+> **在 RAM 中预留空间，但在可执行镜像中主要记录大小，而不是保存大量零值。**
+
+这也是为什么一个很大的零初始化数组，可能明显增加 RAM 占用，却不会同比例增加固件文件大小。
+
+---
+
+<MemorySectionLifecycleDemo />
+
+---
+
+# 6. Stack：函数调用和自动变量的运行时区域
+
+栈主要服务于函数调用。
+
+一个函数被调用时，常见需要保存：
+
+```text
+返回地址
+保存寄存器
+局部变量
+临时变量
+函数参数的一部分
+```
+
+例如：
+
+```c
+void foo(void)
+{
+    int a = 10;
+    char buffer[64];
+}
+```
+
+`a` 和 `buffer` 通常随着 `foo()` 的栈帧一起创建。
+
+函数返回后，这块栈空间就可以被后续函数调用重新使用。
+
+可以把调用过程理解成：
+
+```text
+main()
+  ↓
+创建 main 栈帧
+  ↓
+调用 foo()
+  ↓
+再创建 foo 栈帧
+  ↓
+foo() 返回
+  ↓
+foo 栈帧释放
+```
+
+这就是栈非常典型的 LIFO：
+
+```text
+Last In
+First Out
+```
+
+## 6.1 栈为什么快？
+
+因为很多体系结构下，分配和释放栈空间本质上只是调整栈指针。
+
+概念上类似：
+
+```text
+SP = SP - frame_size
+```
+
+函数退出时：
+
+```text
+SP = SP + frame_size
+```
+
+不需要像通用堆分配器那样搜索空闲块。
+
+## 6.2 栈溢出
+
+如果局部对象过大：
+
+```c
+void task(void)
+{
+    uint8_t image[200 * 1024];
+}
+```
+
+就可能直接耗尽栈空间。
+
+递归也会不断创建新栈帧：
+
+```c
+void recurse(void)
+{
+    uint8_t temp[128];
+    recurse();
+}
+```
+
+最终可能发生 stack overflow。
+
+在 FreeRTOS 中，每个任务通常有自己的任务栈，因此不仅要关心“系统总 RAM”，还要关心：
+
+```text
+每个任务分别分配了多少栈
+实际峰值用了多少
+中断嵌套是否还会额外消耗栈
+```
+
+---
+
+# 7. Heap：运行时动态分配区域
+
+堆用于动态内存管理。
+
+C 中常见：
+
+```c
+uint8_t *buffer = malloc(256);
+
+if (buffer != NULL)
+{
+    /* use buffer */
+    free(buffer);
+}
+```
+
+C++ 中则常见：
+
+```cpp
+Object *obj = new Object();
+delete obj;
+```
+
+和栈不同，堆对象的生命周期不由函数作用域自动决定。
+
+例如：
+
+```c
+uint8_t *create_buffer(void)
+{
+    uint8_t *p = malloc(128);
+    return p;
+}
+```
+
+函数退出后，`p` 这个局部指针变量消失了，但 `malloc()` 得到的堆内存仍然存在，直到有人调用 `free()`。
+
+## 7.1 堆碎片
+
+堆分配并不是简单的 LIFO。
+
+例如：
+
+```text
+分配 A  100B
+分配 B  200B
+分配 C  100B
+释放 B
+```
+
+内存可能变成：
+
+```text
+[A][ free 200 ][C]
+```
+
+如果接下来需要申请 300B，即使总空闲内存超过 300B，也可能因为没有足够大的连续空闲块而失败。
+
+这就是外部碎片问题。
+
+因此在长期运行、实时性要求高的嵌入式系统中，经常限制动态内存的使用，或者改用：
+
+```text
+固定大小内存池
+对象池
+静态数组
+FreeRTOS 静态对象
+启动阶段一次性分配
+```
+
+---
+
+# 8. Stack 和 Heap 的增长方向
+
+经典内存布局图中经常看到：
+
+```text
+高地址
+┌──────────┐
+│ Stack ↓  │
+│          │
+│          │
+│ Heap  ↑  │
+├──────────┤
+│ .bss     │
+│ .data    │
+└──────────┘
+低地址
+```
+
+这里表示：
+
+```text
+Stack 常向低地址增长
+Heap 常向高地址增长
+```
+
+这样两者可以共享中间尚未使用的地址空间。
+
+但是要注意：
+
+> **这只是非常常见的内存布局模型，不是 C 语言标准强制规定。**
+
+实际布局由：
+
+```text
+CPU 架构
+ABI
+操作系统
+链接脚本
+运行时库
+RTOS 配置
+```
+
+共同决定。
+
+在 MCU 工程中，最终应以 linker script / scatter file / map 文件为准。
+
+---
+
+# 9. 栈与堆的核心区别
+
+| 对比 | Stack | Heap |
+| :--- | :--- | :--- |
+| 管理方式 | 编译器/运行时自动管理 | `malloc/free`、`new/delete` 等管理 |
+| 分配速度 | 通常很快 | 通常更慢 |
+| 生命周期 | 通常随作用域/栈帧结束 | 由程序主动释放决定 |
+| 空间组织 | LIFO 特征明显 | 分配顺序自由 |
+| 典型问题 | 栈溢出 | 泄漏、碎片、double free |
+| 常见用途 | 局部变量、调用现场 | 动态对象、可变大小缓冲区 |
+
+栈的核心问题是：
+
+```text
+容量是否足够？
+最大调用深度是多少？
+局部对象是否过大？
+```
+
+堆的核心问题是：
+
+```text
+谁负责释放？
+是否会泄漏？
+是否会碎片化？
+分配失败如何处理？
+```
+
+这两种问题的解决思路完全不同。
+
+---
+
+# 10. 一段代码放到哪里？
+
+看下面的例子：
+
+```c
+#include <stdint.h>
+#include <stdlib.h>
+
+int global_bss;
+int global_data = 10;
+const int global_const = 20;
+
+void foo(void)
+{
+    static int local_static_bss;
+    static int local_static_data = 30;
+
+    int local_stack = 40;
+    uint8_t *heap_buf = malloc(128);
+
+    free(heap_buf);
+}
+```
+
+可以近似理解为：
+
+```text
+global_bss
+local_static_bss
+        → .bss
+
+global_data
+local_static_data
+        → .data
+
+global_const
+        → .rodata（常见情况）
+
+local_stack
+heap_buf 这个“指针变量本身”
+        → Stack
+
+malloc(128) 得到的 128 字节
+        → Heap
+
+foo() 的机器指令
+        → .text
+```
+
+这里非常容易混淆的一点是：
+
+```c
+uint8_t *heap_buf = malloc(128);
+```
+
+实际上有两个对象：
+
+```text
+heap_buf 指针变量本身 → Stack
+heap_buf 指向的内存   → Heap
+```
+
+指针放在哪里，和它指向的数据放在哪里，是两个完全不同的问题。
+
+---
+
+# 11. 在嵌入式工程中如何查看真实内存占用
+
+不要只根据源码猜。
+
+GCC 工具链下可以关注：
+
+```bash
+arm-none-eabi-size firmware.elf
+```
+
+常见输出：
+
+```text
+   text    data     bss     dec     hex
+  24560     320    4096   28976    7130
+```
+
+通常可以粗略理解为：
+
+```text
+text → 代码和只读内容为主
+data → 有初始值的 RAM 数据
+bss  → 零初始化 RAM 数据
+```
+
+还可以查看链接生成的 `.map` 文件，进一步确认：
+
+```text
+某个大数组到底在哪个段
+某个静态对象占了多少空间
+堆和栈预留了多少
+哪个模块占用 Flash 最大
+```
+
+对于 STM32、Bootloader、FreeRTOS 这类项目，map 文件往往比“看代码猜内存”更可靠。
