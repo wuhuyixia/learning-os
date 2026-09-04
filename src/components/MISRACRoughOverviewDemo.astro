@@ -1,0 +1,116 @@
+<section class="misra-rough not-prose" data-misra-rough>
+  <div class="misra-rough__head">
+    <div>
+      <h3>MISRA-C 在做什么？</h3>
+      <p>它不是“让代码更漂亮”，而是在编译之前主动收紧 C 语言里容易产生歧义、未定义行为和平台差异的写法。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="misra-rough__paper">
+    <svg viewBox="0 0 1180 700" role="img" aria-label="MISRA-C 安全编码手绘示意图">
+      <g data-rough-layer></g>
+      <g class="misra-rough__labels">
+        <text x="70" y="68" class="mr-title">普通 C 代码</text>
+        <text x="85" y="122" class="mr-code">int / char / pointer</text>
+        <text x="85" y="158" class="mr-code">macro / switch / malloc</text>
+
+        <text x="420" y="56" class="mr-title">MISRA-C 约束层</text>
+        <text x="402" y="125" class="mr-note">① 类型与转换</text>
+        <text x="402" y="190" class="mr-note">② 指针与数组</text>
+        <text x="402" y="255" class="mr-note">③ 控制流</text>
+        <text x="402" y="320" class="mr-note">④ 宏 / 预处理</text>
+        <text x="402" y="385" class="mr-note">⑤ 资源 / 库函数</text>
+
+        <text x="825" y="68" class="mr-title">更可预测的程序</text>
+        <text x="840" y="126" class="mr-good">✓ 边界明确</text>
+        <text x="840" y="168" class="mr-good">✓ 类型意图明确</text>
+        <text x="840" y="210" class="mr-good">✓ 控制流容易审查</text>
+        <text x="840" y="252" class="mr-good">✓ 平台依赖可追踪</text>
+        <text x="840" y="294" class="mr-good">✓ 故障更容易提前暴露</text>
+
+        <text x="70" y="500" class="mr-title">容易被 MISRA 盯上的典型风险</text>
+        <text x="95" y="562" class="mr-bad">signed overflow</text>
+        <text x="330" y="562" class="mr-bad">array OOB</text>
+        <text x="535" y="562" class="mr-bad">macro side effect</text>
+        <text x="790" y="562" class="mr-bad">implicit conversion</text>
+        <text x="1000" y="562" class="mr-bad">malloc/free</text>
+        <text x="92" y="632" class="mr-caption">核心目标：把“可能工作”的代码，收敛成“行为可解释、可审查、可重复”的代码。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .misra-rough { margin:1.2rem 0 2rem; }
+  .misra-rough__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.7rem; }
+  .misra-rough__head h3 { margin:0; font-size:1rem; }
+  .misra-rough__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.72; line-height:1.55; }
+  .misra-rough__head button { flex:none; padding:.44rem .72rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .misra-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.9rem; background:#fbfaf5; }
+  .misra-rough__paper svg { display:block; width:100%; min-width:860px; height:auto; }
+  .misra-rough__labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .mr-title { font-size:25px; font-weight:700; }
+  .mr-code { font-size:20px; }
+  .mr-note { font-size:21px; }
+  .mr-good { font-size:20px; fill:#277a43 !important; }
+  .mr-bad { font-size:18px; fill:#c44439 !important; font-weight:700; }
+  .mr-caption { font-size:19px; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+
+  async function initMisraRough(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+
+    const roughModule = await import(roughUrl);
+    const rough = roughModule.default;
+    let seed = 71;
+
+    const drawArrow = (rc, x1, y1, x2, y2, color) => {
+      const opts = { stroke:color, strokeWidth:2.3, roughness:1.45, bowing:1.1, seed };
+      layer.appendChild(rc.line(x1, y1, x2, y2, opts));
+      const angle = Math.atan2(y2-y1, x2-x1);
+      const a = 14;
+      layer.appendChild(rc.line(x2,y2,x2-a*Math.cos(angle-.55),y2-a*Math.sin(angle-.55),opts));
+      layer.appendChild(rc.line(x2,y2,x2-a*Math.cos(angle+.55),y2-a*Math.sin(angle+.55),opts));
+    };
+
+    const draw = () => {
+      layer.replaceChildren();
+      const rc = rough.svg(svg);
+      const base = { stroke:"#333", strokeWidth:1.7, roughness:1.6, bowing:1.15, seed };
+      const add = (n) => layer.appendChild(n);
+
+      add(rc.rectangle(58, 88, 245, 125, { ...base, stroke:"#bd4d43", fill:"#fde9e5", fillStyle:"hachure", hachureGap:9 }));
+      add(rc.rectangle(365, 86, 245, 340, { ...base, stroke:"#6f5aa8", fill:"#f2ecfb", fillStyle:"hachure", hachureGap:10 }));
+      add(rc.rectangle(790, 88, 325, 245, { ...base, stroke:"#3e8651", fill:"#edf7ec", fillStyle:"hachure", hachureGap:9 }));
+      drawArrow(rc, 305, 152, 362, 152, "#6f5aa8");
+      drawArrow(rc, 612, 205, 787, 205, "#3e8651");
+
+      [120,185,250,315,380].forEach((y) => add(rc.line(386,y,585,y,{...base,stroke:"#9b8ac1",strokeWidth:1.2})));
+
+      const risks = [70,305,510,765,985];
+      const widths = [190,155,205,175,125];
+      risks.forEach((x,i)=>add(rc.rectangle(x,525,widths[i],72,{...base,stroke:"#c24a40",fill:"#fff1ef",fillStyle:"hachure",hachureGap:8})));
+
+      add(rc.path("M 150 510 C 260 470, 400 470, 500 515", { ...base, stroke:"#c24a40", strokeWidth:1.8 }));
+      add(rc.path("M 570 510 C 690 465, 840 470, 1030 515", { ...base, stroke:"#c24a40", strokeWidth:1.8 }));
+
+      seed += 1;
+    };
+
+    draw();
+    redraw.addEventListener("click", draw);
+  }
+
+  document.querySelectorAll("[data-misra-rough]").forEach(initMisraRough);
+  document.addEventListener("astro:page-load", () => document.querySelectorAll("[data-misra-rough]").forEach(initMisraRough));
+</script>
