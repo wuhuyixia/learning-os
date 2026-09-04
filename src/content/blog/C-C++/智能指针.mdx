@@ -787,31 +787,7 @@ reset()
 use_count()
 ```
 
-## 11. 面试中如何快速回答
-
-如果面试官问：
-
-> unique_ptr、shared_ptr、weak_ptr 有什么区别？
-
-可以直接回答：
-
-```text
-unique_ptr 表示独占所有权，不能复制，只能通过 move 转移；
-shared_ptr 通过引用计数实现共享所有权，最后一个 shared_ptr 销毁时对象释放；
-weak_ptr 不增加强引用计数，只用于观察 shared_ptr 管理的对象，常用于解决循环引用。
-```
-
-如果继续追问：
-
-> 为什么优先使用 unique_ptr？
-
-可以回答：
-
-```text
-因为 unique_ptr 的所有权关系最清晰，没有引用计数开销，也更容易推断对象生命周期；只有确实存在共享所有权需求时才使用 shared_ptr。
-```
-
-## 12. 最后记住一句话
+## 11. 最后记住一句话
 
 ```text
 unique_ptr：我一个人拥有
