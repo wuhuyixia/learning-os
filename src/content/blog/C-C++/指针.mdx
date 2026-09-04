@@ -1,0 +1,406 @@
+---
+title: 指针
+description: 从地址、解引用到指针函数、函数指针、数组指针、参数传递与悬空指针，结合内存模型理解 C 语言指针
+pubDate: 2026-08-31
+draft: false
+demo: pointer-function
+categories:
+  - C/C++
+tags:
+  - 指针
+  - 内存管理
+  - 栈
+---
+
+import PointerBasicRoughDemo from "@components/PointerBasicRoughDemo.astro";
+import PointerToPointerRoughDemo from "@components/PointerToPointerRoughDemo.astro";
+import PointerArrayRoughDemo from "@components/PointerArrayRoughDemo.astro";
+import PointerArrayArgumentRoughDemo from "@components/PointerArrayArgumentRoughDemo.astro";
+import PointerPassByValueRoughDemo from "@components/PointerPassByValueRoughDemo.astro";
+
+# 指针
+
+指针本质上是一个**保存内存地址的变量**。普通变量保存数据，指针变量保存“数据在哪里”。
+
+例如：
+
+```c
+int a = 10;
+int *p = &a;
+```
+
+<PointerBasicRoughDemo />
+
+其中：
+
+- `&a`：取得变量 `a` 的地址；
+- `p`：保存 `a` 的地址；
+- `*p`：访问该地址中的数据。
+
+因此：
+
+```c
+*p = 20;
+```
+
+等价于通过地址修改 `a`：
+
+```c
+a = 20;
+```
+
+## 指向指针的指针（二级指针）
+
+指针本身也是变量，因此它也有自己的内存地址。于是可以再定义一个指针，专门保存另一个指针的地址，这就是**二级指针**。
+
+```c
+int x = 5;
+int *p = &x;
+int **q = &p;
+```
+
+三者关系为：
+
+```text
+q → p → x
+```
+
+<PointerToPointerRoughDemo />
+
+其中：
+
+- `p` 保存 `x` 的地址，`*p` 访问 `x`；
+- `q` 保存 `p` 的地址，`*q` 得到 `p`；
+- `**q` 最终访问到 `x` 中的数据。
+
+例如：
+
+```c
+**q = 8;
+```
+
+等价于：
+
+```c
+x = 8;
+```
+
+因此二级指针可以简单理解为：**先通过 `q` 找到 `p`，再通过 `p` 找到真正的数据。**
+
+## 1. 指针函数
+
+如果一个函数的返回值是指针，例如：
+
+```c
+int *get_data(void);
+```
+
+那么它称为**指针函数**，即“返回指针的函数”。
+
+一个需要特别注意的问题是：**不能安全地返回普通局部变量的地址**。
+
+```c
+int *func(void)
+{
+    int a = 10;
+    return &a;
+}
+```
+
+`a` 位于 `func()` 的栈帧中。当函数返回后，`a` 的生命周期结束，返回出去的地址就变成了悬空地址。
+
+## 2. 函数指针
+
+函数本身也存放在程序的代码区，因此函数同样具有入口地址。**函数指针就是专门用来保存函数入口地址的指针。**
+
+```c
+int func(int a)
+{
+    int b = 10;
+    int c = a * b;
+    return c;
+}
+```
+
+如果要定义一个指针，使它能够指向 `func()`，可以写成：
+
+```c
+int (*pa)(int) = NULL;
+```
+
+从变量名 `pa` 开始理解：
+
+```text
+(*pa)        → pa 是一个指针
+(*pa)(int)   → pa 指向一个参数为 int 的函数
+int (*pa)(int)
+             → 这个函数返回 int
+```
+
+下面两种写法完全不同：
+
+```c
+int *pa(int);      // 指针函数
+int (*pa)(int);    // 函数指针
+```
+
+原因是 `()` 的优先级高于 `*`。
+
+```text
+指针函数：函数 → 返回指针
+函数指针：指针 → 指向函数
+```
+
+函数名在大多数表达式中会转换为函数指针，因此可以直接写：
+
+```c
+pa = func;
+```
+
+也可以写成：
+
+```c
+pa = &func;
+```
+
+赋值之后可以这样调用：
+
+```c
+int result1 = func(10);
+int result2 = pa(10);
+int result3 = (*pa)(10);
+```
+
+三种方式最终执行的是同一个 `func()`。
+
+复杂函数指针声明通常可以使用 `typedef` 简化：
+
+```c
+typedef int (*FuncPtr)(int);
+FuncPtr pa = func;
+```
+
+函数指针在嵌入式开发中常用于：**回调函数、状态机、驱动接口、命令分发表和中断处理接口**。
+
+## 3. 数组与指针
+
+数组在内存中是一段**连续的同类型存储空间**。例如：
+
+```c
+int arr[] = {1, 2, 3};
+int *pa = &arr[0];
+```
+
+假设 `arr[0]` 的起始地址为 `0x1100`，那么数组的三个元素会连续排布。对于常见的 32 位 `int`，每移动一个元素通常跨过 4 字节：
+
+```text
+arr[0]      arr[1]      arr[2]
+0x1100      0x1104      0x1108
+   1           2           3
+```
+
+在大多数表达式中，数组名 `arr` 会转换为首元素指针，因此：
+
+```c
+arr == &arr[0]
+```
+
+从“地址数值”来看，两者都指向数组起始位置。
+
+但是还要特别区分：
+
+```c
+arr       // 表达式中通常转换为 int *
+&arr[0]   // int *
+&arr      // int (*)[3]
+```
+
+也就是说，`arr`、`&arr[0]` 和 `&arr` 的**起始地址数值可以相同，但类型和指针运算步长不同**。
+
+<PointerArrayRoughDemo />
+
+例如：
+
+```c
+int arr[] = {1, 2, 3};
+
+printf("%p\n", (void *)arr);
+printf("%p\n", (void *)&arr[0]);
+printf("%p\n", (void *)&arr);
+```
+
+三者打印出的起始地址通常相同，但下面的结果不同：
+
+```c
+arr + 1      // 跳到 arr[1]
+&arr + 1     // 跳过整个 int[3] 数组
+```
+
+因此，理解数组与指针时最重要的是：
+
+> **地址相同，不代表类型相同；指针运算的步长由指针类型决定。**
+
+## 数组作为函数参数
+
+当数组作为函数参数传递时，传进去的不是整个数组副本，而是**数组首元素的地址**。
+
+```c
+int SumOfElements(int A[])
+{
+    int sum = 0;
+
+    for (int i = 0; i < 5; i++)
+        sum += A[i];
+
+    return sum;
+}
+
+int main(void)
+{
+    int A[] = {1, 2, 3, 4, 5};
+    int total = SumOfElements(A);
+}
+```
+
+<PointerArrayArgumentRoughDemo />
+
+这里需要注意：
+
+- `main()` 中的 `A` 是真正的数组；
+- 调用 `SumOfElements(A)` 时，`A` 在该表达式中转换为首元素指针；
+- 函数参数中的 `int A[]` 会调整为 `int *A`；
+- `A[i]` 等价于 `*(A + i)`，因此函数仍然访问的是原数组元素。
+
+> 注意：在函数参数中，`sizeof(A)` 得到的是指针大小，而不是调用者整个数组的大小，因此数组长度通常需要另外传入。
+
+## 4. 值传递与 swap
+
+C 语言函数参数默认采用**值传递**。调用函数时，形参会得到实参当前值的一份副本，它们并不是同一个变量。
+
+例如：
+
+```c
+void swap(int x, int y)
+{
+    int temp = x;
+    x = y;
+    y = temp;
+}
+
+int main(void)
+{
+    int a = 10;
+    int b = 20;
+
+    swap(a, b);
+
+    printf("a = %d\n", a);  // 10
+    printf("b = %d\n", b);  // 20
+}
+```
+
+调用 `swap(a, b)` 时，可以理解为：
+
+```text
+main 栈帧                 swap 栈帧
+
+a = 10    ──复制数值──→   x = 10
+b = 20    ──复制数值──→   y = 20
+```
+
+因此 `swap()` 内部交换的是 `x` 和 `y` 两个副本。即使函数内部已经变成：
+
+```text
+x = 20
+y = 10
+```
+
+`main()` 中原来的：
+
+```text
+a = 10
+b = 20
+```
+
+仍然没有发生变化。
+
+<PointerPassByValueRoughDemo />
+
+这也是为什么在 C 语言中如果希望函数真正修改调用者中的变量，通常需要传入变量地址：
+
+```c
+void swap(int *x, int *y)
+{
+    int temp = *x;
+    *x = *y;
+    *y = temp;
+}
+
+int main(void)
+{
+    int a = 10;
+    int b = 20;
+
+    swap(&a, &b);
+}
+```
+
+此时形参虽然依然是值传递，但传递的值变成了**地址**：
+
+```text
+&a ──→ x ──→ a
+&b ──→ y ──→ b
+```
+
+所以 `*x` 和 `*y` 最终访问的仍是 `main()` 中真正的 `a` 和 `b`。
+
+> **C 语言没有把普通参数“按引用传递”；所谓通过指针修改变量，本质仍然是“把地址这个值传进去”。**
+
+## 5. 悬空指针
+
+悬空指针（Dangling Pointer）指的是：指针仍然保存一个地址，但该地址对应的对象已经失效。
+
+典型情况包括：
+
+- 返回局部变量地址；
+- `free()` 后继续使用旧指针；
+- 对象生命周期结束后仍然保存其地址。
+
+正确做法是让返回对象具有足够长的生命周期。例如：
+
+```c
+int *func(void)
+{
+    static int a = 10;
+    return &a;
+}
+```
+
+`static` 局部变量不会随着函数返回而销毁，因此返回它的地址是有效的。
+
+## 6. 一句话理解
+
+```text
+普通变量：保存数据
+指针变量：保存地址
+*p：访问地址中的数据
+```
+
+再区分几个容易混淆的写法：
+
+```text
+int *func(void);    函数 → 返回 int *
+int (*pa)(int);     指针 → 指向函数
+int *pa;            指针 → 指向 int
+int **q;            二级指针 → 指向 int *
+int (*pArr)[3];     指针 → 指向 int[3]
+```
+
+参数传递还可以这样记：
+
+```text
+swap(a, b)      → 复制 10、20，改的是副本
+swap(&a, &b)    → 复制地址，通过 * 解引用修改原变量
+```
+
+真正需要记住的是：**先看变量名，再看它首先和谁结合；同时始终关注指针的目标类型，以及函数参数实际传进去的到底是“数据值”还是“地址值”。**
