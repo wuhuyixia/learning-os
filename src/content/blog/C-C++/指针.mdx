@@ -16,6 +16,8 @@ import PointerBasicRoughDemo from "@components/PointerBasicRoughDemo.astro";
 import PointerToPointerRoughDemo from "@components/PointerToPointerRoughDemo.astro";
 import PointerArrayRoughDemo from "@components/PointerArrayRoughDemo.astro";
 import Pointer2DArrayRoughDemo from "@components/Pointer2DArrayRoughDemo.astro";
+import Pointer3DArrayRoughDemo from "@components/Pointer3DArrayRoughDemo.astro";
+import Pointer3DArrayLifecycleDemo from "@components/Pointer3DArrayLifecycleDemo.astro";
 import PointerArrayArgumentRoughDemo from "@components/PointerArrayArgumentRoughDemo.astro";
 import PointerPassByValueRoughDemo from "@components/PointerPassByValueRoughDemo.astro";
 
@@ -541,6 +543,306 @@ a + 1
 ```
 
 究竟应该跨过多少字节。
+
+### 3.6 三维数组：每个元素又是一个二维数组
+
+二维数组继续向外再包一层，就得到三维数组。例如：
+
+```c
+int C[3][2][2] = {
+    {{2, 5}, {7, 9}},
+    {{3, 4}, {6, 1}},
+    {{0, 8}, {11, 13}}
+};
+```
+
+完整类型是：
+
+```text
+int [3][2][2]
+```
+
+最容易理解的方法仍然是从最外层开始拆：
+
+```text
+C
+├── C[0]：int[2][2]
+│   ├── C[0][0]：int[2]
+│   └── C[0][1]：int[2]
+├── C[1]：int[2][2]
+│   ├── C[1][0]：int[2]
+│   └── C[1][1]：int[2]
+└── C[2]：int[2][2]
+    ├── C[2][0]：int[2]
+    └── C[2][1]：int[2]
+```
+
+所以三维数组可以理解为：
+
+> **一个包含 3 个二维 `2×2` 数组的数组。**
+
+虽然我们通常把它想象成三维结构，但在实际内存中，12 个 `int` 仍然按行优先顺序连续排列。
+
+假设：
+
+```text
+sizeof(int) = 4
+C 的起始地址 = 800
+```
+
+那么：
+
+```text
+C[0] 占 4 个 int → 16 B
+C[1] 从 816 开始
+C[2] 从 832 开始
+```
+
+<Pointer3DArrayRoughDemo />
+
+#### 3.6.1 `C` 的类型和步长
+
+在普通表达式中，`C` 会转换为指向首元素 `C[0]` 的指针。
+
+而 `C[0]` 的类型是：
+
+```c
+int [2][2]
+```
+
+因此 `C` 退化后的指针类型是：
+
+```c
+int (*)[2][2]
+```
+
+可以显式定义：
+
+```c
+int (*p)[2][2] = C;
+```
+
+这里 `p` 指向的不是单个 `int`，也不是一行，而是一个完整的 `2×2` 平面。
+
+因此：
+
+```c
+C + 1
+```
+
+一次跨过：
+
+```text
+2 × 2 × sizeof(int)
+= 4 × 4
+= 16 字节
+```
+
+所以示例中：
+
+```text
+C      = 800
+C + 1  = 816
+C + 2  = 832
+```
+
+#### 3.6.2 每解引用一层，类型就少一维
+
+这是理解多维数组最关键的规律。
+
+对于：
+
+```c
+int C[3][2][2];
+```
+
+可以沿着下面的链条理解：
+
+```text
+C
+↓
+int (*)[2][2]
+
+*C == C[0]
+↓
+int [2][2]
+
+**C == C[0][0]
+↓
+int [2]
+
+***C == C[0][0][0]
+↓
+int
+```
+
+注意：数组表达式在很多上下文中会继续退化成指针，因此更精确地说：
+
+| 表达式 | 逻辑含义 | 在普通表达式中常见类型 |
+| :--- | :--- | :--- |
+| `C` | 第 0 个二维平面 | `int (*)[2][2]` |
+| `C[0]` / `*C` | 第 0 个二维平面 | `int (*)[2]` |
+| `C[0][0]` / `**C` | 第 0 行 | `int *` |
+| `C[0][0][0]` / `***C` | 第 1 个整数 | `int` |
+
+因此，多维数组不是“神秘的多级指针”，而是：
+
+> **数组套数组，每进入一层，下标或解引用就剥掉一层数组类型。**
+
+#### 3.6.3 推导 `C[1][1][0]`
+
+和二维数组一样：
+
+```c
+A[i] == *(A + i)
+```
+
+因此三维数组：
+
+```c
+C[i][j][k]
+```
+
+可以完整展开为：
+
+```c
+*(*(*(C + i) + j) + k)
+```
+
+例如：
+
+```c
+C[1][1][0]
+```
+
+等价于：
+
+```c
+*(*(*(C + 1) + 1) + 0)
+```
+
+按地址逐层推导：
+
+```text
+C                = 800
+C + 1            = 816   // 跳过一个 2×2 平面
+*(C + 1)         = C[1]
+*(C + 1) + 1     = 824   // 跳过 C[1] 中第一行的 2 个 int
+*(*(C + 1) + 1)  = C[1][1]
+```
+
+此时：
+
+```c
+C[1][1]
+```
+
+是一个 `int[2]` 数组，在普通表达式中会退化为 `int *`，地址为 824。
+
+所以：
+
+```c
+&C[1][1][0]
+```
+
+也是 824。
+
+再解引用后：
+
+```c
+C[1][1][0] == 6
+```
+
+同理：
+
+```c
+C[1][1][1]
+```
+
+地址就是：
+
+```text
+824 + 4 = 828
+```
+
+值为：
+
+```text
+1
+```
+
+<Pointer3DArrayLifecycleDemo />
+
+#### 3.6.4 三维数组作为函数参数
+
+如果函数接收：
+
+```c
+int C[3][2][2]
+```
+
+真正作为函数形参时，第一维仍然会被调整掉。例如可以写：
+
+```c
+void Func(int A[][2][2], int blocks);
+```
+
+等价于：
+
+```c
+void Func(int (*A)[2][2], int blocks);
+```
+
+这里必须保留后面两维 `2` 和 `2`，原因与二维数组完全相同：编译器需要知道：
+
+```text
+A + 1
+```
+
+到底应该跨过多少字节。
+
+对于：
+
+```c
+int (*A)[2][2]
+```
+
+它知道一个元素大小为：
+
+```text
+sizeof(int[2][2]) = 4 × sizeof(int)
+```
+
+因此才能正确定位：
+
+```c
+A[i][j][k]
+```
+
+这也给出了多维数组函数参数的一般规律：
+
+```text
+第一维可以省略
+后续维度通常必须明确
+```
+
+例如：
+
+```c
+void f2(int a[][3], int rows);       // 二维
+void f3(int a[][2][2], int blocks);  // 三维
+```
+
+从指针角度分别对应：
+
+```c
+void f2(int (*a)[3], int rows);
+void f3(int (*a)[2][2], int blocks);
+```
+
+因此，从一维到三维真正不变的核心只有一句话：
+
+> **先确定指针当前指向的完整目标类型，再用该目标类型的大小决定 `+1` 到底移动多少字节。**
 
 ## 数组作为函数参数
 
