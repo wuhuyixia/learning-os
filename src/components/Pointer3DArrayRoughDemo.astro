@@ -1,0 +1,133 @@
+<section class="p3d-rough not-prose" data-p3d-rough>
+  <div class="p3d-rough__head">
+    <div>
+      <h3>三维数组不是“立方体存储”，内存里仍是一条连续字节序列</h3>
+      <p>以下假设 <code>sizeof(int)=4</code>，且 <code>C</code> 的起始地址为 800。每个 <code>C[i]</code> 是一个 <code>int[2][2]</code> 平面，占 16 字节。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="p3d-rough__paper">
+    <svg viewBox="0 0 1260 690" role="img" aria-label="int C[3][2][2] 三维数组连续内存和指针步长手绘图">
+      <g data-rough-layer></g>
+      <g class="p3d-labels">
+        <text x="50" y="56" class="title">int C[3][2][2]</text>
+        <text x="50" y="96" class="note">C → int (*)[2][2]</text>
+        <text x="50" y="132" class="note">C[i] → int[2][2]</text>
+        <text x="50" y="168" class="note">C[i][j] → int[2]</text>
+
+        <text x="250" y="235" class="addr">800</text>
+        <text x="330" y="235" class="addr">804</text>
+        <text x="410" y="235" class="addr">808</text>
+        <text x="490" y="235" class="addr">812</text>
+        <text x="570" y="235" class="addr">816</text>
+        <text x="650" y="235" class="addr">820</text>
+        <text x="730" y="235" class="addr">824</text>
+        <text x="810" y="235" class="addr">828</text>
+        <text x="890" y="235" class="addr">832</text>
+        <text x="970" y="235" class="addr">836</text>
+        <text x="1050" y="235" class="addr">840</text>
+        <text x="1130" y="235" class="addr">844</text>
+
+        <text x="270" y="303" class="value">2</text>
+        <text x="350" y="303" class="value">5</text>
+        <text x="430" y="303" class="value">7</text>
+        <text x="510" y="303" class="value">9</text>
+        <text x="590" y="303" class="value">3</text>
+        <text x="670" y="303" class="value">4</text>
+        <text x="750" y="303" class="value">6</text>
+        <text x="830" y="303" class="value">1</text>
+        <text x="910" y="303" class="value">0</text>
+        <text x="990" y="303" class="value">8</text>
+        <text x="1065" y="303" class="value">11</text>
+        <text x="1145" y="303" class="value">13</text>
+
+        <text x="335" y="385" class="plane">C[0] = 800</text>
+        <text x="655" y="385" class="plane">C[1] = 816</text>
+        <text x="975" y="385" class="plane">C[2] = 832</text>
+
+        <text x="275" y="445" class="small">C[0][0]</text>
+        <text x="435" y="445" class="small">C[0][1]</text>
+        <text x="595" y="445" class="small">C[1][0]</text>
+        <text x="755" y="445" class="small">C[1][1]</text>
+        <text x="915" y="445" class="small">C[2][0]</text>
+        <text x="1075" y="445" class="small">C[2][1]</text>
+
+        <text x="270" y="535" class="formula">C + 1：800 → 816</text>
+        <text x="270" y="575" class="note">一次跨过 2 × 2 × sizeof(int) = 16 字节</text>
+        <text x="740" y="535" class="formula">C[1] + 1：816 → 824</text>
+        <text x="740" y="575" class="note">一次跨过 2 × sizeof(int) = 8 字节</text>
+        <text x="270" y="638" class="caption">最后一级 C[i][j] 再 +1，才是按单个 int 的 4 字节步长移动。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .p3d-rough { margin:1.2rem 0 2rem; }
+  .p3d-rough__head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:.7rem; }
+  .p3d-rough__head h3 { margin:0; font-size:1rem; }
+  .p3d-rough__head p { margin:.3rem 0 0; max-width:52rem; font-size:.76rem; line-height:1.55; opacity:.72; }
+  .p3d-rough__head button { flex:none; padding:.43rem .7rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.58rem; background:transparent; color:inherit; cursor:pointer; font-size:.7rem; }
+  .p3d-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.9rem; background:#fbfaf5; }
+  .p3d-rough__paper svg { width:100%; min-width:970px; height:auto; display:block; }
+  .p3d-labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .p3d-labels .title { font-size:27px; font-weight:700; }
+  .p3d-labels .note { font-size:19px; }
+  .p3d-labels .addr { font-size:17px; fill:#268758; font-weight:700; }
+  .p3d-labels .value { font-size:24px; font-weight:700; }
+  .p3d-labels .plane { font-size:22px; font-weight:700; fill:#8b4e1a; }
+  .p3d-labels .small { font-size:17px; }
+  .p3d-labels .formula { font-size:22px; font-weight:700; fill:#225f9e; }
+  .p3d-labels .caption { font-size:19px; font-weight:700; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+
+  async function init(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+
+    const { default: rough } = await import(roughUrl);
+    let seed = 81;
+
+    const draw = () => {
+      layer.replaceChildren();
+      const rc = rough.svg(svg);
+      const base = { stroke:"#343434", strokeWidth:1.6, roughness:1.45, bowing:1.05, seed };
+      const add = (node) => layer.appendChild(node);
+      const fills = ["#fff0a8","#fff0a8","#fff0a8","#fff0a8","#e2f2ff","#e2f2ff","#e2f2ff","#e2f2ff","#fff0bd","#fff0bd","#fff0bd","#fff0bd"];
+
+      for (let i=0;i<12;i++) {
+        add(rc.rectangle(245+i*80,255,76,72,{...base,fill:fills[i],fillStyle:"hachure",hachureGap:10}));
+      }
+      add(rc.rectangle(240,245,322,102,{...base,stroke:"#b1761e",strokeWidth:2.1}));
+      add(rc.rectangle(560,245,322,102,{...base,stroke:"#2a739f",strokeWidth:2.1}));
+      add(rc.rectangle(880,245,322,102,{...base,stroke:"#b1761e",strokeWidth:2.1}));
+
+      [240,400,560,720,880,1040,1200].forEach((x)=>add(rc.line(x,350,x,415,{...base,stroke:"#8b8b8b",strokeWidth:1.1})));
+
+      add(rc.line(247,492,565,492,{...base,stroke:"#225f9e",strokeWidth:2.2}));
+      add(rc.line(565,492,548,483,{...base,stroke:"#225f9e",strokeWidth:2.2}));
+      add(rc.line(565,492,548,502,{...base,stroke:"#225f9e",strokeWidth:2.2}));
+      add(rc.line(565,492,885,492,{...base,stroke:"#8b4e1a",strokeWidth:1.6,strokeLineDash:[7,6]}));
+
+      add(rc.line(570,492,730,492,{...base,stroke:"#277a43",strokeWidth:2.2}));
+      add(rc.line(730,492,713,483,{...base,stroke:"#277a43",strokeWidth:2.2}));
+      add(rc.line(730,492,713,502,{...base,stroke:"#277a43",strokeWidth:2.2}));
+
+      seed += 1;
+    };
+
+    draw();
+    redraw.addEventListener("click", draw);
+  }
+
+  document.querySelectorAll("[data-p3d-rough]").forEach(init);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-p3d-rough]").forEach(init));
+</script>
