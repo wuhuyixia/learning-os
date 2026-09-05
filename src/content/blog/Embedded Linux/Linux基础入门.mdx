@@ -1,0 +1,234 @@
+---
+title: Linux 基础入门
+description: 从终端提示符、用户权限、文件权限、常用文件操作到 Vim 键盘速查，快速掌握 Linux 基础使用方法
+pubDate: 2025-10-18
+draft: false
+categories:
+  - Embedded Linux
+tags:
+  - Linux
+  - Shell
+  - 权限管理
+  - 文件系统
+  - Vim
+---
+
+import VimKeyboardDemo from "@components/VimKeyboardDemo.astro";
+
+# Linux 基础入门
+
+## 一、终端会话提示符
+
+打开终端后，首先看到的就是**命令提示符**（Prompt），它包含了当前会话的重要信息。
+
+![终端会话提示符](/learning-os/image/Linux/终端会话提示符.svg)
+
+### 提示符各部分含义
+
+```text
+pi@raspberrypi:~ $
+```
+
+| 部分 | 值 | 含义 |
+|------|-----|------|
+| `pi` | 当前用户名 | 登录系统的用户账号 |
+| `@` | 分隔符 | 连接用户名和主机名 |
+| `raspberrypi` | 计算机名称（主机名） | 当前设备的网络名称 |
+| `:` | 分隔符 | 连接主机名和工作目录 |
+| `~` | 当前工作目录 | `~` 代表主目录 `/home/pi` |
+| `$` | 命令输入起始位置 | 表示当前是**普通用户**身份 |
+
+### 工作目录符号对照
+
+| 符号 | 含义 | 示例路径 |
+|------|------|---------|
+| `~` | 当前用户的主目录 | `/home/pi` |
+| `.` | 当前目录 | `/home/pi/projects` |
+| `..` | 上一级目录 | `/home/pi` |
+| `/` | 根目录 | `/` |
+
+### 示例
+
+```bash
+pi@raspberrypi:~ $ pwd
+/home/pi
+
+pi@raspberrypi:~ $ cd /etc
+pi@raspberrypi:/etc $
+```
+
+---
+
+## 二、用户与权限管理
+
+Linux 是一个**多用户操作系统**，不同用户拥有不同的权限。
+
+![超级用户切换](/learning-os/image/Linux/超级用户.svg)
+
+### 用户类型
+
+| 用户类型 | 提示符标识 | 权限级别 | 说明 |
+|---------|-----------|---------|------|
+| **普通用户** | `$` | 受限 | 日常操作，只能修改自己的文件 |
+| **超级用户（root）** | `#` | 完全控制 | 系统管理，可执行任何操作 |
+
+### 切换用户
+
+```bash
+# 从普通用户切换到超级用户
+sudo su
+
+# 从超级用户切换回普通用户
+su pi
+```
+
+### 操作演示
+
+```bash
+pi@raspberrypi:~ $ whoami
+pi
+
+pi@raspberrypi:~ $ sudo su
+root@raspberrypi:/home/pi# whoami
+root
+
+root@raspberrypi:/home/pi# su pi
+pi@raspberrypi:~ $ whoami
+pi
+```
+
+### sudo 与 su 的区别
+
+| 命令 | 全称 | 用法 | 特点 |
+|------|------|------|------|
+| `sudo` | Super User Do | `sudo 命令` | 临时提升权限执行单条命令 |
+| `su` | Substitute User | `su 用户名` | 切换到另一个用户会话 |
+
+### 权限管理常用命令
+
+```bash
+chmod 755 file
+chmod 644 file
+chown pi:pi file
+sudo apt update
+sudo reboot
+```
+
+---
+
+## 三、文件权限详解
+
+Linux 中每个文件或目录都有三组权限，分别对应**所有者**、**所属组**和**其他用户**。
+
+```text
+-rwxr-xr-- 1 pi pi 4096 Jan 1 00:00 file.txt
+│└┬┘└┬┘└┬┘
+│ │   │   └─ 其他用户权限
+│ │   └───── 所属组权限
+│ └───────── 所有者权限
+└─────────── 文件类型（- 普通文件，d 目录）
+```
+
+### 权限数字对照
+
+| 数字 | 权限 | 含义 |
+|------|------|------|
+| `7` | rwx | 读 + 写 + 执行 |
+| `6` | rw- | 读 + 写 |
+| `5` | r-x | 读 + 执行 |
+| `4` | r-- | 只读 |
+| `0` | --- | 无权限 |
+
+### 常用权限设置
+
+```bash
+chmod 755 script.sh
+chmod 644 config.txt
+chmod 700 private/
+chmod +x run.sh
+```
+
+---
+
+## 四、文件创建与查看
+
+### 创建
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `touch file` | 创建空文件或更新时间戳 | `touch hello.txt` |
+| `mkdir dir` | 创建目录 | `mkdir projects` |
+| `mkdir -p a/b/c` | 递归创建多级目录 | `mkdir -p src/utils` |
+
+### 删除
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `rm file` | 删除文件 | `rm note.txt` |
+| `rm -r dir` | 递归删除目录及其内容 | `rm -r myproject` |
+| `rm -ri dir` | 删除前逐一确认 | `rm -ri myproject` |
+| `rm -rf dir` | 强制删除，不确认，需谨慎 | `rm -rf /tmp/cache` |
+
+### 重命名或移动
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `mv file1 file2` | 重命名或覆盖目标文件 | `mv old.txt new.txt` |
+| `mv file dir` | 将文件移动到目录 | `mv note.txt /tmp/` |
+
+### 查看文件内容
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `cat file` | 一次性显示全部内容 | `cat /etc/hostname` |
+| `more file` | 分页查看 | `more large_log.txt` |
+| `head file` | 查看文件开头 | `head -n 20 file.txt` |
+| `tail file` | 查看文件末尾 | `tail -n 20 file.txt` |
+| `tail -f file` | 实时追踪新增内容 | `tail -f /var/log/syslog` |
+
+### 示例
+
+```bash
+touch note.txt
+mkdir myproject
+echo "Hello Linux" > note.txt
+cat note.txt
+head note.txt
+tail note.txt
+more /var/log/syslog
+```
+
+---
+
+## 五、Vim 基础与键盘速查
+
+Vim 是 Linux 中常见的终端文本编辑器。最基础的使用流程可以理解为三个状态之间的切换：
+
+```text
+Normal Mode
+   │ i / a / o
+   ▼
+Insert Mode
+   │ Esc
+   ▼
+Normal Mode
+   │ :
+   ▼
+Command-Line Mode
+```
+
+启动 Vim 时默认进入普通模式；按 `i`、`a` 或 `o` 可以进入插入模式，按 `Esc` 回到普通模式；在普通模式输入 `:` 后，可以执行保存、退出等命令。
+
+最常见的一组操作是：
+
+```bash
+vim test.txt
+```
+
+进入后按 `i` 开始输入，编辑完成后按 `Esc`，然后输入 `:wq` 保存并退出。常见退出方式还有 `:q`、`:q!` 和 `:w`。
+
+Vim 的效率主要来自普通模式下的键盘命令，例如 `h/j/k/l` 移动光标，`dd` 删除一行，`yy` 复制一行，`p` 粘贴，`u` 撤销，`/word` 搜索文本。数字还可以作为重复次数，例如 `10j` 表示向下移动 10 行，`5dd` 表示删除 5 行。
+
+<VimKeyboardDemo />
+
+使用这张交互键盘时，可以先按类别筛选，再点击具体按键查看常用组合；也可以直接搜索“删除”“复制”“移动”“save”等关键词定位相关按键。
