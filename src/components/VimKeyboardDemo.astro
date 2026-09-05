@@ -1,0 +1,191 @@
+<section class="vim-keyboard not-prose" data-vim-keyboard>
+  <div class="vim-keyboard__head">
+    <div>
+      <h3>Vim 键盘速查</h3>
+      <p>筛选类别或搜索命令，再点击键盘上的按键查看常见用法。</p>
+    </div>
+    <span class="vim-keyboard__mode" data-mode>Normal Mode</span>
+  </div>
+
+  <div class="vim-keyboard__toolbar">
+    <div class="vim-keyboard__filters" role="group" aria-label="Vim 按键分类">
+      <button type="button" class="is-active" data-filter="all">全部</button>
+      <button type="button" data-filter="move">光标移动</button>
+      <button type="button" data-filter="edit">编辑操作</button>
+      <button type="button" data-filter="insert">插入模式</button>
+      <button type="button" data-filter="visual">可视模式</button>
+      <button type="button" data-filter="search">搜索跳转</button>
+      <button type="button" data-filter="command">保存退出</button>
+    </div>
+    <label class="vim-keyboard__search">
+      <span>⌕</span>
+      <input type="search" data-search placeholder="搜索：删除 / 复制 / 移动 / save ..." />
+    </label>
+  </div>
+
+  <div class="vim-keyboard__hint">点击高亮按键查看说明；灰色按键在当前筛选条件下没有匹配命令。</div>
+
+  <div class="vim-keyboard__board" aria-label="Vim QWERTY 交互键盘">
+    <div class="vim-keyboard__row">
+      <button class="vim-key vim-key--wide" data-key="esc">Esc</button>
+      <button class="vim-key" data-key="1">1</button><button class="vim-key" data-key="2">2</button><button class="vim-key" data-key="3">3</button><button class="vim-key" data-key="4">4</button><button class="vim-key" data-key="5">5</button><button class="vim-key" data-key="6">6</button><button class="vim-key" data-key="7">7</button><button class="vim-key" data-key="8">8</button><button class="vim-key" data-key="9">9</button><button class="vim-key" data-key="0">0</button>
+      <button class="vim-key" data-key="dollar">$</button><button class="vim-key" data-key="colon">:</button>
+    </div>
+    <div class="vim-keyboard__row">
+      <span class="vim-key vim-key--spacer vim-key--tab">Tab</span>
+      <button class="vim-key" data-key="q">Q</button><button class="vim-key" data-key="w">W</button><button class="vim-key" data-key="e">E</button><button class="vim-key" data-key="r">R</button><button class="vim-key" data-key="t">T</button><button class="vim-key" data-key="y">Y</button><button class="vim-key" data-key="u">U</button><button class="vim-key" data-key="i">I</button><button class="vim-key" data-key="o">O</button><button class="vim-key" data-key="p">P</button>
+      <button class="vim-key" data-key="slash">/</button><button class="vim-key" data-key="question">?</button>
+    </div>
+    <div class="vim-keyboard__row">
+      <span class="vim-key vim-key--spacer vim-key--caps">Caps</span>
+      <button class="vim-key" data-key="a">A</button><button class="vim-key" data-key="s">S</button><button class="vim-key" data-key="d">D</button><button class="vim-key" data-key="f">F</button><button class="vim-key" data-key="g">G</button><button class="vim-key" data-key="h">H</button><button class="vim-key" data-key="j">J</button><button class="vim-key" data-key="k">K</button><button class="vim-key" data-key="l">L</button><button class="vim-key" data-key="semicolon">;</button>
+      <span class="vim-key vim-key--spacer vim-key--enter">Enter</span>
+    </div>
+    <div class="vim-keyboard__row">
+      <span class="vim-key vim-key--spacer vim-key--shift">Shift</span>
+      <button class="vim-key" data-key="z">Z</button><button class="vim-key" data-key="x">X</button><button class="vim-key" data-key="c">C</button><button class="vim-key" data-key="v">V</button><button class="vim-key" data-key="b">B</button><button class="vim-key" data-key="n">N</button><button class="vim-key" data-key="m">M</button><button class="vim-key" data-key="dot">.</button>
+      <span class="vim-key vim-key--spacer vim-key--shift">Shift</span>
+    </div>
+    <div class="vim-keyboard__row vim-keyboard__row--bottom">
+      <button class="vim-key vim-key--ctrl" data-key="ctrl">Ctrl</button>
+      <span class="vim-key vim-key--spacer">Alt</span>
+      <button class="vim-key vim-key--space" data-key="space">Space</button>
+      <span class="vim-key vim-key--spacer">Alt</span>
+      <span class="vim-key vim-key--spacer">Fn</span>
+    </div>
+  </div>
+
+  <div class="vim-keyboard__detail" data-detail>
+    <div class="vim-keyboard__detail-key" data-detail-key>h / j / k / l</div>
+    <div>
+      <div class="vim-keyboard__detail-title" data-detail-title>移动光标</div>
+      <p data-detail-text>在普通模式中，h 向左、j 向下、k 向上、l 向右。可以在前面加数字，例如 5j 表示向下移动 5 行。</p>
+      <div class="vim-keyboard__examples" data-examples><code>h</code><code>j</code><code>k</code><code>l</code><code>5j</code></div>
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  .vim-keyboard { margin:1.2rem 0 2rem; padding:1rem; border:1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius:1rem; background:color-mix(in srgb,currentColor 2%,transparent); }
+  .vim-keyboard__head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
+  .vim-keyboard__head h3 { margin:0; font-size:1rem; }
+  .vim-keyboard__head p { margin:.25rem 0 0; font-size:.75rem; line-height:1.55; opacity:.68; }
+  .vim-keyboard__mode { flex:none; padding:.28rem .55rem; border-radius:999px; font-size:.66rem; font-family:ui-monospace,monospace; background:color-mix(in srgb,currentColor 8%,transparent); }
+  .vim-keyboard__toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.7rem; margin:1rem 0 .65rem; }
+  .vim-keyboard__filters { display:flex; flex-wrap:wrap; gap:.35rem; }
+  .vim-keyboard__filters button { padding:.34rem .58rem; border:1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius:.5rem; background:transparent; color:inherit; cursor:pointer; font-size:.68rem; }
+  .vim-keyboard__filters button.is-active { background:color-mix(in srgb,currentColor 10%,transparent); font-weight:700; }
+  .vim-keyboard__search { display:flex; align-items:center; gap:.4rem; min-width:min(100%,240px); padding:.36rem .6rem; border:1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius:.55rem; }
+  .vim-keyboard__search input { width:100%; border:0; outline:0; background:transparent; color:inherit; font-size:.7rem; }
+  .vim-keyboard__hint { margin-bottom:.7rem; font-size:.66rem; opacity:.55; }
+  .vim-keyboard__board { overflow-x:auto; padding:.8rem; border-radius:.85rem; background:#1f2430; }
+  .vim-keyboard__row { display:flex; justify-content:center; gap:5px; min-width:780px; margin-bottom:5px; }
+  .vim-keyboard__row:last-child { margin-bottom:0; }
+  .vim-key { display:flex; align-items:center; justify-content:center; width:52px; height:48px; padding:0; border:1px solid #566171; border-bottom-width:3px; border-radius:7px; background:#303846; color:#f3f5f7; font:700 13px ui-monospace,monospace; cursor:pointer; transition:transform .12s ease,opacity .18s ease,background .18s ease,border-color .18s ease; }
+  button.vim-key:hover:not(.is-muted) { transform:translateY(-2px); background:#3d4859; }
+  .vim-key.is-active { background:#e4a853; border-color:#f3c575; color:#171717; transform:translateY(-2px); }
+  .vim-key.is-match { border-color:#7fc7ff; box-shadow:0 0 0 1px #7fc7ff inset; }
+  .vim-key.is-muted { opacity:.2; cursor:default; }
+  .vim-key--spacer { background:#262d38; color:#7d8795; cursor:default; font-weight:500; }
+  .vim-key--wide { width:70px; }
+  .vim-key--tab { width:78px; }
+  .vim-key--caps { width:92px; }
+  .vim-key--enter { width:93px; }
+  .vim-key--shift { width:118px; }
+  .vim-key--ctrl { width:72px; }
+  .vim-key--space { width:330px; }
+  .vim-keyboard__detail { display:grid; grid-template-columns:110px 1fr; gap:1rem; margin-top:.9rem; padding:.9rem; border:1px solid color-mix(in srgb,currentColor 12%,transparent); border-radius:.8rem; }
+  .vim-keyboard__detail-key { display:flex; align-items:center; justify-content:center; min-height:72px; padding:.5rem; border-radius:.65rem; background:color-mix(in srgb,currentColor 8%,transparent); text-align:center; font:700 .88rem ui-monospace,monospace; }
+  .vim-keyboard__detail-title { font-size:.88rem; font-weight:700; }
+  .vim-keyboard__detail p { margin:.25rem 0 .55rem; font-size:.74rem; line-height:1.6; opacity:.74; }
+  .vim-keyboard__examples { display:flex; flex-wrap:wrap; gap:.3rem; }
+  .vim-keyboard__examples code { padding:.2rem .38rem; border-radius:.35rem; background:color-mix(in srgb,currentColor 7%,transparent); font-size:.68rem; }
+  @media(max-width:640px){ .vim-keyboard__head{align-items:center}.vim-keyboard__detail{grid-template-columns:1fr}.vim-keyboard__detail-key{min-height:auto}.vim-keyboard__search{width:100%} }
+</style>
+
+<script is:inline>
+  function initVimKeyboard(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const data = {
+      esc:{cat:["insert","visual","command"],title:"返回普通模式",text:"从插入模式、可视模式或命令行输入状态回到 Normal Mode。",examples:["Esc"],mode:"Normal Mode"},
+      h:{cat:["move"],title:"向左移动",text:"普通模式下向左移动一个字符；数字前缀可以重复动作。",examples:["h","5h"],mode:"Normal Mode"},
+      j:{cat:["move"],title:"向下移动",text:"向下移动一行，常与数字组合快速跨越多行。",examples:["j","10j"],mode:"Normal Mode"},
+      k:{cat:["move"],title:"向上移动",text:"向上移动一行。",examples:["k","5k"],mode:"Normal Mode"},
+      l:{cat:["move"],title:"向右移动",text:"向右移动一个字符。",examples:["l","8l"],mode:"Normal Mode"},
+      w:{cat:["move"],title:"跳到下一个单词",text:"按单词向前移动；大写 W 以空白分隔的 WORD 为单位。",examples:["w","3w","W"],mode:"Normal Mode"},
+      b:{cat:["move"],title:"跳到上一个单词",text:"回到前一个单词开头。",examples:["b","2b"],mode:"Normal Mode"},
+      e:{cat:["move"],title:"移动到词尾",text:"将光标移动到当前或下一个单词的结尾。",examples:["e","3e"],mode:"Normal Mode"},
+      0:{cat:["move"],title:"移动到行首",text:"数字 0 将光标移动到当前行第一个字符。",examples:["0"],mode:"Normal Mode"},
+      dollar:{cat:["move"],title:"移动到行尾",text:"$ 将光标移动到当前行末尾。",examples:["$","d$","y$"],mode:"Normal Mode"},
+      g:{cat:["move","search"],title:"文件级跳转",text:"gg 跳到文件第一行；G 跳到最后一行；数字加 G 可跳到指定行。",examples:["gg","G","20G"],mode:"Normal Mode"},
+      i:{cat:["insert"],title:"进入插入模式",text:"i 从当前光标位置开始输入；I 从当前行第一个非空白字符处输入。",examples:["i","I"],mode:"Insert Mode"},
+      a:{cat:["insert"],title:"在光标后插入",text:"a 从光标后一个位置开始输入；A 从当前行末尾开始输入。",examples:["a","A"],mode:"Insert Mode"},
+      o:{cat:["insert"],title:"新建一行并输入",text:"o 在当前行下方创建新行；O 在当前行上方创建新行。",examples:["o","O"],mode:"Insert Mode"},
+      r:{cat:["insert","edit"],title:"替换字符",text:"r 替换当前字符一次；R 进入连续替换模式，按 Esc 返回普通模式。",examples:["r","R"],mode:"Replace Mode"},
+      x:{cat:["edit"],title:"删除字符",text:"x 删除光标所在字符；数字前缀可一次删除多个字符。",examples:["x","5x"],mode:"Normal Mode"},
+      d:{cat:["edit"],title:"删除 / 剪切",text:"d 是删除操作符。dd 删除当前整行，d$ 删除到行尾，d0 删除到行首。",examples:["dd","5dd","d$","d0"],mode:"Normal Mode"},
+      y:{cat:["edit"],title:"复制（Yank）",text:"y 是复制操作符。yy 复制当前行，y$ 复制到行尾。",examples:["yy","3yy","y$"],mode:"Normal Mode"},
+      p:{cat:["edit"],title:"粘贴",text:"p 在光标之后或下一行粘贴；P 在光标之前或上一行粘贴。",examples:["p","P"],mode:"Normal Mode"},
+      u:{cat:["edit"],title:"撤销",text:"u 撤销上一次编辑操作；Ctrl+r 用于重做。",examples:["u","Ctrl+r"],mode:"Normal Mode"},
+      dot:{cat:["edit"],title:"重复上一次修改",text:"句点 . 会重复最近一次编辑动作，适合连续执行同类修改。",examples:[".","dd → j → ."],mode:"Normal Mode"},
+      v:{cat:["visual"],title:"进入可视模式",text:"v 按字符选择，V 按整行选择，Ctrl+v 进入块选择模式。",examples:["v","V","Ctrl+v"],mode:"Visual Mode"},
+      slash:{cat:["search"],title:"向下搜索",text:"输入 /关键字 后回车，从当前位置向后查找。n 跳到下一个匹配，N 反向跳转。",examples:["/main","n","N"],mode:"Command-Line"},
+      question:{cat:["search"],title:"向上搜索",text:"输入 ?关键字 后回车，从当前位置向前查找。",examples:["?error","n","N"],mode:"Command-Line"},
+      n:{cat:["search"],title:"重复搜索",text:"n 按上一次搜索方向继续查找；N 反向重复搜索。",examples:["n","N"],mode:"Normal Mode"},
+      colon:{cat:["command","search"],title:"进入命令行模式",text:"冒号用于输入保存、退出、替换和设置等命令。",examples:[":w",":q",":wq",":q!",":set nu",":%s/old/new/g"],mode:"Command-Line"},
+      z:{cat:["command"],title:"快速保存退出",text:"ZZ 保存修改并退出；ZQ 不保存直接退出。",examples:["ZZ","ZQ"],mode:"Normal Mode"},
+      ctrl:{cat:["move","edit","visual"],title:"Ctrl 组合键",text:"常见组合包括 Ctrl+f/b 翻页、Ctrl+d/u 半页移动、Ctrl+r 重做、Ctrl+v 块选择。",examples:["Ctrl+f","Ctrl+b","Ctrl+d","Ctrl+u","Ctrl+r","Ctrl+v"],mode:"Normal Mode"},
+      space:{cat:["move"],title:"数字 + Space",text:"数字前缀配合空格可以向右移动指定数量的字符。",examples:["20 Space"],mode:"Normal Mode"}
+    };
+
+    const keys=[...root.querySelectorAll("button[data-key]")];
+    const filters=[...root.querySelectorAll("[data-filter]")];
+    const search=root.querySelector("[data-search]");
+    const detailKey=root.querySelector("[data-detail-key]");
+    const detailTitle=root.querySelector("[data-detail-title]");
+    const detailText=root.querySelector("[data-detail-text]");
+    const examples=root.querySelector("[data-examples]");
+    const mode=root.querySelector("[data-mode]");
+    let activeFilter="all";
+
+    const keyText=(key,item)=>[key,item.title,item.text,...item.examples].join(" ").toLowerCase();
+
+    function applyFilter(){
+      const query=(search.value||"").trim().toLowerCase();
+      keys.forEach(btn=>{
+        const item=data[btn.dataset.key];
+        if(!item){btn.classList.add("is-muted");return;}
+        const categoryOk=activeFilter==="all"||item.cat.includes(activeFilter);
+        const searchOk=!query||keyText(btn.dataset.key,item).includes(query);
+        btn.classList.toggle("is-muted",!(categoryOk&&searchOk));
+        btn.classList.toggle("is-match",Boolean(query&&categoryOk&&searchOk));
+      });
+    }
+
+    function show(key){
+      const item=data[key];
+      if(!item) return;
+      keys.forEach(btn=>btn.classList.toggle("is-active",btn.dataset.key===key));
+      detailKey.textContent=item.examples[0]||key;
+      detailTitle.textContent=item.title;
+      detailText.textContent=item.text;
+      examples.innerHTML=item.examples.map(x=>`<code>${x.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")}</code>`).join("");
+      mode.textContent=item.mode;
+    }
+
+    keys.forEach(btn=>btn.addEventListener("click",()=>{if(!btn.classList.contains("is-muted")) show(btn.dataset.key);}));
+    filters.forEach(btn=>btn.addEventListener("click",()=>{
+      activeFilter=btn.dataset.filter;
+      filters.forEach(x=>x.classList.toggle("is-active",x===btn));
+      applyFilter();
+    }));
+    search.addEventListener("input",applyFilter);
+    applyFilter();
+    show("h");
+  }
+
+  document.querySelectorAll("[data-vim-keyboard]").forEach(initVimKeyboard);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-vim-keyboard]").forEach(initVimKeyboard));
+</script>
