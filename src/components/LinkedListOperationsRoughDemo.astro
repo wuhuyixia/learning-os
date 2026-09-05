@@ -1,0 +1,101 @@
+<section class="ll-rough not-prose" data-ll-rough>
+  <div class="ll-rough__head">
+    <div>
+      <h3>单链表的插入、删除与反转</h3>
+      <p>每个节点只保存数据和 <code>next</code>。真正改变链表结构的，就是修改这些 next 指针。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="ll-rough__paper">
+    <svg viewBox="0 0 1180 780" role="img" aria-label="单链表插入删除反转手绘图">
+      <g data-rough-layer></g>
+      <g class="ll-labels">
+        <text x="55" y="55" class="ll-title">① 插入：把新节点接入两个节点之间</text>
+        <text x="85" y="145" class="ll-node">10</text>
+        <text x="330" y="145" class="ll-node">20</text>
+        <text x="575" y="145" class="ll-node">30</text>
+        <text x="330" y="260" class="ll-new">25</text>
+        <text x="64" y="325" class="ll-note">关键：newNode-&gt;next = current-&gt;next；current-&gt;next = newNode</text>
+
+        <text x="55" y="395" class="ll-title">② 删除：让前驱节点跳过目标节点</text>
+        <text x="85" y="485" class="ll-node">10</text>
+        <text x="330" y="485" class="ll-del">20</text>
+        <text x="575" y="485" class="ll-node">30</text>
+        <text x="64" y="555" class="ll-note">关键：prev-&gt;next = target-&gt;next，然后释放 target</text>
+
+        <text x="55" y="635" class="ll-title">③ 反转：逐个把 next 箭头指回前一个节点</text>
+        <text x="75" y="720" class="ll-small">原链表：10 → 20 → 30 → NULL</text>
+        <text x="560" y="720" class="ll-small">反转后：NULL ← 10 ← 20 ← 30</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .ll-rough { margin:1.2rem 0 2rem; }
+  .ll-rough__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.7rem; }
+  .ll-rough__head h3 { margin:0; font-size:1rem; }
+  .ll-rough__head p { margin:.25rem 0 0; font-size:.76rem; opacity:.72; line-height:1.55; }
+  .ll-rough__head button { flex:none; padding:.44rem .72rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .ll-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.9rem; background:#fbfaf5; }
+  .ll-rough__paper svg { display:block; width:100%; min-width:900px; height:auto; }
+  .ll-labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .ll-title { font-size:24px; font-weight:700; }
+  .ll-node { font-size:26px; font-weight:700; }
+  .ll-new { font-size:26px; font-weight:700; fill:#247a44 !important; }
+  .ll-del { font-size:26px; font-weight:700; fill:#c5463b !important; }
+  .ll-note { font-size:18px; }
+  .ll-small { font-size:20px; font-weight:700; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+  async function init(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+    const { default: rough } = await import(roughUrl);
+    let seed = 91;
+
+    const arrow = (rc,x1,y1,x2,y2,color="#333") => {
+      const opts={stroke:color,strokeWidth:2.1,roughness:1.45,bowing:1.05,seed};
+      layer.appendChild(rc.line(x1,y1,x2,y2,opts));
+      const a=Math.atan2(y2-y1,x2-x1), s=13;
+      layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a-.55),y2-s*Math.sin(a-.55),opts));
+      layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a+.55),y2-s*Math.sin(a+.55),opts));
+    };
+
+    const node=(rc,x,y,stroke,fill)=>{
+      layer.appendChild(rc.rectangle(x,y,135,76,{stroke,strokeWidth:1.8,fill,fillStyle:"hachure",hachureGap:9,roughness:1.45,bowing:1.05,seed}));
+      layer.appendChild(rc.line(x+82,y,x+82,y+76,{stroke,strokeWidth:1.4,roughness:1.3,seed}));
+    };
+
+    const draw=()=>{
+      layer.replaceChildren();
+      const rc=rough.svg(svg);
+      node(rc,55,95,"#4978a8","#edf5fd"); node(rc,300,95,"#4978a8","#edf5fd"); node(rc,545,95,"#4978a8","#edf5fd");
+      node(rc,300,210,"#2e8650","#ecf8ef");
+      arrow(rc,190,133,298,133); arrow(rc,435,133,543,133);
+      arrow(rc,367,172,367,208,"#2e8650"); arrow(rc,435,248,543,160,"#2e8650");
+
+      node(rc,55,435,"#4978a8","#edf5fd"); node(rc,300,435,"#c5463b","#fff0ee"); node(rc,545,435,"#4978a8","#edf5fd");
+      arrow(rc,190,473,298,473,"#888"); arrow(rc,435,473,543,473,"#888");
+      arrow(rc,190,455,543,455,"#2e8650");
+      layer.appendChild(rc.line(315,445,420,500,{stroke:"#c5463b",strokeWidth:2.4,roughness:1.6,seed}));
+      layer.appendChild(rc.line(420,445,315,500,{stroke:"#c5463b",strokeWidth:2.4,roughness:1.6,seed}));
+
+      node(rc,55,660,"#4978a8","#edf5fd"); node(rc,300,660,"#4978a8","#edf5fd"); node(rc,545,660,"#4978a8","#edf5fd");
+      arrow(rc,190,680,298,680,"#888"); arrow(rc,435,680,543,680,"#888");
+      arrow(rc,300,714,192,714,"#7b4ea3"); arrow(rc,545,714,437,714,"#7b4ea3");
+      seed += 1;
+    };
+    draw();
+    redraw.addEventListener("click",draw);
+  }
+  document.querySelectorAll("[data-ll-rough]").forEach(init);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-ll-rough]").forEach(init));
+</script>
