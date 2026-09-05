@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 610" role="img" aria-labelledby="title desc">
+  <title id="title">Linux 终端会话提示符组成</title>
+  <desc id="desc">展示 pi@raspberrypi:~ $ 中用户名、主机名、主目录和普通用户提示符的含义。</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4f91cc"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#f08a2b"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#6ca445"/>
+    </marker>
+    <style>
+      .cn { font-family: "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+      .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="610" rx="48" fill="#f8fafc"/>
+
+  <g filter="url(#shadow)">
+    <rect x="140" y="60" width="365" height="78" rx="10" fill="#5b9bd5"/>
+    <text x="322" y="110" text-anchor="middle" class="cn" font-size="28" fill="#fff">计算机名称：raspberrypi</text>
+
+    <rect x="625" y="60" width="450" height="78" rx="10" fill="#70a947"/>
+    <text x="850" y="110" text-anchor="middle" class="cn" font-size="27" fill="#fff">$：普通用户命令提示符</text>
+
+    <rect x="40" y="445" width="265" height="80" rx="10" fill="#f8b51b"/>
+    <text x="172" y="495" text-anchor="middle" class="cn" font-size="28" fill="#fff">当前用户名：pi</text>
+
+    <rect x="590" y="445" width="470" height="80" rx="10" fill="#f28b2d"/>
+    <text x="825" y="495" text-anchor="middle" class="cn" font-size="27" fill="#fff">~：当前用户主目录 /home/pi</text>
+  </g>
+
+  <g transform="translate(130 245)" filter="url(#shadow)">
+    <rect x="0" y="0" width="95" height="105" rx="8" fill="#ffb51b"/>
+    <text x="48" y="72" text-anchor="middle" class="mono" font-size="70" font-weight="700" fill="#111">pi</text>
+
+    <text x="235" y="72" text-anchor="middle" class="mono" font-size="72" fill="#333">@</text>
+
+    <rect x="170" y="0" width="520" height="105" rx="8" fill="#5b9bd5"/>
+    <text x="430" y="72" text-anchor="middle" class="mono" font-size="68" letter-spacing="4" fill="#fff">raspberrypi</text>
+
+    <text x="715" y="72" text-anchor="middle" class="mono" font-size="68" fill="#333">:</text>
+
+    <rect x="735" y="0" width="70" height="105" rx="8" fill="#f28b2d"/>
+    <text x="770" y="72" text-anchor="middle" class="mono" font-size="68" fill="#fff">~</text>
+
+    <rect x="825" y="0" width="72" height="105" rx="8" fill="#70a947"/>
+    <text x="861" y="72" text-anchor="middle" class="mono" font-size="68" fill="#fff">$</text>
+  </g>
+
+  <line x1="450" y1="238" x2="450" y2="155" stroke="#4f91cc" stroke-width="5" marker-end="url(#arrowBlue)"/>
+  <line x1="177" y1="365" x2="177" y2="425" stroke="#f0ad16" stroke-width="5" marker-end="url(#arrowOrange)"/>
+  <line x1="900" y1="365" x2="900" y2="425" stroke="#f08a2b" stroke-width="5" marker-end="url(#arrowOrange)"/>
+  <line x1="991" y1="238" x2="991" y2="155" stroke="#6ca445" stroke-width="5" marker-end="url(#arrowGreen)"/>
+
+  <text x="600" y="575" text-anchor="middle" class="cn" font-size="20" fill="#64748b">提示符结构：用户名 @ 主机名 : 当前目录  用户身份标识</text>
+</svg>
