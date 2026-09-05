@@ -1,0 +1,139 @@
+---
+interface PostLink {
+  id: string;
+  title: string;
+}
+
+interface Props {
+  previous?: PostLink | null;
+  next?: PostLink | null;
+}
+
+const { previous = null, next = null } = Astro.props;
+---
+
+{(previous || next) && (
+  <nav class="post-navigation not-prose" aria-label="文章翻页导航">
+    <div class="post-navigation__slot post-navigation__slot--previous">
+      {previous && (
+        <a
+          class="post-navigation__link post-navigation__link--previous"
+          href={`/learning-os/blog/${previous.id}`}
+          rel="prev"
+        >
+          <span class="post-navigation__arrow" aria-hidden="true">←</span>
+          <span class="post-navigation__content">
+            <span class="post-navigation__label">上一篇</span>
+            <span class="post-navigation__title">{previous.title}</span>
+          </span>
+        </a>
+      )}
+    </div>
+
+    <div class="post-navigation__slot post-navigation__slot--next">
+      {next && (
+        <a
+          class="post-navigation__link post-navigation__link--next"
+          href={`/learning-os/blog/${next.id}`}
+          rel="next"
+        >
+          <span class="post-navigation__content">
+            <span class="post-navigation__label">下一篇</span>
+            <span class="post-navigation__title">{next.title}</span>
+          </span>
+          <span class="post-navigation__arrow" aria-hidden="true">→</span>
+        </a>
+      )}
+    </div>
+  </nav>
+)}
+
+<style>
+  .post-navigation {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    margin-top: 2.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  }
+
+  .post-navigation__slot {
+    min-width: 0;
+  }
+
+  .post-navigation__slot--next {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .post-navigation__link {
+    display: inline-flex;
+    align-items: center;
+    gap: .65rem;
+    max-width: 100%;
+    color: inherit;
+    text-decoration: none;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+
+  .post-navigation__link:hover {
+    opacity: .72;
+  }
+
+  .post-navigation__link--previous:hover {
+    transform: translateX(-3px);
+  }
+
+  .post-navigation__link--next {
+    text-align: right;
+  }
+
+  .post-navigation__link--next:hover {
+    transform: translateX(3px);
+  }
+
+  .post-navigation__arrow {
+    flex: none;
+    font-size: 1.15rem;
+    line-height: 1;
+    opacity: .72;
+  }
+
+  .post-navigation__content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: .12rem;
+  }
+
+  .post-navigation__label {
+    font-size: .72rem;
+    opacity: .55;
+  }
+
+  .post-navigation__title {
+    overflow: hidden;
+    font-size: .92rem;
+    font-weight: 600;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .post-navigation {
+      grid-template-columns: 1fr;
+      gap: .85rem;
+      margin-top: 1.8rem;
+    }
+
+    .post-navigation__slot--next {
+      justify-content: flex-end;
+    }
+
+    .post-navigation__title {
+      max-width: min(78vw, 28rem);
+    }
+  }
+</style>
