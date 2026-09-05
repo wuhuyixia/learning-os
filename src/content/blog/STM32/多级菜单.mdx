@@ -11,6 +11,7 @@ tags:
 ---
 
 import MenuLinkedListDemo from '../../../components/MenuLinkedListDemo.astro';
+import LinkedListOperationsRoughDemo from '../../../components/LinkedListOperationsRoughDemo.astro';
 
 ## 1. 多级菜单设计
 
@@ -69,41 +70,182 @@ typedef struct MenuNode
 - `parent` 用于返回上一级；
 - `callback` 指向当前菜单对应的功能函数。
 
-## 4. 菜单滚动
+## 4. 先理解普通单链表的基本操作
 
-向右切换时，只需要移动当前指针：
+多级菜单本质上是在链表基础上继续增加 `prev`、`child`、`parent` 等关系，因此先把普通单链表的几个核心动作弄清楚会更容易理解菜单节点是怎么变化的。
 
-```c
-current_menu = current_menu->next;
-```
-
-向左切换：
+下面把节点定义、插入、删除、反转、遍历打印和主函数演示放在一个完整代码示例里，不拆成多个零散代码块：
 
 ```c
-current_menu = current_menu->prev;
-```
+#include <stdio.h>
+#include <stdlib.h>
 
-进入下一级：
-
-```c
-if (current_menu->child != NULL)
+typedef struct Node
 {
-    current_menu = current_menu->child;
+    int data;
+    struct Node *next;
+} Node_t;
+
+static Node_t *head = NULL;
+
+/* 头插法：新节点始终插在链表最前面 */
+void Insert(int x)
+{
+    Node_t *newNode = (Node_t *)malloc(sizeof(Node_t));
+    if (newNode == NULL)
+        return;
+
+    newNode->data = x;
+    newNode->next = head;
+    head = newNode;
+}
+
+/* 删除第一个值等于 x 的节点 */
+void Delete(int x)
+{
+    Node_t *current = head;
+    Node_t *prev = NULL;
+
+    while (current != NULL)
+    {
+        if (current->data == x)
+        {
+            if (prev == NULL)
+                head = current->next;
+            else
+                prev->next = current->next;
+
+            free(current);
+            return;
+        }
+
+        prev = current;
+        current = current->next;
+    }
+}
+
+/* 原地反转链表 */
+void Reverse(void)
+{
+    Node_t *prev = NULL;
+    Node_t *current = head;
+    Node_t *next = NULL;
+
+    while (current != NULL)
+    {
+        next = current->next;
+        current->next = prev;
+        prev = current;
+        current = next;
+    }
+
+    head = prev;
+}
+
+/* 遍历打印 */
+void Print(void)
+{
+    Node_t *temp = head;
+
+    printf("List is: ");
+    while (temp != NULL)
+    {
+        printf("%d ", temp->data);
+        temp = temp->next;
+    }
+    printf("\n");
+}
+
+int main(void)
+{
+    int n, i, x;
+
+    printf("How many numbers?\n");
+    scanf("%d", &n);
+
+    for (i = 0; i < n; i++)
+    {
+        printf("Enter the number: ");
+        scanf("%d", &x);
+
+        Insert(x);
+        Print();
+    }
+
+    printf("Delete one value: ");
+    scanf("%d", &x);
+    Delete(x);
+    Print();
+
+    Reverse();
+    printf("After reverse: ");
+    Print();
+
+    return 0;
 }
 ```
 
-返回上一级：
+这个示例和你截图里的思路一致：`head` 一开始为 `NULL`，每次输入一个数字后调用 `Insert(x)`，然后通过 `Print()` 从 `head` 开始一直沿着 `next` 指针遍历到 `NULL`。
+
+需要特别注意的是，这里的 `Insert()` 使用的是**头插法**。例如依次输入 `10、20、30`，链表会变成：
+
+```text
+head → 30 → 20 → 10 → NULL
+```
+
+也就是说，打印顺序和输入顺序相反。如果希望保持输入顺序，则应该改用尾插法。
+
+### 插入、删除、反转究竟改了什么
+
+链表操作真正变化的并不是节点本身，而是节点之间的 `next` 指向关系。
+
+<LinkedListOperationsRoughDemo />
+
+对于插入，核心是先让新节点接住后半段链表，再让前一个节点指向它；对于删除，核心是让前驱节点直接越过目标节点；对于反转，则是依次把每个节点原本向后的 `next` 指针改成指向前一个节点。
+
+反转过程可以简化理解成三个临时指针：
+
+```text
+prev      current      next
+ ↓           ↓           ↓
+NULL   →    10    →      20    → 30 → NULL
+```
+
+每轮循环都做三件事：先保存 `current->next`，再执行 `current->next = prev`，最后让 `prev` 和 `current` 一起向前推进。直到 `current == NULL`，此时 `prev` 就是新的头节点，因此最后执行 `head = prev`。
+
+## 5. 菜单滚动
+
+把普通链表理解清楚后，菜单滚动就很好理解了。菜单节点只是把单链表里的 `next` 扩展成了 `prev / next / child / parent` 四种关系。
 
 ```c
-if (current_menu->parent != NULL)
+void MenuMoveRight(void)
 {
-    current_menu = current_menu->parent;
+    if (current_menu->next != NULL)
+        current_menu = current_menu->next;
+}
+
+void MenuMoveLeft(void)
+{
+    if (current_menu->prev != NULL)
+        current_menu = current_menu->prev;
+}
+
+void MenuEnter(void)
+{
+    if (current_menu->child != NULL)
+        current_menu = current_menu->child;
+}
+
+void MenuBack(void)
+{
+    if (current_menu->parent != NULL)
+        current_menu = current_menu->parent;
 }
 ```
 
 因此菜单显示逻辑与菜单数据结构可以完全解耦。显示层只需要读取 `current_menu` 以及其前后节点，而按键、旋钮或触摸事件只负责修改当前节点。
 
-## 5. 为什么使用双向循环链表
+## 6. 为什么使用双向循环链表
 
 相比普通数组，双向循环链表更适合层级菜单和动态菜单：
 
@@ -113,7 +255,7 @@ if (current_menu->parent != NULL)
 4. UI 层无需关心菜单总数量；
 5. 可以方便地为每个节点绑定独立回调函数。
 
-## 6. 与状态机结合
+## 7. 与状态机结合
 
 实际嵌入式项目中，菜单系统通常还会与有限状态机结合。例如可以定义：
 
