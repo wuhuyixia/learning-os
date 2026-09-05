@@ -1,0 +1,101 @@
+<section class="tcp-demo not-prose" data-tcp-demo>
+  <div class="tcp-demo__head">
+    <div>
+      <h3>TCP 连接状态动态演示</h3>
+      <p>按步骤观察三次握手、数据传输与四次挥手。每一步都会更新客户端、服务端状态以及报文标志位。</p>
+    </div>
+    <button type="button" data-reset>重置</button>
+  </div>
+
+  <div class="tcp-demo__panel">
+    <div class="tcp-demo__host">
+      <strong>Client</strong>
+      <span data-client-state>CLOSED</span>
+    </div>
+    <div class="tcp-demo__wire">
+      <div class="tcp-demo__packet" data-packet>点击“下一步”开始</div>
+      <div class="tcp-demo__arrow">⇄</div>
+    </div>
+    <div class="tcp-demo__host">
+      <strong>Server</strong>
+      <span data-server-state>LISTEN</span>
+    </div>
+  </div>
+
+  <div class="tcp-demo__controls">
+    <button type="button" data-prev disabled>上一步</button>
+    <button type="button" data-next>下一步</button>
+  </div>
+
+  <div class="tcp-demo__detail">
+    <span data-step>0 / 9</span>
+    <p data-description>服务器已经处于 LISTEN，客户端尚未建立连接。</p>
+  </div>
+</section>
+
+<style is:global>
+  .tcp-demo { margin:1.2rem 0 2rem; }
+  .tcp-demo__head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+  .tcp-demo__head h3 { margin:0; font-size:1rem; }
+  .tcp-demo__head p { margin:.25rem 0 0; font-size:.76rem; line-height:1.55; opacity:.72; }
+  .tcp-demo button { border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.65rem; background:transparent; color:inherit; padding:.5rem .8rem; cursor:pointer; }
+  .tcp-demo button:disabled { opacity:.35; cursor:not-allowed; }
+  .tcp-demo__panel { display:grid; grid-template-columns:1fr 1.35fr 1fr; gap:1rem; align-items:center; margin-top:1rem; padding:1.1rem; border:1px solid color-mix(in srgb,currentColor 12%,transparent); border-radius:1rem; }
+  .tcp-demo__host { display:flex; flex-direction:column; gap:.35rem; padding:1rem; border-radius:.85rem; background:color-mix(in srgb,currentColor 4%,transparent); text-align:center; }
+  .tcp-demo__host span { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.78rem; font-weight:700; }
+  .tcp-demo__wire { text-align:center; }
+  .tcp-demo__packet { min-height:2.6rem; display:grid; place-items:center; padding:.55rem .8rem; border-radius:.7rem; background:color-mix(in srgb,currentColor 6%,transparent); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.78rem; font-weight:700; }
+  .tcp-demo__arrow { margin-top:.5rem; font-size:1.4rem; opacity:.55; }
+  .tcp-demo__controls { display:flex; justify-content:center; gap:.7rem; margin-top:.85rem; }
+  .tcp-demo__detail { margin-top:.85rem; padding:.85rem 1rem; border-left:3px solid color-mix(in srgb,currentColor 35%,transparent); background:color-mix(in srgb,currentColor 3%,transparent); }
+  .tcp-demo__detail span { font-size:.72rem; opacity:.55; }
+  .tcp-demo__detail p { margin:.25rem 0 0; font-size:.82rem; line-height:1.6; }
+  @media (max-width:700px){ .tcp-demo__panel{grid-template-columns:1fr}.tcp-demo__wire{order:2}.tcp-demo__host:last-child{order:3} }
+</style>
+
+<script is:inline>
+  function initTcpDemo(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const client = root.querySelector('[data-client-state]');
+    const server = root.querySelector('[data-server-state]');
+    const packet = root.querySelector('[data-packet]');
+    const desc = root.querySelector('[data-description]');
+    const stepLabel = root.querySelector('[data-step]');
+    const prev = root.querySelector('[data-prev]');
+    const next = root.querySelector('[data-next]');
+    const reset = root.querySelector('[data-reset]');
+
+    const steps = [
+      ["CLOSED", "LISTEN", "等待建立连接", "服务器处于 LISTEN，客户端尚未发起连接。"],
+      ["SYN-SENT", "LISTEN", "Client → Server : SYN, seq=x", "客户端发送 SYN，请求建立连接，并进入 SYN-SENT。"],
+      ["SYN-SENT", "SYN-RECEIVED", "Server → Client : SYN+ACK, seq=y, ack=x+1", "服务器确认客户端的 SYN，同时发送自己的 SYN。"],
+      ["ESTABLISHED", "ESTABLISHED", "Client → Server : ACK, ack=y+1", "客户端返回 ACK。三次握手完成，双方进入 ESTABLISHED。"],
+      ["ESTABLISHED", "ESTABLISHED", "Client ⇄ Server : DATA + ACK", "建立连接后，TCP 通过序号、确认号、窗口和重传机制可靠传输字节流。"],
+      ["FIN-WAIT-1", "ESTABLISHED", "Client → Server : FIN", "客户端主动关闭发送方向，发送 FIN。"],
+      ["FIN-WAIT-2", "CLOSE-WAIT", "Server → Client : ACK", "服务器确认 FIN；客户端进入 FIN-WAIT-2，服务器进入 CLOSE-WAIT。"],
+      ["FIN-WAIT-2", "LAST-ACK", "Server → Client : FIN", "服务器处理完剩余数据后也发送 FIN。"],
+      ["TIME-WAIT", "CLOSED", "Client → Server : ACK", "客户端确认服务器的 FIN，并进入 TIME-WAIT；服务器关闭。"],
+      ["CLOSED", "CLOSED", "2MSL 后关闭", "TIME-WAIT 结束后客户端也进入 CLOSED，连接完全释放。"]
+    ];
+
+    let index = 0;
+    const render = () => {
+      const [c,s,p,d] = steps[index];
+      client.textContent = c;
+      server.textContent = s;
+      packet.textContent = p;
+      desc.textContent = d;
+      stepLabel.textContent = `${index} / ${steps.length - 1}`;
+      prev.disabled = index === 0;
+      next.disabled = index === steps.length - 1;
+    };
+    prev.addEventListener('click',()=>{ if(index>0){ index--; render(); }});
+    next.addEventListener('click',()=>{ if(index<steps.length-1){ index++; render(); }});
+    reset.addEventListener('click',()=>{ index=0; render(); });
+    render();
+  }
+  document.querySelectorAll('[data-tcp-demo]').forEach(initTcpDemo);
+  document.addEventListener('astro:page-load',()=>document.querySelectorAll('[data-tcp-demo]').forEach(initTcpDemo));
+</script>
