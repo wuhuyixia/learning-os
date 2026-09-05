@@ -1,0 +1,102 @@
+<section class="tcpip-rough not-prose" data-tcpip-rough>
+  <div class="tcpip-rough__head">
+    <div>
+      <h3>TCP/IP 分层与数据封装</h3>
+      <p>发送端逐层添加首部，接收端再反向拆解。应用数据最终会被封装成帧，在链路上传输。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="tcpip-rough__paper">
+    <svg viewBox="0 0 1180 760" role="img" aria-label="TCP IP 分层与封装手绘图">
+      <g data-rough-layer></g>
+      <g class="tcpip-rough__labels">
+        <text x="75" y="58" class="tr-title">发送端</text>
+        <text x="78" y="132" class="tr-layer">应用层</text>
+        <text x="78" y="242" class="tr-layer">传输层</text>
+        <text x="78" y="352" class="tr-layer">网络层</text>
+        <text x="78" y="462" class="tr-layer">网络接口层</text>
+
+        <text x="320" y="132" class="tr-code">Data</text>
+        <text x="300" y="242" class="tr-code">TCP | Data</text>
+        <text x="277" y="352" class="tr-code">IP | TCP | Data</text>
+        <text x="245" y="462" class="tr-code">ETH | IP | TCP | Data | FCS</text>
+
+        <text x="452" y="555" class="tr-link">物理链路 / Ethernet / Wi-Fi</text>
+
+        <text x="935" y="58" class="tr-title">接收端</text>
+        <text x="930" y="132" class="tr-layer">应用层</text>
+        <text x="930" y="242" class="tr-layer">传输层</text>
+        <text x="930" y="352" class="tr-layer">网络层</text>
+        <text x="904" y="462" class="tr-layer">网络接口层</text>
+
+        <text x="565" y="665" class="tr-note">封装 ↓</text>
+        <text x="665" y="665" class="tr-note">↑ 解封装</text>
+        <text x="86" y="712" class="tr-caption">每一层只关心自己的协议首部：TCP 负责端到端传输，IP 负责跨网络寻址，链路层负责一跳内的帧传递。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .tcpip-rough { margin:1.2rem 0 2rem; }
+  .tcpip-rough__head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.7rem; }
+  .tcpip-rough__head h3 { margin:0; font-size:1rem; }
+  .tcpip-rough__head p { margin:.25rem 0 0; max-width:50rem; font-size:.76rem; line-height:1.55; opacity:.72; }
+  .tcpip-rough__head button { flex:none; padding:.44rem .72rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .tcpip-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.9rem; background:#fbfaf5; }
+  .tcpip-rough__paper svg { display:block; width:100%; min-width:920px; height:auto; }
+  .tcpip-rough__labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .tr-title { font-size:27px; font-weight:700; }
+  .tr-layer { font-size:22px; font-weight:700; }
+  .tr-code { font-size:21px; font-weight:700; fill:#285f96 !important; }
+  .tr-link { font-size:22px; font-weight:700; fill:#7d4f9c !important; }
+  .tr-note { font-size:21px; font-weight:700; }
+  .tr-caption { font-size:18px; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+  async function init(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+    const { default: rough } = await import(roughUrl);
+    let seed = 121;
+
+    const arrow = (rc,x1,y1,x2,y2,color="#555") => {
+      const opts={stroke:color,strokeWidth:2.1,roughness:1.45,bowing:1.05,seed};
+      layer.appendChild(rc.line(x1,y1,x2,y2,opts));
+      const a=Math.atan2(y2-y1,x2-x1), s=13;
+      layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a-.55),y2-s*Math.sin(a-.55),opts));
+      layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a+.55),y2-s*Math.sin(a+.55),opts));
+    };
+
+    const draw=()=>{
+      layer.replaceChildren();
+      const rc=rough.svg(svg);
+      const base={stroke:"#333",strokeWidth:1.7,roughness:1.5,bowing:1.05,seed};
+      const add=(n)=>layer.appendChild(n);
+      const ys=[88,198,308,418];
+      const fills=["#eef6ff","#eef9ef","#fff6df","#f7ecff"];
+      const strokes=["#3d78aa","#3e8954","#c58a26","#7c55a2"];
+
+      ys.forEach((y,i)=>{
+        add(rc.rectangle(55,y,420,78,{...base,stroke:strokes[i],fill:fills[i],fillStyle:"hachure",hachureGap:9}));
+        add(rc.rectangle(705,y,420,78,{...base,stroke:strokes[i],fill:fills[i],fillStyle:"hachure",hachureGap:9}));
+      });
+      arrow(rc,500,570,680,570,"#7d4f9c");
+      arrow(rc,520,120,520,475,"#336f9c");
+      arrow(rc,660,475,660,120,"#3e8954");
+      [166,276,386].forEach((y)=>add(rc.line(475,y,705,y,{...base,stroke:"#aaa",strokeWidth:1.1,strokeLineDash:[6,6]})));
+      seed += 1;
+    };
+    draw();
+    redraw.addEventListener("click",draw);
+  }
+  document.querySelectorAll("[data-tcpip-rough]").forEach(init);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-tcpip-rough]").forEach(init));
+</script>
