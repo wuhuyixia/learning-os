@@ -1,0 +1,98 @@
+<section class="p3d-live not-prose" data-p3d-live>
+  <div class="p3d-live__head">
+    <div>
+      <h3>动态演示：表达式到底跨了几层？</h3>
+      <p>点击表达式，观察它对应的类型、地址步长和最终定位到的元素。</p>
+    </div>
+  </div>
+
+  <div class="p3d-live__tabs" role="tablist">
+    <button type="button" data-exp="C" class="is-active">C</button>
+    <button type="button" data-exp="C+1">C + 1</button>
+    <button type="button" data-exp="C1">C[1]</button>
+    <button type="button" data-exp="C11">C[1][1]</button>
+    <button type="button" data-exp="C110">&C[1][1][0]</button>
+    <button type="button" data-exp="VALUE">C[1][1][0]</button>
+  </div>
+
+  <div class="p3d-live__grid">
+    <div class="p3d-live__memory" data-memory></div>
+    <div class="p3d-live__info">
+      <div><span>表达式</span><strong data-expression>C</strong></div>
+      <div><span>地址</span><strong data-address>800</strong></div>
+      <div><span>常见表达式类型</span><strong data-type>int (*)[2][2]</strong></div>
+      <div><span>本层 +1 步长</span><strong data-step>16 B</strong></div>
+      <p data-explain>C 指向第一个 2×2 平面，因此 C+1 会跳过整个 C[0]。</p>
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  .p3d-live { margin:1.2rem 0 2rem; padding:1rem; border:1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius:.9rem; background:color-mix(in srgb,currentColor 2%,transparent); }
+  .p3d-live__head h3 { margin:0; font-size:1rem; }
+  .p3d-live__head p { margin:.25rem 0 .85rem; font-size:.76rem; opacity:.72; }
+  .p3d-live__tabs { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:1rem; }
+  .p3d-live__tabs button { padding:.42rem .68rem; border:1px solid color-mix(in srgb,currentColor 16%,transparent); border-radius:.55rem; background:transparent; color:inherit; cursor:pointer; font-family:ui-monospace,monospace; font-size:.72rem; }
+  .p3d-live__tabs button.is-active { font-weight:700; outline:2px solid color-mix(in srgb,currentColor 20%,transparent); }
+  .p3d-live__grid { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(230px,.8fr); gap:1rem; align-items:start; }
+  .p3d-live__memory { display:grid; grid-template-columns:repeat(12,minmax(54px,1fr)); gap:3px; overflow-x:auto; padding-bottom:.25rem; }
+  .p3d-live__cell { min-width:54px; padding:.52rem .2rem; border:1px solid rgba(100,116,139,.28); border-radius:.45rem; text-align:center; font-family:ui-monospace,monospace; transition:.18s ease; }
+  .p3d-live__cell small { display:block; margin-top:.22rem; opacity:.58; font-size:.62rem; }
+  .p3d-live__cell.is-plane { outline:2px solid rgba(37,99,235,.42); transform:translateY(-2px); }
+  .p3d-live__cell.is-row { outline:2px solid rgba(22,163,74,.48); transform:translateY(-2px); }
+  .p3d-live__cell.is-element { outline:3px solid rgba(220,38,38,.62); transform:translateY(-3px); font-weight:700; }
+  .p3d-live__info { display:grid; gap:.65rem; }
+  .p3d-live__info div { display:flex; justify-content:space-between; gap:1rem; padding-bottom:.45rem; border-bottom:1px dashed color-mix(in srgb,currentColor 15%,transparent); }
+  .p3d-live__info span { font-size:.72rem; opacity:.65; }
+  .p3d-live__info strong { text-align:right; font-family:ui-monospace,monospace; font-size:.75rem; }
+  .p3d-live__info p { margin:.1rem 0 0; font-size:.76rem; line-height:1.6; opacity:.8; }
+  @media (max-width:760px){ .p3d-live__grid{grid-template-columns:1fr;} }
+</style>
+
+<script is:inline>
+  function initP3DLive(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const values = [2,5,7,9,3,4,6,1,0,8,11,13];
+    const memory = root.querySelector("[data-memory]");
+    const buttons = [...root.querySelectorAll("[data-exp]")];
+    const expression = root.querySelector("[data-expression]");
+    const address = root.querySelector("[data-address]");
+    const type = root.querySelector("[data-type]");
+    const step = root.querySelector("[data-step]");
+    const explain = root.querySelector("[data-explain]");
+
+    const states = {
+      C:{exp:"C",addr:"800",type:"int (*)[2][2]",step:"16 B",kind:"plane",range:[0,3],text:"C 指向第一个 2×2 平面，因此 C+1 会跳过整个 C[0]。"},
+      "C+1":{exp:"C + 1",addr:"816",type:"int (*)[2][2]",step:"16 B",kind:"plane",range:[4,7],text:"C+1 指向 C[1]。因为一个平面有 4 个 int，所以地址从 800 增加到 816。"},
+      C1:{exp:"C[1]",addr:"816",type:"int [2][2] → int (*)[2]",step:"8 B",kind:"plane",range:[4,7],text:"C[1] 是第二个 2×2 平面；进入普通表达式后通常退化为指向第一行的 int (*)[2]。"},
+      C11:{exp:"C[1][1]",addr:"824",type:"int [2] → int *",step:"4 B",kind:"row",range:[6,7],text:"C[1][1] 是第二个平面的第二行，包含两个 int；再 +1 时按单个 int 的 4 字节移动。"},
+      C110:{exp:"&C[1][1][0]",addr:"824",type:"int *",step:"4 B",kind:"element",range:[6,6],text:"&C[1][1][0] 已经是指向单个 int 的指针，因此它和 C[1][1] 退化后的地址数值相同，但类型语义不同。"},
+      VALUE:{exp:"C[1][1][0]",addr:"824",type:"int",step:"—",kind:"element",range:[6,6],text:"最后一次解引用后得到真正的 int 值 6，不再是地址。"}
+    };
+
+    memory.innerHTML = values.map((v,i)=>`<div class="p3d-live__cell" data-cell="${i}">${v}<small>${800+i*4}</small></div>`).join("");
+    const cells = [...memory.querySelectorAll("[data-cell]")];
+
+    function render(key){
+      const s=states[key];
+      buttons.forEach(b=>b.classList.toggle("is-active",b.dataset.exp===key));
+      cells.forEach((c,i)=>{
+        c.classList.remove("is-plane","is-row","is-element");
+        if(i>=s.range[0]&&i<=s.range[1]) c.classList.add(`is-${s.kind}`);
+      });
+      expression.textContent=s.exp;
+      address.textContent=s.addr;
+      type.textContent=s.type;
+      step.textContent=s.step;
+      explain.textContent=s.text;
+    }
+
+    buttons.forEach(b=>b.addEventListener("click",()=>render(b.dataset.exp)));
+    render("C");
+  }
+
+  document.querySelectorAll("[data-p3d-live]").forEach(initP3DLive);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-p3d-live]").forEach(initP3DLive));
+</script>
