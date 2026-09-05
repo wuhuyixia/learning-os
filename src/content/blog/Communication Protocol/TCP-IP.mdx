@@ -1,0 +1,416 @@
+---
+title: TCP/IP 协议详解
+description: 从 TCP/IP 分层、数据封装、IP 寻址到 TCP 三次握手、可靠传输、四次挥手与 Socket 编程，结合手绘图、时序图和动态演示理解网络通信。
+pubDate: 2026-09-05
+draft: false
+categories:
+  - Communication Protocol
+tags:
+  - TCP/IP
+  - Network
+---
+
+import MermaidDiagram from "@components/MermaidDiagram.astro";
+import TCPIPRoughOverviewDemo from "@components/TCPIPRoughOverviewDemo.astro";
+import TCPConnectionDemo from "@components/TCPConnectionDemo.astro";
+
+# TCP/IP 协议详解
+
+TCP/IP 不是单独一个协议，而是一组用于网络通信的协议体系。应用程序发送的一段数据，会依次经过传输层、网络层和网络接口层完成封装；到达另一台设备后，再按相反方向逐层拆解。
+
+如果只记一句话，可以先记住：
+
+> **IP 负责把数据送到哪台主机，TCP/UDP 负责把数据交给主机中的哪个应用，并决定如何传。**
+
+## 1. TCP/IP 四层模型
+
+TCP/IP 常按四层理解：
+
+| 层级 | 主要作用 | 常见协议或概念 |
+| :--- | :--- | :--- |
+| 应用层 | 定义应用数据格式和交互规则 | HTTP、DNS、MQTT、FTP |
+| 传输层 | 进程到进程的数据传输 | TCP、UDP、端口 |
+| 网络层 | 跨网络寻址与路由 | IPv4、IPv6、ICMP |
+| 网络接口层 | 一跳范围内传输帧 | Ethernet、Wi-Fi、MAC |
+
+以访问一个 HTTP 服务为例，应用层产生 HTTP 数据，TCP 为它提供可靠字节流，IP 决定目标主机地址，Ethernet 或 Wi-Fi 再把数据真正送到下一跳设备。
+
+<TCPIPRoughOverviewDemo />
+
+### 数据是如何一层层封装的
+
+下面用流程图把发送端的数据变化画出来：
+
+<MermaidDiagram
+  title="TCP/IP 数据封装流程"
+  chart={`flowchart TD
+    A[应用数据 Data] --> B[TCP 添加首部<br/>TCP Segment]
+    B --> C[IP 添加首部<br/>IP Packet]
+    C --> D[Ethernet 添加帧头与 FCS<br/>Frame]
+    D --> E[网卡发送比特流]
+    E --> F[网络传输]
+    F --> G[接收端逐层解封装]
+    G --> H[应用程序收到 Data]`}
+/>
+
+不同资料会使用“报文段、数据报、分组、包、帧”等术语。理解时不必死记名称，重要的是知道：**每经过一层，都会增加该层需要的控制信息。**
+
+## 2. IP：解决“主机在哪里”
+
+IP 位于网络层，主要负责把数据从源主机送到目标主机。IPv4 地址通常写成点分十进制，例如：
+
+```text
+192.168.1.10
+```
+
+一个 IPv4 地址可以理解成“网络部分 + 主机部分”。具体怎么划分，由子网掩码或 CIDR 前缀决定。例如：
+
+```text
+192.168.1.10/24
+```
+
+`/24` 表示前 24 位属于网络部分。在常见局域网中，`192.168.1.10/24` 与 `192.168.1.20/24` 属于同一网段，而 `192.168.2.20/24` 通常需要经过路由器才能到达。
+
+### IP 地址和 MAC 地址不是一回事
+
+可以简单区分为：
+
+- **IP 地址**：用于跨网络寻找目标主机；
+- **MAC 地址**：用于当前链路中寻找下一跳网卡。
+
+因此一份 IP 数据包在经过不同路由器时，源/目标 IP 通常保持不变，而链路层帧的源/目标 MAC 会随着每一跳重新封装。
+
+## 3. 端口：解决“数据交给哪个程序”
+
+同一台 Linux 主机上可能同时运行 Web 服务、SSH、MQTT Broker 等多个进程，所以只有 IP 地址还不够，还需要端口号区分应用。
+
+例如：
+
+```text
+192.168.1.10:8080
+```
+
+表示目标主机为 `192.168.1.10`，目标端口为 `8080`。
+
+一个网络连接通常可以由四元组描述：
+
+```text
+源 IP : 源端口  →  目标 IP : 目标端口
+```
+
+例如：
+
+```text
+192.168.1.20:52631 → 192.168.1.10:8080
+```
+
+客户端端口通常由操作系统临时分配，服务器则监听一个固定或约定的端口。
+
+## 4. TCP 与 UDP 的区别
+
+TCP 和 UDP 都位于传输层，但设计目标完全不同。
+
+| 特性 | TCP | UDP |
+| :--- | :--- | :--- |
+| 是否建立连接 | 是 | 否 |
+| 数据形式 | 字节流 | 数据报 |
+| 可靠性 | 提供确认、重传、排序 | 不保证到达与顺序 |
+| 开销 | 较高 | 较低 |
+| 典型场景 | HTTP、SSH、文件传输、MQTT | DNS、实时音视频、广播、部分控制数据 |
+
+TCP 更关心“数据是否完整、顺序是否正确”，UDP 更关心“尽快发送”。
+
+需要注意，UDP 并不等于“一定不可靠”。如果应用确实需要，也可以在 UDP 上自行实现序号、确认和重传，只是这些能力不由 UDP 协议本身提供。
+
+## 5. TCP 三次握手
+
+TCP 在正式传输数据之前，需要先建立双方的连接状态，并确认两边的收发能力。
+
+<MermaidDiagram
+  title="TCP 三次握手"
+  chart={`sequenceDiagram
+    participant C as Client
+    participant S as Server
+    C->>S: SYN, seq = x
+    S-->>C: SYN + ACK, seq = y, ack = x + 1
+    C->>S: ACK, ack = y + 1
+    Note over C,S: ESTABLISHED`}
+/>
+
+三步可以这样理解：
+
+1. 客户端发送 `SYN`：我想建立连接，我的初始序号是 `x`；
+2. 服务端回复 `SYN+ACK`：我收到了你的请求，我的初始序号是 `y`；
+3. 客户端回复 `ACK`：你的确认我也收到了。
+
+三次完成后，双方才进入 `ESTABLISHED`。
+
+### 为什么不是两次
+
+如果只进行两次交互，服务器无法确认自己发出的 `SYN+ACK` 是否真的到达客户端。第三次 ACK 使服务器能够确认：客户端不仅能发数据，也能正常接收服务端的数据并作出响应。
+
+## 6. TCP 如何做到可靠传输
+
+TCP 的可靠性不是依赖某一个机制，而是多个机制共同作用。
+
+### 序列号与确认号
+
+TCP 为字节流编号。接收方通过 ACK 告诉发送方自己已经收到哪些字节，以及下一步希望收到哪个序号。
+
+可以抽象为：
+
+```text
+Sender                    Receiver
+seq=100, len=100  ------>
+                  <------ ACK=200
+```
+
+`ACK=200` 表示 100～199 这部分数据已经收到，下一步希望从 200 开始继续发送。
+
+### 超时与重传
+
+如果发送方在规定时间内没有收到确认，会认为报文可能丢失并重新发送。实际 TCP 还会根据网络往返时间动态估计重传超时时间，而不是固定写死一个毫秒数。
+
+### 滑动窗口
+
+如果每发送一段数据都必须等待 ACK 才继续，链路利用率会很低。因此 TCP 允许在一定窗口范围内连续发送多个字节，再由接收端累计确认。
+
+窗口本质上解决的是：
+
+> **在可靠的前提下，允许多少尚未确认的数据同时存在于网络中。**
+
+### 流量控制与拥塞控制
+
+这两个概念容易混淆：
+
+- **流量控制**关注接收方是否来得及处理，避免把接收缓冲区打满；
+- **拥塞控制**关注网络本身是否过载，避免继续向拥堵链路注入大量数据。
+
+前者主要看接收窗口，后者主要通过拥塞窗口等机制调整发送速率。
+
+## 7. TCP 四次挥手
+
+TCP 是全双工连接，两个方向可以分别关闭，因此通常需要四次交互。
+
+<MermaidDiagram
+  title="TCP 四次挥手"
+  chart={`sequenceDiagram
+    participant C as Client
+    participant S as Server
+    C->>S: FIN
+    S-->>C: ACK
+    Note right of S: 服务端仍可继续发送剩余数据
+    S-->>C: FIN
+    C->>S: ACK
+    Note left of C: TIME-WAIT
+    Note over C,S: 连接最终关闭`}
+/>
+
+主动关闭的一方发送 FIN 后，只表示“我没有更多数据要发送”，并不代表另一方也已经发完。因此对端先 ACK，等自己的数据处理完后再单独发送 FIN。
+
+### TIME-WAIT 为什么存在
+
+主动关闭的一方在最后发送 ACK 后通常不会立即消失，而会等待一段时间。这样做主要为了：
+
+- 如果最后的 ACK 丢失，还能再次响应对端重发的 FIN；
+- 让旧连接中延迟到达的数据包在网络中自然失效，避免干扰之后可能出现的新连接。
+
+<TCPConnectionDemo />
+
+## 8. TCP 是字节流，不保留消息边界
+
+这是写 Socket 程序时非常重要的一点。
+
+如果发送端连续调用：
+
+```c
+send(fd, "ABC", 3, 0);
+send(fd, "DEF", 3, 0);
+```
+
+接收端不一定恰好得到两次 `recv()`，结果可能是：
+
+```text
+ABCDEF
+```
+
+也可能拆成：
+
+```text
+AB
+CDEF
+```
+
+因为 TCP 只保证字节顺序，不负责保存应用层“消息边界”。因此应用协议通常需要自己定义帧格式，例如：
+
+```text
+| magic | length | command | payload | checksum |
+```
+
+或者使用固定长度、分隔符、长度字段等方式解决粘包与拆包问题。
+
+## 9. TCP Socket 编程流程
+
+Linux 中，TCP 通信最终通常通过 Socket API 实现。
+
+<MermaidDiagram
+  title="TCP Client / Server Socket 流程"
+  chart={`flowchart LR
+    subgraph Server
+      S1[socket] --> S2[bind]
+      S2 --> S3[listen]
+      S3 --> S4[accept]
+      S4 --> S5[recv / send]
+      S5 --> S6[close]
+    end
+    subgraph Client
+      C1[socket] --> C2[connect]
+      C2 --> C3[send / recv]
+      C3 --> C4[close]
+    end
+    C2 -. 建立 TCP 连接 .-> S4`}
+/>
+
+下面把客户端和服务端放在一个代码块中对照理解，避免把流程拆成许多零散代码段：
+
+```c
+/* server.c */
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+int main(void)
+{
+    int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(8080);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    bind(listen_fd, (struct sockaddr *)&addr, sizeof(addr));
+    listen(listen_fd, 4);
+
+    int client_fd = accept(listen_fd, NULL, NULL);
+
+    char buf[128] = {0};
+    ssize_t n = recv(client_fd, buf, sizeof(buf) - 1, 0);
+    if (n > 0) {
+        printf("recv: %s\n", buf);
+        send(client_fd, "hello client", 12, 0);
+    }
+
+    close(client_fd);
+    close(listen_fd);
+    return 0;
+}
+
+/* client.c */
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+int main(void)
+{
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    struct sockaddr_in server = {0};
+    server.sin_family = AF_INET;
+    server.sin_port = htons(8080);
+    inet_pton(AF_INET, "127.0.0.1", &server.sin_addr);
+
+    connect(fd, (struct sockaddr *)&server, sizeof(server));
+    send(fd, "hello server", 12, 0);
+
+    char buf[128] = {0};
+    ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
+    if (n > 0)
+        printf("recv: %s\n", buf);
+
+    close(fd);
+    return 0;
+}
+```
+
+这里最核心的对应关系是：
+
+```text
+Server: socket → bind → listen → accept → recv/send → close
+Client: socket → connect        → send/recv → close
+```
+
+`accept()` 返回的是一个新的已连接 Socket，原来的 `listen_fd` 仍然负责继续监听后续客户端。
+
+## 10. 网络字节序
+
+网络协议中多字节整数使用网络字节序，也就是大端序。因此 Socket 编程中经常看到：
+
+```c
+htons(8080);      // host short → network short
+htonl(value);     // host long  → network long
+ntohs(value);     // network short → host short
+ntohl(value);     // network long  → host long
+```
+
+写端口号时不要直接把整数赋值后就认为一定可移植，应该使用 `htons()` 完成主机字节序到网络字节序的转换。
+
+## 11. 从抓包角度理解一次 TCP 通信
+
+真正学习 TCP/IP 时，建议把代码和抓包结合起来。一次最简单的 TCP 请求通常可以观察到：
+
+```text
+SYN
+SYN, ACK
+ACK
+PSH, ACK + application data
+ACK
+...
+FIN, ACK
+ACK
+FIN, ACK
+ACK
+```
+
+在 Wireshark 中可以重点观察这些字段：
+
+| 字段 | 作用 |
+| :--- | :--- |
+| Source / Destination Port | 源端口与目标端口 |
+| Sequence Number | 当前数据的序列号 |
+| Acknowledgment Number | 下一步期望收到的序列号 |
+| Flags | SYN、ACK、FIN、RST、PSH 等标志 |
+| Window | 接收窗口大小 |
+| Length | 当前 TCP Payload 长度 |
+
+把抓包中的 `seq`、`ack` 与代码中的 `send()`、`recv()` 对照起来，比单纯背三次握手更容易真正理解 TCP 的状态变化。
+
+## 12. 从嵌入式开发角度看 TCP/IP
+
+在 STM32、ESP32 或嵌入式 Linux 中，应用通常不会自己实现完整 TCP/IP 协议栈，而是使用现成协议栈，例如系统内核网络栈或轻量级 TCP/IP 栈。应用层主要处理三件事：
+
+1. 选择 TCP 还是 UDP；
+2. 设计自己的应用层数据格式；
+3. 正确处理断线、超时、重连、粘包、缓冲区和并发连接。
+
+例如设备通过 TCP 向服务器上传传感器数据时，可以把应用层协议设计成：
+
+```text
+Header | Device ID | Length | Payload | CRC
+```
+
+TCP 保证字节流可靠到达，但“这一帧从哪里开始、到哪里结束、CRC 是否正确、收到哪类命令”仍然属于应用层协议自己的职责。
+
+因此，理解 TCP/IP 最重要的不是背每个首部字段，而是建立完整的数据流思维：
+
+```text
+应用数据
+→ TCP/UDP 端口与传输控制
+→ IP 寻址与路由
+→ Ethernet/Wi-Fi 链路传输
+→ 对端逐层解封装
+→ 目标进程处理数据
+```
