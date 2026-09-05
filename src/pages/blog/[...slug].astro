@@ -3,6 +3,7 @@ import { type CollectionEntry, getCollection, render } from "astro:content";
 import License from "@components/widgets/License.astro";
 import PostFilter from "@components/widgets/PostFilter.astro";
 import PostInfo from "@components/widgets/PostInfo.astro";
+import PostNavigation from "@components/widgets/PostNavigation.astro";
 import StackMemoryDemo from "@components/StackMemoryDemo.astro";
 import HeapMemoryDemo from "@components/HeapMemoryDemo.astro";
 import StackHeapPointerDemo from "@components/StackHeapPointerDemo.astro";
@@ -43,6 +44,21 @@ const showHeapDemo = blog.data.demo === "heap-memory" || blog.data.demo === "sta
 const showPointerDemo = blog.data.demo === "stack-and-heap";
 const showHeapFitAutoDemo = blog.data.demo === "stack-and-heap";
 const showPointerFunctionDemo = blog.data.demo === "pointer-function";
+
+const allPosts = await getCollection("blog");
+const visiblePosts = (import.meta.env.PROD
+  ? allPosts.filter((post: CollectionEntry<"blog">) => !post.data.draft)
+  : allPosts
+).sort(
+  (a: CollectionEntry<"blog">, b: CollectionEntry<"blog">) =>
+    new Date(a.data.pubDate).getTime() - new Date(b.data.pubDate).getTime(),
+);
+const currentIndex = visiblePosts.findIndex((post) => post.id === blog.id);
+const previousPost = currentIndex > 0 ? visiblePosts[currentIndex - 1] : null;
+const nextPost =
+  currentIndex >= 0 && currentIndex < visiblePosts.length - 1
+    ? visiblePosts[currentIndex + 1]
+    : null;
 ---
 
 <BaseLayout
@@ -131,6 +147,10 @@ const showPointerFunctionDemo = blog.data.demo === "pointer-function";
           tags={blog.data.tags}
           word={remarkPluginFrontmatter.totalCharCount}
           time={remarkPluginFrontmatter.readingTime}
+        />
+        <PostNavigation
+          previous={previousPost ? { id: previousPost.id, title: previousPost.data.title } : null}
+          next={nextPost ? { id: nextPost.id, title: nextPost.data.title } : null}
         />
       </div>
     </div>
