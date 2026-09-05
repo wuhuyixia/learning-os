@@ -1,33 +1,221 @@
 ---
-import { t } from "@config";
 import type { PaginationProps } from "@interfaces/data";
-import PaginationArrow from "./PaginationArrow.astro";
-import PaginationDropdown from "./PaginationDropdown.astro";
-import PaginationNumber from "./PaginationNumber.astro";
+import { Icon } from "astro-icon/components";
 
-const { page, totalPages, pageLinks, baseUrl } = Astro.props as PaginationProps;
+const { page, totalPages, baseUrl } = Astro.props as PaginationProps;
+const current = page.current;
+
+type PageItem = number | "ellipsis";
+
+function buildPageItems(total: number, active: number): PageItem[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, index) => index + 1);
+  }
+
+  if (active <= 4) {
+    return [1, 2, 3, 4, 5, "ellipsis", total];
+  }
+
+  if (active >= total - 3) {
+    return [1, "ellipsis", total - 4, total - 3, total - 2, total - 1, total];
+  }
+
+  return [1, "ellipsis", active - 1, active, active + 1, "ellipsis", total];
+}
+
+const items = buildPageItems(totalPages, current);
+const pageHref = (number: number) =>
+  number === 1 ? baseUrl : `${baseUrl}/${number}`;
 ---
 
-<div class="flex justify-between items-center w-full gap-2 order-4" transition:name="pagination">
-  <PaginationArrow direction="prev" url={page.url.prev} label={t("label.prevPage")} />
-  <div class="join">
-    {
-      totalPages > 3 ? (
-        <>
-          {pageLinks.active.map((link: string | number) =>
-            link === "..." ? (
-              <PaginationDropdown hiddenPages={pageLinks.hidden} current={page.current} baseUrl={baseUrl} />
-            ) : (
-              <PaginationNumber number={link} current={page.current} baseUrl={baseUrl} />
-            ),
-          )}
-        </>
-      ) : (
-        pageLinks.active.map((link: string | number) => (
-          <PaginationNumber number={link} current={page.current} baseUrl={baseUrl} isOnly={totalPages === 1} />
-        ))
-      )
+{totalPages > 1 && (
+  <nav class="blog-pagination order-4" aria-label="博客分页" transition:name="pagination">
+    {page.url.prev ? (
+      <a class="blog-pagination__arrow" href={page.url.prev} aria-label="上一页" rel="prev">
+        <Icon name="ri:arrow-left-s-line" class="h-5 w-5" />
+        <span class="blog-pagination__arrow-text">上一页</span>
+      </a>
+    ) : (
+      <span class="blog-pagination__arrow blog-pagination__arrow--disabled" aria-disabled="true">
+        <Icon name="ri:arrow-left-s-line" class="h-5 w-5" />
+        <span class="blog-pagination__arrow-text">上一页</span>
+      </span>
+    )}
+
+    <div class="blog-pagination__pages">
+      {items.map((item, index) =>
+        item === "ellipsis" ? (
+          <span class="blog-pagination__ellipsis" aria-hidden="true" data-index={index}>•••</span>
+        ) : (
+          <a
+            href={pageHref(item)}
+            class:list={[
+              "blog-pagination__number",
+              item === current && "blog-pagination__number--active",
+            ]}
+            aria-label={`第 ${item} 页`}
+            aria-current={item === current ? "page" : undefined}
+          >
+            {item}
+          </a>
+        ),
+      )}
+    </div>
+
+    {page.url.next ? (
+      <a class="blog-pagination__arrow" href={page.url.next} aria-label="下一页" rel="next">
+        <span class="blog-pagination__arrow-text">下一页</span>
+        <Icon name="ri:arrow-right-s-line" class="h-5 w-5" />
+      </a>
+    ) : (
+      <span class="blog-pagination__arrow blog-pagination__arrow--disabled" aria-disabled="true">
+        <span class="blog-pagination__arrow-text">下一页</span>
+        <Icon name="ri:arrow-right-s-line" class="h-5 w-5" />
+      </span>
+    )}
+  </nav>
+)}
+
+<style>
+  .blog-pagination {
+    display: grid;
+    grid-template-columns: minmax(2.5rem, 1fr) auto minmax(2.5rem, 1fr);
+    align-items: center;
+    gap: .8rem;
+    width: 100%;
+    margin-top: 1.25rem;
+  }
+
+  .blog-pagination__pages {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    padding: .3rem;
+    border: 1px solid color-mix(in srgb, currentColor 9%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--fallback-b1, oklch(var(--b1))) 92%, transparent);
+    box-shadow: 0 7px 22px rgb(15 23 42 / .055);
+  }
+
+  .blog-pagination__number,
+  .blog-pagination__ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    font-size: .86rem;
+    line-height: 1;
+  }
+
+  .blog-pagination__number {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    opacity: .72;
+    transition: background-color .16s ease, color .16s ease, opacity .16s ease, transform .16s ease;
+  }
+
+  .blog-pagination__number:hover {
+    background: color-mix(in srgb, currentColor 8%, transparent);
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+
+  .blog-pagination__number--active,
+  .blog-pagination__number--active:hover {
+    background: oklch(var(--p));
+    color: oklch(var(--pc));
+    opacity: 1;
+    box-shadow: 0 4px 12px color-mix(in srgb, oklch(var(--p)) 28%, transparent);
+    transform: none;
+  }
+
+  .blog-pagination__ellipsis {
+    width: 1.8rem;
+    font-size: .7rem;
+    letter-spacing: .05em;
+    opacity: .38;
+  }
+
+  .blog-pagination__arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    width: fit-content;
+    min-height: 2.4rem;
+    padding: .45rem .65rem;
+    border-radius: .75rem;
+    color: inherit;
+    font-size: .82rem;
+    font-weight: 600;
+    text-decoration: none;
+    opacity: .66;
+    transition: background-color .16s ease, opacity .16s ease, transform .16s ease;
+  }
+
+  .blog-pagination__arrow:last-child {
+    justify-self: end;
+  }
+
+  .blog-pagination__arrow:hover {
+    background: color-mix(in srgb, currentColor 7%, transparent);
+    opacity: 1;
+  }
+
+  .blog-pagination__arrow:first-child:hover {
+    transform: translateX(-2px);
+  }
+
+  .blog-pagination__arrow:last-child:hover {
+    transform: translateX(2px);
+  }
+
+  .blog-pagination__arrow--disabled {
+    pointer-events: none;
+    opacity: .24;
+  }
+
+  @media (max-width: 640px) {
+    .blog-pagination {
+      grid-template-columns: 2.35rem minmax(0, auto) 2.35rem;
+      gap: .35rem;
     }
-  </div>
-  <PaginationArrow direction="next" url={page.url.next} label={t("label.nextPage")} />
-</div>
+
+    .blog-pagination__arrow {
+      width: 2.35rem;
+      height: 2.35rem;
+      min-height: 0;
+      justify-content: center;
+      padding: 0;
+      border-radius: 999px;
+    }
+
+    .blog-pagination__arrow:last-child {
+      justify-self: stretch;
+    }
+
+    .blog-pagination__arrow-text {
+      display: none;
+    }
+
+    .blog-pagination__pages {
+      gap: .12rem;
+      padding: .22rem;
+    }
+
+    .blog-pagination__number,
+    .blog-pagination__ellipsis {
+      width: 2rem;
+      height: 2rem;
+      font-size: .78rem;
+    }
+
+    .blog-pagination__ellipsis {
+      width: 1.25rem;
+      font-size: .62rem;
+    }
+  }
+</style>
