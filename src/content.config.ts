@@ -2,6 +2,19 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
+const CATEGORY_ALIASES: Record<string, string> = {
+  "通信协议": "Communication Protocol",
+  "Embedded Linux": "Linux",
+};
+
+function normalizeCategories(items: string[]): string[] {
+  return [
+    ...new Set(
+      items.map((category) => CATEGORY_ALIASES[category] ?? category),
+    ),
+  ];
+}
+
 const blog = defineCollection({
   loader: glob({
     pattern: "**/*.{md,mdx}",
@@ -19,9 +32,7 @@ const blog = defineCollection({
     demo: z.enum(["stack-memory", "heap-memory", "stack-and-heap", "pointer-function"]).optional(),
     categories: z
       .array(z.string())
-      .refine((items: string[]) => new Set(items).size === items.length, {
-        message: "categories must be unique",
-      })
+      .transform(normalizeCategories)
       .optional(),
     tags: z
       .array(z.string())
