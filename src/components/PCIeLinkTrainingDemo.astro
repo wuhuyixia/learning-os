@@ -1,0 +1,149 @@
+<section class="pcie-training not-prose" data-pcie-training>
+  <div class="pcie-training__head">
+    <div>
+      <h3>PCIe Link Training 动态演示</h3>
+      <p>按步骤观察链路从 Detect 到 L0 的训练过程，并通过 Recovery 模拟速率重训练。这里展示的是便于理解的主路径，而不是完整 LTSSM 状态全集。</p>
+    </div>
+    <button type="button" data-reset>重置</button>
+  </div>
+
+  <div class="pcie-training__panel">
+    <div class="pcie-training__device">
+      <strong>Root Port</strong>
+      <span data-root-state>Detect</span>
+    </div>
+
+    <div class="pcie-training__link">
+      <div class="pcie-training__lanes" data-lanes>
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <div class="pcie-training__packet" data-exchange>检测 Receiver</div>
+      <div class="pcie-training__meta">
+        <span data-speed>速率：未协商</span>
+        <span data-width>宽度：未协商</span>
+      </div>
+    </div>
+
+    <div class="pcie-training__device">
+      <strong>Endpoint</strong>
+      <span data-endpoint-state>Detect</span>
+    </div>
+  </div>
+
+  <div class="pcie-training__progress" aria-hidden="true">
+    <span data-progress></span>
+  </div>
+
+  <div class="pcie-training__controls">
+    <button type="button" data-prev disabled>上一步</button>
+    <button type="button" data-next>下一步</button>
+  </div>
+
+  <div class="pcie-training__detail">
+    <span data-step>0 / 5</span>
+    <p data-description>双方检测链路另一端是否存在接收器。检测到对端后，才能进入后续训练。</p>
+  </div>
+</section>
+
+<style is:global>
+  .pcie-training { margin:1.2rem 0 2rem; }
+  .pcie-training__head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
+  .pcie-training__head h3 { margin:0; font-size:1rem; }
+  .pcie-training__head p { margin:.25rem 0 0; max-width:52rem; font-size:.76rem; line-height:1.55; opacity:.72; }
+  .pcie-training button { border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.65rem; background:transparent; color:inherit; padding:.5rem .8rem; cursor:pointer; }
+  .pcie-training button:disabled { opacity:.35; cursor:not-allowed; }
+  .pcie-training__panel { display:grid; grid-template-columns:1fr 1.55fr 1fr; gap:1rem; align-items:center; margin-top:1rem; padding:1.05rem; border:1px solid color-mix(in srgb,currentColor 12%,transparent); border-radius:1rem; }
+  .pcie-training__device { display:flex; flex-direction:column; align-items:center; gap:.35rem; padding:1rem; border-radius:.85rem; background:color-mix(in srgb,currentColor 4%,transparent); text-align:center; }
+  .pcie-training__device span { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.8rem; font-weight:700; }
+  .pcie-training__link { min-width:0; }
+  .pcie-training__lanes { display:grid; gap:.3rem; }
+  .pcie-training__lanes span { display:block; height:4px; border-radius:999px; background:color-mix(in srgb,currentColor 18%,transparent); transition:transform .25s ease, background .25s ease; }
+  .pcie-training__lanes.is-active span { background:color-mix(in srgb,currentColor 58%,transparent); animation:pcie-lane-pulse 1.25s ease-in-out infinite alternate; }
+  .pcie-training__packet { margin-top:.65rem; min-height:2.55rem; display:grid; place-items:center; padding:.5rem .7rem; border-radius:.7rem; background:color-mix(in srgb,currentColor 6%,transparent); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.75rem; font-weight:700; text-align:center; }
+  .pcie-training__meta { display:flex; justify-content:space-between; gap:.7rem; margin-top:.55rem; font-size:.7rem; opacity:.7; }
+  .pcie-training__progress { height:6px; margin-top:.8rem; overflow:hidden; border-radius:999px; background:color-mix(in srgb,currentColor 8%,transparent); }
+  .pcie-training__progress span { display:block; height:100%; width:0; border-radius:inherit; background:currentColor; opacity:.55; transition:width .25s ease; }
+  .pcie-training__controls { display:flex; justify-content:center; gap:.7rem; margin-top:.85rem; }
+  .pcie-training__detail { margin-top:.85rem; padding:.85rem 1rem; border-left:3px solid color-mix(in srgb,currentColor 35%,transparent); background:color-mix(in srgb,currentColor 3%,transparent); }
+  .pcie-training__detail span { font-size:.72rem; opacity:.55; }
+  .pcie-training__detail p { margin:.25rem 0 0; font-size:.82rem; line-height:1.6; }
+  @keyframes pcie-lane-pulse { from { transform:scaleX(.96); } to { transform:scaleX(1); } }
+  @media (max-width:720px) {
+    .pcie-training__panel { grid-template-columns:1fr; }
+    .pcie-training__link { order:2; }
+    .pcie-training__device:last-child { order:3; }
+    .pcie-training__meta { flex-direction:column; align-items:center; gap:.2rem; }
+  }
+</style>
+
+<script is:inline>
+  function initPcieTraining(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const rootState = root.querySelector('[data-root-state]');
+    const endpointState = root.querySelector('[data-endpoint-state]');
+    const exchange = root.querySelector('[data-exchange]');
+    const speed = root.querySelector('[data-speed]');
+    const width = root.querySelector('[data-width]');
+    const lanes = root.querySelector('[data-lanes]');
+    const progress = root.querySelector('[data-progress]');
+    const description = root.querySelector('[data-description]');
+    const stepLabel = root.querySelector('[data-step]');
+    const prev = root.querySelector('[data-prev]');
+    const next = root.querySelector('[data-next]');
+    const reset = root.querySelector('[data-reset]');
+
+    const steps = [
+      {
+        state:'Detect', exchange:'检测 Receiver', speed:'速率：未协商', width:'宽度：未协商', active:false,
+        desc:'双方检测链路另一端是否存在接收器。检测到对端后，才能进入后续训练。'
+      },
+      {
+        state:'Polling', exchange:'TS1 / TS2 Ordered Sets', speed:'速率：初始训练', width:'宽度：候选 Lane', active:true,
+        desc:'链路交换训练序列，建立位锁定、符号/块同步并确认双方能够继续训练。'
+      },
+      {
+        state:'Configuration', exchange:'Lane Number / Link Number', speed:'速率：协商中', width:'宽度：协商中', active:true,
+        desc:'双方确定 Link 和 Lane 的组织关系，完成 Lane 编号、宽度等配置。最终宽度可能低于物理槽位支持的最大宽度。'
+      },
+      {
+        state:'L0', exchange:'TLP / DLLP 正常传输', speed:'速率：已协商', width:'宽度：已协商', active:true,
+        desc:'链路进入 L0，Transaction Layer Packet 和链路层控制信息可以正常传输。'
+      },
+      {
+        state:'Recovery', exchange:'重新训练 / Equalization', speed:'速率：重新协商', width:'宽度：保持或调整', active:true,
+        desc:'链路需要改变速率、重新均衡或恢复同步时会进入 Recovery。完成训练后可再次回到 L0。'
+      },
+      {
+        state:'L0', exchange:'恢复正常传输', speed:'速率：新协商值', width:'宽度：有效 Link Width', active:true,
+        desc:'Recovery 完成，链路重新进入 L0。实际 LTSSM 还包含更多低功耗、禁用、回环等状态。'
+      }
+    ];
+
+    let index = 0;
+
+    const render = () => {
+      const step = steps[index];
+      rootState.textContent = step.state;
+      endpointState.textContent = step.state;
+      exchange.textContent = step.exchange;
+      speed.textContent = step.speed;
+      width.textContent = step.width;
+      description.textContent = step.desc;
+      stepLabel.textContent = `${index} / ${steps.length - 1}`;
+      progress.style.width = `${(index / (steps.length - 1)) * 100}%`;
+      lanes.classList.toggle('is-active', step.active);
+      prev.disabled = index === 0;
+      next.disabled = index === steps.length - 1;
+    };
+
+    prev.addEventListener('click', () => { if (index > 0) { index--; render(); } });
+    next.addEventListener('click', () => { if (index < steps.length - 1) { index++; render(); } });
+    reset.addEventListener('click', () => { index = 0; render(); });
+    render();
+  }
+
+  document.querySelectorAll('[data-pcie-training]').forEach(initPcieTraining);
+  document.addEventListener('astro:page-load', () => document.querySelectorAll('[data-pcie-training]').forEach(initPcieTraining));
+</script>

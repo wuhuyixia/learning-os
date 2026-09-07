@@ -1,0 +1,580 @@
+---
+title: PCIe 协议详解
+description: 从 PCIe 拓扑、Lane、三层协议栈、TLP/DLLP、LTSSM 链路训练到配置空间、BAR、MSI/MSI-X 与 Linux 驱动，结合手绘图、流程图和动态演示理解 PCI Express。
+pubDate: 2026-06-08
+draft: false
+categories:
+  - Communication Protocol
+tags:
+  - PCIe
+  - 高速总线
+---
+
+import MermaidDiagram from "@components/MermaidDiagram.astro";
+import PCIeTopologyRoughDemo from "@components/PCIeTopologyRoughDemo.astro";
+import PCIeLinkTrainingDemo from "@components/PCIeLinkTrainingDemo.astro";
+
+# PCIe 协议详解
+
+PCIe（PCI Express）是一种高性能、通用的**高速串行 I/O 互连协议**。PC 中的显卡、NVMe SSD、网卡、采集卡，以及很多嵌入式 SoC 与 FPGA 之间的高速通信，都可以通过 PCIe 完成。
+
+它名字里虽然带有 PCI，但 PCIe 并不是传统 PCI 那种“多设备共享一组并行总线”的结构。PCIe 更接近一个由多条**点对点全双工 Link** 组成的交换网络。
+
+如果先记一句话，可以记成：
+
+> **PCIe 用 Lane 解决“怎么高速传”，用三层协议解决“数据怎么封装和保证可靠”，用配置空间解决“系统怎么发现和管理设备”。**
+
+## 1. PCIe 的整体结构
+
+一个典型 PCIe 系统里经常出现下面几个角色：
+
+| 角色 | 作用 |
+| :--- | :--- |
+| Root Complex（RC） | 连接 CPU/内存系统与 PCIe Fabric，通常负责枚举和资源分配 |
+| Root Port | Root Complex 面向下游设备的端口 |
+| Switch | 把一个上游端口扩展成多个下游端口，转发 PCIe 报文 |
+| Endpoint（EP） | 终端设备，例如 NVMe、GPU、网卡、FPGA |
+| Link | 两个 PCIe Port 之间的点对点连接 |
+| Lane | Link 的基本物理传输单元 |
+
+<PCIeTopologyRoughDemo />
+
+这张手绘图体现了 PCIe 和传统共享总线最重要的区别：**每一段 Link 都只连接两个 Port**。如果系统里有很多 Endpoint，通常通过多个 Root Port 或 PCIe Switch 组织成树状拓扑。
+
+## 2. Lane、Link 与 x1/x4/x8/x16
+
+一条 PCIe Lane 包含两个方向的差分信号：
+
+```text
+TX+ / TX-   → 发送差分对
+RX+ / RX-   → 接收差分对
+```
+
+发送和接收使用不同的差分对，所以 PCIe 天生支持**全双工**：两个方向可以同时传输。
+
+多条 Lane 可以组合成更宽的 Link：
+
+```text
+x1   = 1 Lane
+x4   = 4 Lanes
+x8   = 8 Lanes
+x16  = 16 Lanes
+```
+
+这里的 `x16` 表示链路宽度，不表示 PCIe 版本。比如“PCIe 4.0 x4”和“PCIe 4.0 x16”协议代际相同，但后者拥有更多 Lane，因此理论带宽更高。
+
+设备上电后，最终 Link Width 和 Link Speed 需要经过链路训练协商。一个物理上是 x16 的插槽，不代表设备一定会以 x16 工作；布线、设备能力或链路质量都可能让最终协商结果变成更低的宽度或速率。
+
+## 3. PCIe 代际、GT/s 与带宽
+
+PCIe 常用 `GT/s` 描述每条 Lane 的传输速率。`GT/s` 是每秒传输次数（Giga Transfers per second），**不能简单等同于 GB/s**，因为编码、Flit、协议头等都会占用带宽。
+
+| 代际 | 每 Lane 速率 | 主要编码/信号方式 | x16 双向理论总带宽（约） |
+| :--- | :--- | :--- | :--- |
+| PCIe 1.x | 2.5 GT/s | 8b/10b，NRZ | 8 GB/s |
+| PCIe 2.x | 5.0 GT/s | 8b/10b，NRZ | 16 GB/s |
+| PCIe 3.x | 8.0 GT/s | 128b/130b，NRZ | 32 GB/s |
+| PCIe 4.0 | 16.0 GT/s | 128b/130b，NRZ | 64 GB/s |
+| PCIe 5.0 | 32.0 GT/s | 128b/130b，NRZ | 128 GB/s |
+| PCIe 6.0 | 64.0 GT/s | PAM4 + Flit + FEC | 256 GB/s |
+| PCIe 7.0 | 128.0 GT/s | PAM4 + Flit | 512 GB/s |
+
+表里的 x16 带宽是两个方向相加后的理论量级，实际应用层有效吞吐还会受到 TLP 头、流控、链路效率、设备实现等因素影响。
+
+PCIe 6.0 开始引入 PAM4、低延迟 FEC 和 Flit Mode；PCIe 7.0 继续使用 PAM4 和 Flit，把速率提升到 128 GT/s。PCI-SIG 已在 2025 年发布 PCIe 7.0 正式规范。
+
+## 4. PCIe 三层协议栈
+
+PCIe 协议可以从上到下分成三层：
+
+1. **Transaction Layer（事务层）**
+2. **Data Link Layer（数据链路层）**
+3. **Physical Layer（物理层）**
+
+<MermaidDiagram
+  title="PCIe 三层协议栈"
+  chart={`flowchart TD
+    A[软件 / Device Core] --> B[Transaction Layer<br/>生成和解析 TLP]
+    B --> C[Data Link Layer<br/>可靠链路与 DLLP]
+    C --> D[Physical Layer<br/>编码、Lane、训练、串行传输]
+    D --> E[PCIe Link]
+    E --> F[对端 Physical Layer]
+    F --> G[对端 Data Link Layer]
+    G --> H[对端 Transaction Layer]
+    H --> I[对端 Device Core]`}
+/>
+
+可以把它们分别理解为：
+
+- **事务层**：我要读内存、写内存、访问配置空间还是发送消息？
+- **数据链路层**：这份报文在当前这一跳有没有正确送达？
+- **物理层**：这些 bit 到底怎样通过差分线高速传过去？
+
+### 分层的好处
+
+假设 CPU 通过 Root Complex 向 NVMe 控制器写一个寄存器，软件只需要产生一次 MMIO 写操作。PCIe 控制器会把这个访问转换成 TLP，再经过链路层和物理层发送出去。上层不需要关心 SerDes 如何工作，下层也不需要理解这个地址对应 NVMe 的哪个寄存器。
+
+## 5. TLP：PCIe 真正承载事务的数据包
+
+Transaction Layer 的核心报文叫 **TLP（Transaction Layer Packet）**。
+
+一个传统模式下的 TLP 可以概念化为：
+
+```text
++-------------+----------------+----------------+
+| TLP Header  | Data(optional) | ECRC(optional) |
++-------------+----------------+----------------+
+```
+
+常见事务包括：
+
+| TLP 类型 | 用途 |
+| :--- | :--- |
+| Memory Read | 从目标地址读取数据 |
+| Memory Write | 向目标地址写数据 |
+| Configuration Read/Write | 访问 PCIe 配置空间 |
+| Completion / Completion with Data | 对非 Posted 请求进行完成响应 |
+| Message | 中断、电源管理、错误等消息类事务 |
+
+### Posted、Non-Posted 和 Completion
+
+PCIe 事务的一个关键分类是：
+
+- **Posted Request**：发送后不要求对端返回 Completion，例如普通 Memory Write；
+- **Non-Posted Request**：必须等待 Completion，例如 Memory Read；
+- **Completion**：对 Non-Posted Request 的响应。
+
+因此，Memory Write 和 Memory Read 的交互并不一样。
+
+<MermaidDiagram
+  title="PCIe Memory Write 与 Memory Read"
+  chart={`sequenceDiagram
+    participant RC as Root Complex
+    participant EP as Endpoint
+    Note over RC,EP: Memory Write：Posted
+    RC->>EP: Memory Write TLP + Data
+    Note over RC: 不等待 Completion
+    Note over RC,EP: Memory Read：Non-Posted
+    RC->>EP: Memory Read Request TLP
+    EP-->>RC: Completion with Data TLP`}
+/>
+
+这也是理解 PCIe 性能时很重要的一点：写操作通常可以更流水化地向下发送，而读操作涉及请求和返回路径，还会受到往返延迟影响。
+
+## 6. Data Link Layer：一跳范围内的可靠传输
+
+在 PCIe 1.0～5.0 的传统非 Flit 模式下，Data Link Layer 会围绕 TLP 增加链路可靠性机制，例如：
+
+- TLP Sequence Number；
+- LCRC（Link CRC）；
+- ACK / NAK；
+- Replay Buffer；
+- DLLP（Data Link Layer Packet）。
+
+可以把流程简化成：
+
+```text
+发送 TLP
+   ↓
+保存副本到 Replay Buffer
+   ↓
+对端检查 LCRC
+   ↓
+正确 → ACK
+错误 → NAK / 触发重放
+   ↓
+发送端必要时重新发送
+```
+
+这种可靠性是**当前 Link 上的一跳可靠性**，不要和 TCP 那种跨网络的端到端可靠传输混为一谈。
+
+DLLP 除了 ACK/NAK，还承担 Flow Control、电源管理等链路层控制功能。
+
+> PCIe 6.0/7.0 的 Flit Mode 对传统 TLP/DLLP 在链路上的组织方式做了较大调整，并结合 FEC、CRC 等机制适配 PAM4 更高的原始误码率。因此学习时最好先理解传统三层和 TLP/DLLP，再单独理解 Flit Mode。
+
+## 7. Flow Control：为什么不会无限把包塞给对端
+
+PCIe 使用基于 Credit 的流量控制。接收端告诉发送端自己还能接收多少不同类型的数据，发送端只有在 Credit 足够时才能继续发送对应 TLP。
+
+概念上可以理解为：
+
+```text
+Endpoint：我还有 20 个 Header Credit、64 个 Data Credit
+Root Port：检查 Credit 足够 → 发送 TLP → 扣减 Credit
+Endpoint：释放缓存 → 更新 Credit
+```
+
+它的目的不是控制整个互联网的拥塞，而是保护 PCIe 接收缓冲区，避免发送方把对端缓存打爆。
+
+## 8. Physical Layer 与 LTSSM
+
+Physical Layer 负责真正的数据传输，包括：
+
+- SerDes 串并转换；
+- Lane 差分信号；
+- 编码/解码；
+- Clock Recovery；
+- Lane polarity / lane reversal 等链路能力；
+- Equalization；
+- Link Training；
+- LTSSM 状态机。
+
+PCIe 设备并不是一上电就直接进入正常数据传输，而是先经过 **LTSSM（Link Training and Status State Machine）** 完成训练。
+
+学习时可以先抓住一条主路径：
+
+```text
+Detect → Polling → Configuration → L0
+                                  ↓
+                               正常通信
+```
+
+当链路需要重新训练或调整速率时，还可能进入 `Recovery`。
+
+<PCIeLinkTrainingDemo />
+
+完整 LTSSM 还有 L0s、L1、L2、Disabled、Loopback、Hot Reset 等更多状态。动态演示只保留了最有助于理解“链路是怎样起来的”这条主线。
+
+## 9. PCIe 枚举：操作系统怎样发现设备
+
+链路进入可用状态后，系统还需要发现设备、读取能力并分配地址资源，这个过程通常称为 **Enumeration（枚举）**。
+
+PCIe Function 有一个配置空间。传统 PCI 配置头位于前 256 Byte 范围内，而 PCIe 把配置空间扩展到每 Function 最多 4 KB，用于放置更多 Extended Capability。
+
+配置空间中常见字段包括：
+
+- Vendor ID；
+- Device ID；
+- Class Code；
+- Command / Status；
+- BAR；
+- Capability Pointer；
+- PCIe Capability；
+- MSI / MSI-X Capability；
+- AER 等 Extended Capability。
+
+<MermaidDiagram
+  title="PCIe 设备枚举简化流程"
+  chart={`flowchart TD
+    A[链路训练完成 L0] --> B[Root Complex 扫描 Bus / Device / Function]
+    B --> C{Vendor ID 有效?}
+    C -->|否| D[该 Function 不存在]
+    C -->|是| E[读取 Device ID / Class Code / Header]
+    E --> F[探测 BAR 所需空间]
+    F --> G[分配 MMIO / I/O 地址]
+    G --> H[配置 Bus Number 与 Command]
+    H --> I[识别 Capability]
+    I --> J[匹配并加载驱动]`}
+/>
+
+### BDF：PCIe 设备的地址
+
+Linux 中常看到这样的设备地址：
+
+```text
+0000:03:00.0
+```
+
+它可以拆成：
+
+```text
+Domain : Bus : Device . Function
+0000     03    00       0
+```
+
+通常简称 **BDF**。
+
+## 10. BAR：把设备寄存器映射到 CPU 地址空间
+
+BAR（Base Address Register）是 PCI/PCIe 配置空间里的重要结构，用于告诉系统：这个设备需要多大的地址窗口，以及系统最终把它映射到了哪里。
+
+例如某个 FPGA Endpoint 暴露了一组控制寄存器，系统可能最终给它分配：
+
+```text
+BAR0 → 0x8000_0000 ~ 0x8000_FFFF
+```
+
+CPU 访问这个地址范围时，Root Complex 会把访问转换成 PCIe Memory Request TLP，发送给对应 Endpoint。
+
+从软件角度看像普通 MMIO：
+
+```c
+/* 仅用于说明 MMIO 访问方式 */
+uint32_t value = readl(bar0 + REG_STATUS);
+writel(0x1, bar0 + REG_CONTROL);
+```
+
+但底层实际已经经过：CPU 地址访问 → Root Complex → TLP → PCIe Link → Endpoint。
+
+## 11. Linux 下查看 PCIe 设备
+
+Linux 最常用的是 `lspci`：
+
+```bash
+# 查看所有 PCI / PCIe 设备
+lspci
+
+# 显示 Vendor ID / Device ID
+lspci -nn
+
+# 查看拓扑树
+lspci -t
+
+# 查看某个设备的详细 PCIe Capability、Link Speed、Link Width 等
+lspci -s 03:00.0 -vv
+```
+
+常见输出里可以重点看：
+
+```text
+LnkCap: Speed 16GT/s, Width x4
+LnkSta: Speed 8GT/s,  Width x4
+```
+
+`LnkCap` 表示设备能力上限，`LnkSta` 表示当前实际协商状态。如果一个设备标称 PCIe 4.0，但 `LnkSta` 只跑到 8 GT/s，就说明当前实际工作在 PCIe 3.x 速率级别，需要继续排查 Root Port、BIOS、PCB 信号质量或设备配置。
+
+还可以直接观察 sysfs：
+
+```bash
+ls /sys/bus/pci/devices/
+cat /sys/bus/pci/devices/0000:03:00.0/vendor
+cat /sys/bus/pci/devices/0000:03:00.0/device
+cat /sys/bus/pci/devices/0000:03:00.0/resource
+```
+
+## 12. Linux PCIe 驱动的基本框架
+
+PCIe Endpoint 在 Linux 中通常由 PCI Driver 匹配 Vendor ID / Device ID，然后在 `probe()` 中申请资源、映射 BAR、配置 DMA 和中断。
+
+下面只保留最核心的骨架：
+
+```c
+#include <linux/module.h>
+#include <linux/pci.h>
+
+#define MY_VENDOR_ID 0x1234
+#define MY_DEVICE_ID 0x5678
+
+static const struct pci_device_id my_ids[] = {
+    { PCI_DEVICE(MY_VENDOR_ID, MY_DEVICE_ID) },
+    { 0, }
+};
+MODULE_DEVICE_TABLE(pci, my_ids);
+
+static int my_probe(struct pci_dev *pdev,
+                    const struct pci_device_id *id)
+{
+    void __iomem *bar0;
+    int ret;
+
+    ret = pci_enable_device(pdev);
+    if (ret)
+        return ret;
+
+    ret = pci_request_regions(pdev, "my_pcie");
+    if (ret)
+        goto err_disable;
+
+    bar0 = pci_iomap(pdev, 0, 0);
+    if (!bar0) {
+        ret = -ENOMEM;
+        goto err_regions;
+    }
+
+    pci_set_master(pdev);   /* 允许设备发起 DMA */
+
+    /* 后续：DMA、MSI/MSI-X、寄存器初始化等 */
+    return 0;
+
+err_regions:
+    pci_release_regions(pdev);
+err_disable:
+    pci_disable_device(pdev);
+    return ret;
+}
+
+static void my_remove(struct pci_dev *pdev)
+{
+    pci_clear_master(pdev);
+    pci_release_regions(pdev);
+    pci_disable_device(pdev);
+}
+
+static struct pci_driver my_driver = {
+    .name = "my_pcie",
+    .id_table = my_ids,
+    .probe = my_probe,
+    .remove = my_remove,
+};
+
+module_pci_driver(my_driver);
+MODULE_LICENSE("GPL");
+```
+
+真实驱动还要保存 `pci_iomap()` 返回的地址并在退出时 `pci_iounmap()`，同时根据设备能力配置 DMA mask、IRQ、错误处理和电源管理等。
+
+## 13. MSI / MSI-X：PCIe 设备怎么发中断
+
+PCIe 支持传统 INTx，也支持 MSI 和 MSI-X。
+
+| 方式 | 特点 |
+| :--- | :--- |
+| INTx | 传统电平触发中断，兼容性强，但共享和扩展性较差 |
+| MSI | 通过 Memory Write Message 表达中断，可支持多个向量 |
+| MSI-X | 向量数量更多、配置更灵活，现代高性能设备常用 |
+
+MSI/MSI-X 的关键理解是：**中断不再依赖一根独立的 PCIe 中断线，而是通过 PCIe 事务把一个特殊写操作送到系统指定地址。**
+
+网卡、NVMe 等高性能设备通常会使用多个 MSI-X Vector，让不同队列绑定不同中断，从而更好地利用多核 CPU。
+
+## 14. DMA：真正的大数据通常不靠 CPU 一字节一字节搬
+
+PCIe Endpoint 经常需要高速访问系统内存。例如网卡收包、NVMe 读写、FPGA 采集数据，典型路径是：
+
+```text
+设备内部 Buffer
+      ↓
+PCIe DMA Engine
+      ↓
+Root Complex
+      ↓
+System Memory
+```
+
+驱动先准备 DMA Buffer 和 Descriptor，设备随后作为 Bus Master 主动发起 PCIe Memory Read/Write TLP。
+
+这也是 `pci_set_master()` 的作用之一：允许设备进行 Bus Master DMA。
+
+在带 IOMMU 的系统中，设备看到的 DMA 地址还可能经过 IOMMU 转换和权限保护，因此“设备总线地址”和“CPU 物理地址”不能始终简单画等号。
+
+## 15. 一个 TLP 从 CPU 到 Endpoint 经历了什么
+
+把前面的知识串起来，可以得到一条完整路径：
+
+```text
+CPU 执行 MMIO Write
+        ↓
+Root Complex 根据地址判断目标 BAR
+        ↓
+Transaction Layer 生成 Memory Write TLP
+        ↓
+Data Link Layer 提供当前 Link 的可靠传输机制
+        ↓
+Physical Layer 编码并分配到 Lane
+        ↓
+经过 Switch（如果存在）逐跳转发
+        ↓
+Endpoint 收到并解析 TLP
+        ↓
+写入设备内部寄存器 / Buffer
+```
+
+如果换成 Memory Read，则 Endpoint 还要返回 `Completion with Data`，Root Complex 最终把数据交回 CPU。
+
+## 16. PCIe 6.0 / 7.0 为什么要引入 PAM4 和 Flit
+
+PCIe 1.0～5.0 主要使用 NRZ 信号。NRZ 每个符号只有两个电平，可以直观理解为一个符号表达一个 bit。
+
+PAM4 使用四个电平，一个符号可以表达更多信息，从而在有限信道带宽下进一步提升数据率。但代价是电平间距变小，对噪声、抖动和信号完整性更敏感。
+
+因此 PCIe 6.0 同时引入：
+
+- PAM4；
+- 256-Byte Flit Mode；
+- 低延迟 FEC；
+- 更强的 CRC 保护。
+
+PCIe 7.0 继续基于 PAM4 和 Flit，把原始速率进一步提升到 128 GT/s，并保持与之前 PCIe 代际的向后兼容。
+
+## 17. 常见易混点
+
+### PCIe 不是 PCI 的简单“加速版并行总线”
+
+PCI 是共享并行总线，PCIe 是高速串行、点对点、交换式互连。
+
+### GT/s 不等于 GB/s
+
+GT/s 描述符号/传输速率，转换成有效数据带宽时还要考虑编码与协议开销。
+
+### x16 和 PCIe 5.0 是两个维度
+
+`5.0` 表示代际和每 Lane 速率，`x16` 表示 Lane 数量。
+
+### Memory Write 通常没有 Completion
+
+Memory Write 属于 Posted Request；Memory Read 属于 Non-Posted Request，需要返回 Completion with Data。
+
+### L0 才是正常工作状态
+
+设备插上去并不等于链路已经可用。物理层必须经过 LTSSM 训练，正常数据传输时主要工作在 L0。
+
+### BAR 不是“设备里的真正 RAM 地址”
+
+BAR 描述的是设备需要的主机地址窗口。系统枚举后为它分配地址，Root Complex 再把对该地址窗口的访问路由成 PCIe TLP。
+
+## 18. 实际排查 PCIe 问题的思路
+
+遇到“设备识别不到”或“速率不对”时，可以按层排查：
+
+```text
+1. 供电 / REFCLK / PERST# 是否正确
+            ↓
+2. LTSSM 是否能到 L0
+            ↓
+3. Link Speed / Link Width 是否符合预期
+            ↓
+4. 配置空间能否正常读取 Vendor ID / Device ID
+            ↓
+5. BAR 是否正确分配
+            ↓
+6. 驱动是否匹配并 probe 成功
+            ↓
+7. MSI/MSI-X、DMA 是否正常
+            ↓
+8. AER 是否报告链路或协议错误
+```
+
+Linux 中可优先结合：
+
+```bash
+lspci -t
+lspci -nn
+lspci -vv
+lspci -xxxx
+
+dmesg | grep -i -E "pci|pcie|aer"
+```
+
+如果连 `lspci` 都完全看不到设备，应优先排查物理层、时钟、复位和 LTSSM；如果能看到设备但驱动不工作，则重点转向 BAR、IRQ、DMA 和驱动初始化。
+
+## 19. 总结
+
+PCIe 可以按下面这条主线理解：
+
+```text
+拓扑：Root Complex → Switch → Endpoint
+
+物理：Link = 多条 Lane，TX/RX 全双工
+
+协议：Transaction → Data Link → Physical
+
+事务：Memory / Config / Message → TLP
+
+可靠：LCRC / ACK-NAK / Replay / Flow Control
+
+启动：Detect → Polling → Configuration → L0
+
+软件：Enumeration → BDF → BAR → Driver
+
+性能：MSI-X + DMA + 多 Lane + 更高代际
+```
+
+真正把 PCIe 学明白，不需要一开始死记完整规范。先把 **Lane、三层、TLP、LTSSM、配置空间、BAR、DMA** 这几个核心概念串成一条数据路径，再去看 PCIe 6.0/7.0 的 PAM4、Flit、FEC 等新机制，会容易很多。
+
+## 参考资料
+
+- [PCI-SIG：PCI Express Base Specification Overview](https://pcisig.com/specification-overview/pci-express-base)
+- [PCI-SIG：What is the PCI Express architecture?](https://pcisig.com/what-pci-express-pcie-architecture)
+- [PCI-SIG：PCIe 7.0 FAQ](https://pcisig.com/faq?field_category_value%5B%5D=pci_express_7.0)
+- [PCI-SIG：PCIe 6.0 FAQ](https://pcisig.com/faq?field_category_value%5B%5D=pci_express_6.0)
+- [Markdown_02_作图 - shirayner - 博客园](https://www.cnblogs.com/shirui/p/10763443.html)

@@ -1,0 +1,124 @@
+<section class="pcie-rough not-prose" data-pcie-rough>
+  <div class="pcie-rough__head">
+    <div>
+      <h3>PCIe 拓扑与 Lane 手绘图</h3>
+      <p>PCIe 不是所有设备共享一条并行总线，而是由 Root Complex、Switch 和 Endpoint 通过点对点 Link 连接。每条 Lane 都包含独立的发送与接收差分对。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="pcie-rough__paper">
+    <svg viewBox="0 0 1180 760" role="img" aria-label="PCIe Root Complex Switch Endpoint and Lane rough diagram">
+      <g data-rough-layer></g>
+      <g class="pcie-rough__labels">
+        <text x="465" y="70" class="pr-title">CPU / SoC</text>
+        <text x="430" y="145" class="pr-node">Root Complex</text>
+        <text x="488" y="300" class="pr-node">PCIe Switch</text>
+
+        <text x="92" y="500" class="pr-node">NVMe SSD</text>
+        <text x="465" y="500" class="pr-node">GPU</text>
+        <text x="840" y="500" class="pr-node">FPGA / NIC</text>
+        <text x="118" y="533" class="pr-small">Endpoint</text>
+        <text x="487" y="533" class="pr-small">Endpoint</text>
+        <text x="886" y="533" class="pr-small">Endpoint</text>
+
+        <text x="315" y="222" class="pr-link">PCIe Link</text>
+        <text x="268" y="400" class="pr-link">示例 x4</text>
+        <text x="554" y="400" class="pr-link">示例 x16</text>
+        <text x="795" y="400" class="pr-link">示例 x1</text>
+
+        <text x="82" y="650" class="pr-title pr-title--small">1 条 Lane</text>
+        <text x="255" y="625" class="pr-lane">TX+</text>
+        <text x="255" y="655" class="pr-lane">TX−</text>
+        <text x="255" y="695" class="pr-lane">RX+</text>
+        <text x="255" y="725" class="pr-lane">RX−</text>
+        <text x="410" y="644" class="pr-small">发送差分对</text>
+        <text x="410" y="714" class="pr-small">接收差分对</text>
+        <text x="670" y="650" class="pr-note">全双工：发送和接收可以同时进行</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .pcie-rough { margin:1.2rem 0 2rem; }
+  .pcie-rough__head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.7rem; }
+  .pcie-rough__head h3 { margin:0; font-size:1rem; }
+  .pcie-rough__head p { margin:.25rem 0 0; max-width:52rem; font-size:.76rem; line-height:1.55; opacity:.72; }
+  .pcie-rough__head button { flex:none; padding:.44rem .72rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .pcie-rough__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.9rem; background:#fbfaf5; }
+  .pcie-rough__paper svg { display:block; width:100%; min-width:920px; height:auto; }
+  .pcie-rough__labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .pr-title { font-size:28px; font-weight:700; }
+  .pr-title--small { font-size:24px; }
+  .pr-node { font-size:23px; font-weight:700; }
+  .pr-small { font-size:18px; }
+  .pr-link { font-size:20px; font-weight:700; fill:#356b98 !important; }
+  .pr-lane { font-size:19px; font-weight:700; fill:#7c55a2 !important; }
+  .pr-note { font-size:20px; font-weight:700; fill:#3e8954 !important; }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+
+  async function initPcieRough(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+
+    const { default: rough } = await import(roughUrl);
+    let seed = 311;
+
+    const drawArrow = (rc, x1, y1, x2, y2, color = "#555") => {
+      const opts = { stroke:color, strokeWidth:2, roughness:1.45, bowing:1.05, seed };
+      layer.appendChild(rc.line(x1, y1, x2, y2, opts));
+      const a = Math.atan2(y2 - y1, x2 - x1);
+      const s = 13;
+      layer.appendChild(rc.line(x2, y2, x2 - s * Math.cos(a - .55), y2 - s * Math.sin(a - .55), opts));
+      layer.appendChild(rc.line(x2, y2, x2 - s * Math.cos(a + .55), y2 - s * Math.sin(a + .55), opts));
+    };
+
+    const draw = () => {
+      layer.replaceChildren();
+      const rc = rough.svg(svg);
+      const base = { stroke:"#333", strokeWidth:1.8, roughness:1.5, bowing:1.05, seed };
+      const add = (node) => layer.appendChild(node);
+
+      add(rc.rectangle(390, 28, 395, 72, { ...base, fill:"#eef6ff", fillStyle:"hachure", hachureGap:9 }));
+      add(rc.rectangle(390, 108, 395, 72, { ...base, fill:"#eef9ef", fillStyle:"hachure", hachureGap:9 }));
+      add(rc.rectangle(420, 258, 340, 76, { ...base, fill:"#fff6df", fillStyle:"hachure", hachureGap:9 }));
+
+      const endpoints = [
+        [60, 458, 280, 92, "#7c55a2"],
+        [410, 458, 280, 92, "#3d78aa"],
+        [790, 458, 315, 92, "#3e8954"]
+      ];
+      endpoints.forEach(([x,y,w,h,stroke]) => add(rc.rectangle(x,y,w,h,{...base,stroke,fill:"#f8f8f6",fillStyle:"hachure",hachureGap:10})));
+
+      drawArrow(rc, 590, 180, 590, 258, "#356b98");
+      drawArrow(rc, 500, 334, 205, 458, "#356b98");
+      drawArrow(rc, 590, 334, 550, 458, "#356b98");
+      drawArrow(rc, 680, 334, 945, 458, "#356b98");
+
+      add(rc.rectangle(205, 590, 380, 155, { ...base, stroke:"#7c55a2", fill:"#f7ecff", fillStyle:"hachure", hachureGap:11 }));
+      [620,650,690,720].forEach((y, i) => {
+        const color = i < 2 ? "#3d78aa" : "#3e8954";
+        add(rc.line(310, y, 555, y, { ...base, stroke:color, strokeWidth:2.2 }));
+      });
+      drawArrow(rc, 315, 636, 545, 636, "#3d78aa");
+      drawArrow(rc, 545, 706, 315, 706, "#3e8954");
+
+      seed += 1;
+    };
+
+    draw();
+    redraw.addEventListener("click", draw);
+  }
+
+  document.querySelectorAll("[data-pcie-rough]").forEach(initPcieRough);
+  document.addEventListener("astro:page-load", () => document.querySelectorAll("[data-pcie-rough]").forEach(initPcieRough));
+</script>
