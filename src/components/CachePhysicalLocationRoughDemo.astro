@@ -1,0 +1,145 @@
+<section class="cache-physical not-prose" data-cache-physical>
+  <div class="cache-physical__head">
+    <div>
+      <h3>Cache 在硬件中的物理位置</h3>
+      <p>从 CPU 核心向外看：寄存器最近，其次是片上 Cache，最后才是主存 DRAM。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+
+  <div class="cache-physical__paper">
+    <svg viewBox="0 0 1180 720" role="img" aria-label="CPU Cache 与内存物理位置手绘图">
+      <g data-rough-layer></g>
+      <g class="cache-physical__labels">
+        <text x="64" y="58" class="cp-title">CPU / SoC 芯片内部（On-chip）</text>
+        <text x="89" y="126" class="cp-box-title">CPU Core</text>
+        <text x="106" y="190" class="cp-main">Registers</text>
+        <text x="107" y="220" class="cp-note">寄存器：离执行单元最近</text>
+
+        <text x="340" y="126" class="cp-box-title">L1 Cache</text>
+        <text x="347" y="181" class="cp-main">L1 I-Cache</text>
+        <text x="347" y="225" class="cp-main">L1 D-Cache</text>
+        <text x="347" y="262" class="cp-note">通常每个核心私有</text>
+
+        <text x="594" y="126" class="cp-box-title">L2 Cache</text>
+        <text x="601" y="194" class="cp-main">更大 / 更慢</text>
+        <text x="601" y="230" class="cp-note">常为每核心私有或小范围共享</text>
+
+        <text x="840" y="126" class="cp-box-title">L3 Cache</text>
+        <text x="846" y="194" class="cp-main">Last-Level Cache</text>
+        <text x="846" y="230" class="cp-note">多核 CPU 中常共享</text>
+
+        <text x="463" y="360" class="cp-box-title">Memory Controller</text>
+        <text x="460" y="398" class="cp-note">片上内存控制器 / 总线互连</text>
+
+        <text x="71" y="501" class="cp-speed">更快 / 更小 / 更贵</text>
+        <text x="912" y="501" class="cp-speed">更慢 / 更大 / 更便宜</text>
+
+        <text x="795" y="572" class="cp-out-title">主存 DRAM / DDR</text>
+        <text x="798" y="616" class="cp-main">RAM</text>
+        <text x="798" y="650" class="cp-note">通常位于 CPU/SoC 芯片外部</text>
+
+        <text x="110" y="663" class="cp-caption">访问路径：Core → L1 → L2 → L3 → Memory Controller → DRAM</text>
+        <text x="110" y="694" class="cp-caption">命中 Cache 就直接返回；未命中才继续向更远层级访问。</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .cache-physical { margin:1.1rem 0 2rem; }
+  .cache-physical__head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.7rem; }
+  .cache-physical__head h3 { margin:0; font-size:1rem; }
+  .cache-physical__head p { margin:.25rem 0 0; max-width:48rem; font-size:.76rem; line-height:1.55; opacity:.72; }
+  .cache-physical__head button { flex:none; padding:.44rem .72rem; border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.6rem; background:transparent; color:inherit; font-size:.7rem; cursor:pointer; }
+  .cache-physical__paper { overflow-x:auto; border:1px solid rgba(148,163,184,.24); border-radius:.9rem; background:#fbfaf5; }
+  .cache-physical__paper svg { display:block; width:100%; min-width:940px; height:auto; }
+  .cache-physical__labels text { font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace; fill:#202124; }
+  .cp-title { font-size:25px; font-weight:800; }
+  .cp-box-title { font-size:23px; font-weight:800; }
+  .cp-main { font-size:21px; font-weight:750; fill:#285f96 !important; }
+  .cp-note { font-size:17px; fill:#5d636b !important; }
+  .cp-speed { font-size:19px; font-weight:800; fill:#8a5b2a !important; }
+  .cp-out-title { font-size:25px; font-weight:800; fill:#7d4f9c !important; }
+  .cp-caption { font-size:18px; font-weight:700; }
+  @media (max-width:760px){ .cache-physical__head{flex-direction:column}.cache-physical__head button{align-self:flex-start} }
+</style>
+
+<script is:inline type="module">
+  const roughUrl = "https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+
+  async function initCachePhysical(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const content = document.getElementById("content");
+    if (content && root.dataset.placed !== "true") {
+      const heading = [...content.querySelectorAll("h2")].find((item) =>
+        item.textContent?.replace(/\s/g, "").includes("Cache是什么")
+      );
+      if (heading) {
+        let anchor = heading.nextElementSibling;
+        while (anchor && !/^H[1-2]$/.test(anchor.tagName)) {
+          if (anchor.tagName === "P") {
+            anchor.after(root);
+            root.dataset.placed = "true";
+            break;
+          }
+          anchor = anchor.nextElementSibling;
+        }
+      }
+    }
+
+    const svg = root.querySelector("svg");
+    const layer = root.querySelector("[data-rough-layer]");
+    const redraw = root.querySelector("[data-redraw]");
+    if (!svg || !layer || !redraw) return;
+
+    const { default: rough } = await import(roughUrl);
+    let seed = 431;
+
+    const drawArrow = (rc,x1,y1,x2,y2,color="#555",width=2.1) => {
+      const opts={stroke:color,strokeWidth:width,roughness:1.35,bowing:1.05,seed};
+      layer.appendChild(rc.line(x1,y1,x2,y2,opts));
+      const a=Math.atan2(y2-y1,x2-x1), s=12;
+      layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a-.55),y2-s*Math.sin(a-.55),opts));
+      layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a+.55),y2-s*Math.sin(a+.55),opts));
+    };
+
+    const draw = () => {
+      layer.replaceChildren();
+      const rc=rough.svg(svg);
+      const base={stroke:"#333",strokeWidth:1.7,roughness:1.45,bowing:1.05,seed};
+      const add=(node)=>layer.appendChild(node);
+
+      add(rc.rectangle(42,74,1094,382,{...base,stroke:"#4c6f86",fill:"#eef6f8",fillStyle:"hachure",hachureGap:13}));
+
+      add(rc.rectangle(75,145,205,145,{...base,stroke:"#3d78aa",fill:"#eef6ff",fillStyle:"hachure",hachureGap:9}));
+      add(rc.rectangle(320,145,220,145,{...base,stroke:"#3e8954",fill:"#eef9ef",fillStyle:"hachure",hachureGap:9}));
+      add(rc.rectangle(574,145,220,145,{...base,stroke:"#c58a26",fill:"#fff6df",fillStyle:"hachure",hachureGap:9}));
+      add(rc.rectangle(824,145,260,145,{...base,stroke:"#7c55a2",fill:"#f7ecff",fillStyle:"hachure",hachureGap:9}));
+
+      add(rc.rectangle(420,325,335,92,{...base,stroke:"#536777",fill:"#f4f4f1",fillStyle:"hachure",hachureGap:10}));
+      add(rc.rectangle(765,535,335,125,{...base,stroke:"#7c55a2",fill:"#f5ecfb",fillStyle:"hachure",hachureGap:9}));
+
+      drawArrow(rc,280,216,320,216,"#3d78aa");
+      drawArrow(rc,540,216,574,216,"#3e8954");
+      drawArrow(rc,794,216,824,216,"#c58a26");
+      drawArrow(rc,955,290,710,325,"#7c55a2");
+      drawArrow(rc,585,417,850,535,"#536777",2.4);
+
+      add(rc.line(95,478,1060,478,{...base,stroke:"#9b7a52",strokeWidth:1.7}));
+      drawArrow(rc,105,478,1048,478,"#9b7a52",1.8);
+
+      seed += 1;
+    };
+
+    draw();
+    redraw.addEventListener("click",draw);
+  }
+
+  document.querySelectorAll("[data-cache-physical]").forEach(initCachePhysical);
+  document.addEventListener("astro:page-load",()=>{
+    document.querySelectorAll("[data-cache-physical]").forEach(initCachePhysical);
+  });
+</script>
