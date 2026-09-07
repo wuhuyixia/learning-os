@@ -1,0 +1,212 @@
+<section class="volatile-demo not-prose" data-volatile-demo>
+  <div class="volatile-demo__toolbar">
+    <div class="volatile-demo__source" aria-label="外部修改来源">
+      <button type="button" data-source="ISR" class="is-active">中断 ISR</button>
+      <button type="button" data-source="MMIO">硬件寄存器</button>
+      <button type="button" data-source="DMA">DMA</button>
+    </div>
+    <div class="volatile-demo__controls">
+      <button type="button" data-prev disabled>上一步</button>
+      <button type="button" data-next>下一步</button>
+      <button type="button" data-reset>重置</button>
+    </div>
+  </div>
+
+  <div class="volatile-demo__stage">
+    <div class="volatile-demo__memory">
+      <span class="volatile-demo__eyebrow">真实内存 / 寄存器</span>
+      <strong>flag = <b data-memory-value>0</b></strong>
+      <span class="volatile-demo__writer" data-writer>等待 ISR 修改</span>
+      <div class="volatile-demo__pulse" data-memory-pulse></div>
+    </div>
+
+    <div class="volatile-demo__paths">
+      <article class="volatile-demo__path" data-path="normal">
+        <header>
+          <span>普通变量</span>
+          <code>int flag;</code>
+        </header>
+        <div class="volatile-demo__cpu">
+          <span>CPU / 编译器</span>
+          <strong>寄存器缓存：<b data-cache-value>0</b></strong>
+        </div>
+        <div class="volatile-demo__arrow" data-normal-arrow>内存 → CPU</div>
+        <div class="volatile-demo__result" data-normal-result>第一次读取 flag = 0</div>
+      </article>
+
+      <article class="volatile-demo__path" data-path="volatile">
+        <header>
+          <span>volatile 变量</span>
+          <code>volatile int flag;</code>
+        </header>
+        <div class="volatile-demo__cpu">
+          <span>CPU</span>
+          <strong>每次访问都重新读取</strong>
+        </div>
+        <div class="volatile-demo__arrow" data-volatile-arrow>内存 ⇄ CPU</div>
+        <div class="volatile-demo__result" data-volatile-result>第一次读取 flag = 0</div>
+      </article>
+    </div>
+  </div>
+
+  <div class="volatile-demo__step">
+    <span data-step-label>步骤 1 / 4</span>
+    <strong data-step-title>第一次读取</strong>
+    <p data-step-text>此时真实内存中的 flag 为 0，普通变量和 volatile 变量都读取到 0。</p>
+  </div>
+
+  <div class="volatile-demo__legend">
+    <span><i class="dot dot-memory"></i>真实值</span>
+    <span><i class="dot dot-cache"></i>可能被优化后保留的旧值</span>
+    <strong>volatile 只约束编译器访问，不保证原子性，也不能代替锁。</strong>
+  </div>
+</section>
+
+<style is:global>
+  .volatile-demo { margin:1rem 0 2rem; padding:1rem; border:1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius:1rem; background:color-mix(in srgb,currentColor 2.5%,transparent); }
+  .volatile-demo__toolbar { display:flex; justify-content:space-between; align-items:center; gap:.8rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .volatile-demo button { border:1px solid color-mix(in srgb,currentColor 18%,transparent); border-radius:.65rem; background:transparent; color:inherit; padding:.46rem .7rem; font-size:.72rem; cursor:pointer; transition:transform .18s ease,background .18s ease,border-color .18s ease; }
+  .volatile-demo button:hover:not(:disabled) { transform:translateY(-1px); background:color-mix(in srgb,currentColor 5%,transparent); }
+  .volatile-demo button:disabled { opacity:.35; cursor:not-allowed; }
+  .volatile-demo__source,.volatile-demo__controls { display:flex; gap:.45rem; flex-wrap:wrap; }
+  .volatile-demo__source button.is-active { font-weight:700; border-color:color-mix(in srgb,currentColor 48%,transparent); background:color-mix(in srgb,currentColor 8%,transparent); }
+  .volatile-demo__stage { display:grid; grid-template-columns:minmax(170px,.72fr) minmax(0,2fr); gap:1rem; align-items:stretch; }
+  .volatile-demo__memory { position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:center; min-height:230px; padding:1rem; border:1px solid color-mix(in srgb,currentColor 16%,transparent); border-radius:.9rem; background:color-mix(in srgb,currentColor 4%,transparent); }
+  .volatile-demo__eyebrow { font-size:.68rem; opacity:.6; }
+  .volatile-demo__memory strong { margin-top:.55rem; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:1.35rem; }
+  .volatile-demo__memory strong b { font-size:2.15rem; }
+  .volatile-demo__writer { margin-top:.55rem; font-size:.72rem; opacity:.72; }
+  .volatile-demo__pulse { position:absolute; width:74px; height:74px; right:-18px; bottom:-18px; border:2px solid currentColor; border-radius:999px; opacity:0; transform:scale(.35); pointer-events:none; }
+  .volatile-demo__memory.is-written .volatile-demo__pulse { animation:volatilePulse .8s ease-out; }
+  @keyframes volatilePulse { 0%{opacity:.5;transform:scale(.35)} 100%{opacity:0;transform:scale(1.45)} }
+  .volatile-demo__paths { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+  .volatile-demo__path { position:relative; display:flex; flex-direction:column; gap:.75rem; min-width:0; padding:.9rem; border:1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius:.9rem; }
+  .volatile-demo__path header { display:flex; justify-content:space-between; gap:.5rem; align-items:center; }
+  .volatile-demo__path header span { font-weight:800; font-size:.83rem; }
+  .volatile-demo__path code { font-size:.67rem; padding:.2rem .35rem; border-radius:.35rem; background:color-mix(in srgb,currentColor 5%,transparent); }
+  .volatile-demo__cpu { min-height:74px; display:flex; flex-direction:column; justify-content:center; gap:.2rem; padding:.65rem .75rem; border-radius:.7rem; background:color-mix(in srgb,currentColor 4%,transparent); }
+  .volatile-demo__cpu span { font-size:.67rem; opacity:.58; }
+  .volatile-demo__cpu strong { font-size:.75rem; }
+  .volatile-demo__arrow { position:relative; padding:.38rem .5rem; text-align:center; border-radius:.5rem; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.68rem; opacity:.65; }
+  .volatile-demo__arrow.is-moving::after { content:""; position:absolute; left:10%; right:10%; bottom:0; height:2px; background:currentColor; animation:volatileTravel .75s ease-in-out infinite; transform-origin:left; }
+  @keyframes volatileTravel { 0%{transform:scaleX(.08);opacity:.3} 50%{transform:scaleX(1);opacity:.8} 100%{transform:translateX(42%) scaleX(.08);opacity:.2} }
+  .volatile-demo__result { min-height:54px; display:grid; place-items:center; padding:.55rem; border-radius:.65rem; text-align:center; font-size:.74rem; font-weight:700; background:color-mix(in srgb,currentColor 3%,transparent); }
+  .volatile-demo__result.is-stale { outline:2px dashed color-mix(in srgb,currentColor 34%,transparent); }
+  .volatile-demo__result.is-fresh { outline:2px solid color-mix(in srgb,currentColor 32%,transparent); }
+  .volatile-demo__step { margin-top:.9rem; padding:.78rem .9rem; border-left:3px solid color-mix(in srgb,currentColor 38%,transparent); background:color-mix(in srgb,currentColor 3%,transparent); }
+  .volatile-demo__step span { display:block; font-size:.67rem; opacity:.55; }
+  .volatile-demo__step strong { display:block; margin-top:.18rem; font-size:.83rem; }
+  .volatile-demo__step p { margin:.25rem 0 0; font-size:.75rem; line-height:1.6; opacity:.76; }
+  .volatile-demo__legend { display:flex; gap:.75rem 1rem; align-items:center; flex-wrap:wrap; margin-top:.8rem; font-size:.67rem; opacity:.72; }
+  .volatile-demo__legend span { display:flex; align-items:center; gap:.32rem; }
+  .volatile-demo__legend strong { margin-left:auto; font-size:.67rem; }
+  .volatile-demo .dot { width:.48rem; height:.48rem; border-radius:999px; display:inline-block; border:1px solid currentColor; }
+  .volatile-demo .dot-memory { background:currentColor; }
+  .volatile-demo .dot-cache { background:transparent; }
+  @media (max-width:760px){ .volatile-demo__stage{grid-template-columns:1fr}.volatile-demo__memory{min-height:145px}.volatile-demo__paths{grid-template-columns:1fr}.volatile-demo__legend strong{margin-left:0;width:100%} }
+  @media (prefers-reduced-motion:reduce){ .volatile-demo *{animation:none!important;transition:none!important} }
+</style>
+
+<script is:inline>
+  function initVolatileDemo(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const content = document.getElementById("content");
+    if (content && root.dataset.placed !== "true") {
+      const heading = [...content.querySelectorAll("h2")].find((item) =>
+        item.textContent?.includes("volatile 关键字有什么作用")
+      );
+      if (heading) {
+        let anchor = heading.nextElementSibling;
+        while (anchor && !/^H[1-2]$/.test(anchor.tagName)) {
+          if (anchor.tagName === "P") {
+            anchor.after(root);
+            root.dataset.placed = "true";
+            break;
+          }
+          anchor = anchor.nextElementSibling;
+        }
+      }
+    }
+
+    const memory = root.querySelector(".volatile-demo__memory");
+    const memoryValue = root.querySelector("[data-memory-value]");
+    const writer = root.querySelector("[data-writer]");
+    const cacheValue = root.querySelector("[data-cache-value]");
+    const normalResult = root.querySelector("[data-normal-result]");
+    const volatileResult = root.querySelector("[data-volatile-result]");
+    const normalArrow = root.querySelector("[data-normal-arrow]");
+    const volatileArrow = root.querySelector("[data-volatile-arrow]");
+    const stepLabel = root.querySelector("[data-step-label]");
+    const stepTitle = root.querySelector("[data-step-title]");
+    const stepText = root.querySelector("[data-step-text]");
+    const prev = root.querySelector("[data-prev]");
+    const next = root.querySelector("[data-next]");
+    const reset = root.querySelector("[data-reset]");
+    const sourceButtons = [...root.querySelectorAll("[data-source]")];
+
+    let source = "ISR";
+    let step = 0;
+    const sourceName = () => source === "ISR" ? "中断 ISR" : source === "MMIO" ? "硬件/MMIO" : "DMA";
+
+    const states = [
+      () => ({
+        title:"第一次读取",
+        text:"真实内存中的 flag 为 0，两种写法第一次都读到 0。",
+        mem:"0", cache:"0", normal:"第一次读取 flag = 0", vol:"第一次读取 flag = 0", written:false, normalMove:true, volatileMove:true
+      }),
+      () => ({
+        title:"编译器可能保留旧值",
+        text:"普通变量没有告诉编译器“外部会修改它”，优化后可能继续使用寄存器中的 0；volatile 路径仍要求实际访问。",
+        mem:"0", cache:"0", normal:"后续循环可能直接使用缓存 0", vol:"后续访问仍会读取真实位置", written:false, normalMove:false, volatileMove:true
+      }),
+      () => ({
+        title:`${sourceName()} 在程序流程之外修改 flag`,
+        text:`${sourceName()} 把真实内存/寄存器中的 flag 从 0 改成 1，但 CPU 寄存器里的旧副本不会自动因为 C 变量名而更新。`,
+        mem:"1", cache:"0", normal:"CPU 缓存仍然是 0", vol:"真实位置现在已经是 1", written:true, normalMove:false, volatileMove:false
+      }),
+      () => ({
+        title:"下一次循环读取",
+        text:"普通变量可能继续看到旧的 0；volatile 强制再次访问真实内存或寄存器，因此能够看到外部写入后的 1。",
+        mem:"1", cache:"0", normal:"仍可能读到 0 → 看不到变化", vol:"重新读取 → flag = 1", written:false, normalMove:false, volatileMove:true
+      })
+    ];
+
+    const render = () => {
+      const state = states[step]();
+      memoryValue.textContent = state.mem;
+      cacheValue.textContent = state.cache;
+      writer.textContent = step < 2 ? `等待 ${sourceName()} 修改` : `${sourceName()} 已写入 flag = 1`;
+      normalResult.textContent = state.normal;
+      volatileResult.textContent = state.vol;
+      stepLabel.textContent = `步骤 ${step + 1} / ${states.length}`;
+      stepTitle.textContent = state.title;
+      stepText.textContent = state.text;
+      memory?.classList.toggle("is-written", state.written);
+      normalArrow?.classList.toggle("is-moving", state.normalMove);
+      volatileArrow?.classList.toggle("is-moving", state.volatileMove);
+      normalResult?.classList.toggle("is-stale", step === 3);
+      volatileResult?.classList.toggle("is-fresh", step === 3);
+      prev.disabled = step === 0;
+      next.disabled = step === states.length - 1;
+    };
+
+    sourceButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        source = button.dataset.source || "ISR";
+        sourceButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+        render();
+      });
+    });
+    prev?.addEventListener("click", () => { if (step > 0) { step--; render(); } });
+    next?.addEventListener("click", () => { if (step < states.length - 1) { step++; render(); } });
+    reset?.addEventListener("click", () => { step = 0; render(); });
+    render();
+  }
+
+  document.querySelectorAll("[data-volatile-demo]").forEach(initVolatileDemo);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll("[data-volatile-demo]").forEach(initVolatileDemo);
+  });
+</script>
