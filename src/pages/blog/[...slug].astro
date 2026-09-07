@@ -10,6 +10,8 @@ import StackHeapPointerDemo from "@components/StackHeapPointerDemo.astro";
 import HeapFitAutoDemo from "@components/HeapFitAutoDemo.astro";
 import PointerFunctionAutoDemo from "@components/PointerFunctionAutoDemo.astro";
 import VolatileKeywordDemo from "@components/VolatileKeywordDemo.astro";
+import CachePhysicalLocationRoughDemo from "@components/CachePhysicalLocationRoughDemo.astro";
+import ExternCExplanationPatch from "@components/ExternCExplanationPatch.astro";
 import { DATE_FORMAT } from "@config";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import dayjs from "@utils/dayjs";
@@ -45,7 +47,7 @@ const showHeapDemo = blog.data.demo === "heap-memory" || blog.data.demo === "sta
 const showPointerDemo = blog.data.demo === "stack-and-heap";
 const showHeapFitAutoDemo = blog.data.demo === "stack-and-heap";
 const showPointerFunctionDemo = blog.data.demo === "pointer-function";
-const showVolatileKeywordDemo = blog.id === "面经/面经-2";
+const showInterviewTwoEnhancements = blog.id === "面经/面经-2";
 
 const allPosts = await getCollection("blog");
 const visiblePosts = (import.meta.env.PROD
@@ -139,7 +141,9 @@ const nextPost =
         )}
 
         <Content />
-        {showVolatileKeywordDemo && <VolatileKeywordDemo />}
+        {showInterviewTwoEnhancements && <VolatileKeywordDemo />}
+        {showInterviewTwoEnhancements && <ExternCExplanationPatch />}
+        {showInterviewTwoEnhancements && <CachePhysicalLocationRoughDemo />}
         <License
           url={url}
           title={blog.data.title}
