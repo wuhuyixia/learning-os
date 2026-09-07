@@ -1,0 +1,31 @@
+<span class="hidden" data-extern-c-patch aria-hidden="true"></span>
+
+<script is:inline>
+  function patchExternC(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const content = document.getElementById("content");
+    if (!content) return;
+
+    const heading = [...content.querySelectorAll("h2")].find((item) =>
+      item.textContent?.replace(/\s/g, "").includes('extern"C"的作用') ||
+      item.textContent?.replace(/\s/g, "").includes('extern“C”的作用')
+    );
+    if (!heading) return;
+
+    const paragraph = heading.nextElementSibling;
+    if (!paragraph || paragraph.tagName !== "P") return;
+
+    paragraph.innerHTML = `
+      <code>extern</code> 可以告诉编译器：这个变量或函数是在别的地方定义的，这里只是声明它，先允许我使用。<br><br>
+      而 <code>extern "C"</code> 主要用于 C 和 C++ 混合编程。因为 C++ 支持函数重载，会对函数名进行 Name Mangling，而 C 不会。<code>extern "C"</code> 是告诉 C++ 编译器：这部分函数按照 C 的链接规则生成和查找符号，这样 C++ 才能正确调用 C 编译出来的函数。<br><br>
+      需要注意：<code>extern "C"</code> 只改变链接方式，并不是把 C++ 代码变成 C 代码。
+    `;
+  }
+
+  document.querySelectorAll("[data-extern-c-patch]").forEach(patchExternC);
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll("[data-extern-c-patch]").forEach(patchExternC);
+  });
+</script>
