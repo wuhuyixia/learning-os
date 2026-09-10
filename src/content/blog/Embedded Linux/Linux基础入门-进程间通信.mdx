@@ -92,16 +92,62 @@ int main(void)
 
 <ProcessThreadRoughDemo />
 
+从上面的“虚拟内存布局”页签可以进一步看懂你图里的关系：
+
+```text
+高地址
+┌──────────────────────────────┐
+│ Kernel Space                 │
+├──────────────────────────────┤
+│ Thread 1 Stack               │
+│ Thread 2 Stack               │
+│ ...                          │
+│ mmap / 动态库 / 共享映射      │
+│ Heap                         │
+│ .bss                         │
+│ .data                        │
+│ .text                        │
+└──────────────────────────────┘
+低地址
+```
+
+这个图最关键的不是死记地址，而是看懂“**谁共享、谁独立**”：
+
+- `.text`、`.data`、`.bss`、Heap 属于进程级资源，同一进程内的线程共享；
+- 每个线程都有独立 Stack，用来保存自己的局部变量、函数调用现场等；
+- 不同进程拥有不同的虚拟地址空间，所以进程 A 和进程 B 的 `.data`、`.bss`、Heap 并不是同一份；
+- 内核空间位于用户空间之上，用户进程不能像访问普通用户变量一样随意直接访问内核地址。
+
+你第二张图里几类变量，可以这样对应：
+
+```c
+int globalVar = 10;             // 已初始化全局变量 -> .data
+static int staticGlobal = 20;   // 已初始化 static -> .data
+int globalUninit;               // 未初始化全局变量 -> .bss
+static int staticUninit;        // 未初始化 static -> .bss
+
+void showKeyword(void)
+{
+    static int staticVar = 30;  // 静态存储期，通常仍在 .data
+    int autoVar = 40;           // 普通局部变量 -> 当前线程 Stack
+    register int regVar = 50;   // register 只是提示，是否进寄存器由编译器决定
+    int *p = malloc(sizeof(int));
+    // p 本身是局部变量，通常在 Stack；malloc 得到的对象在 Heap
+}
+```
+
+需要特别注意两点。第一，图片里“每个进程都有 4 GB 虚拟内存，3 GB 用户空间 + 1 GB 内核空间”是**典型 32 位 Linux 教学模型**，不应直接推广到所有 Linux 系统；64 位 Linux 的地址空间远大于 4 GB，而且具体内核/用户区划分与架构和内核配置有关。第二，`register` 不等于“变量一定在 CPU 寄存器里”，现代编译器通常自己决定是否分配寄存器。
+
 <MermaidDiagram
-  title="进程与线程的关系"
+  title="同一进程内，线程共享什么、独立什么"
   chart={`flowchart TD
-    P[一个进程 Process] --> S[共享资源\n代码/全局变量/堆/文件]
-    P --> T1[Thread 1\n独立栈/寄存器/PC]
-    P --> T2[Thread 2\n独立栈/寄存器/PC]
-    P2[另一个进程 Process] --> S2[另一套独立地址空间]
-    P -. 进程间不能直接共享普通变量 .-> P2
-    P -->|需要通信| IPC[IPC 机制]
-    P2 --> IPC`}
+    P[Process] --> S[共享\n.text / .data / .bss / Heap / 打开的文件]
+    P --> T1[Thread 1]
+    P --> T2[Thread 2]
+    T1 --> ST1[独立 Stack\n寄存器 / PC]
+    T2 --> ST2[独立 Stack\n寄存器 / PC]
+    P2[另一个 Process] --> S2[另一套独立虚拟地址空间]
+    P -. 需要 IPC .-> P2`}
 />
 
 一句话记忆：
@@ -449,45 +495,23 @@ munmap();
 shm_unlink();
 ```
 
-简单示意：
-
-```c
-int fd = shm_open("/demo_shm", O_CREAT | O_RDWR, 0666);
-ftruncate(fd, 4096);
-
-char *p = mmap(NULL, 4096,
-               PROT_READ | PROT_WRITE,
-               MAP_SHARED,
-               fd, 0);
-```
-
-映射完成后，不同进程只要映射的是同一个共享内存对象，就可以看到同一块数据。
-
-但共享内存有一个很重要的问题：
-
-> **它只解决“大家都能看到”，不解决“谁先写、谁后读”。**
-
-所以一般需要配合信号量或互斥锁。
+共享内存虽然快，但它只解决“数据放在哪里”，不自动解决“谁先访问”。所以通常还需要搭配信号量或进程间互斥锁。
 
 ## 8. 消息队列 Message Queue
 
-消息队列可以理解成内核中的“邮箱”。
-
-Pipe 更像连续水流：
+消息队列适合一条一条发送结构化消息，它和 Pipe 最大的区别之一是**保留消息边界**。
 
 ```text
+Pipe:
 [helloabc123xyz...]
+
+Message Queue:
+[msg 1: hello]
+[msg 2: abc]
+[msg 3: 123]
 ```
 
-消息队列则是一封一封信：
-
-```text
-[msg1: hello]
-[msg2: abc]
-[msg3: 123]
-```
-
-System V 消息队列常见接口：
+System V 常见接口：
 
 ```c
 msgget();
@@ -496,7 +520,7 @@ msgrcv();
 msgctl();
 ```
 
-消息结构一般带消息类型：
+例如：
 
 ```c
 struct msgbuf {
@@ -505,52 +529,43 @@ struct msgbuf {
 };
 ```
 
-因此消息队列很适合命令、事件、任务这种“一条一条处理”的数据。
+如果应用层本身就是“命令 1、命令 2、事件 3”这种消息模型，消息队列通常比自己在 Pipe 字节流里切包更直观。
 
 ## 9. 信号量 Semaphore
 
-信号量主要负责**同步**，它本身并不负责搬运大数据。
-
-可以把它想成停车场剩余车位：
+信号量主要做同步，而不是传大块数据。
 
 ```text
-count > 0 -> 还有资源，可以进入
-count = 0 -> 没资源，等待
+count > 0 -> 可以获取资源
+count = 0 -> 等待
 ```
 
-经典操作：
+最常见理解：
 
 ```text
-P / wait / down -> 获取资源，计数减 1
-V / post / up   -> 释放资源，计数加 1
+P / wait / down -> 获取，计数减 1
+V / post / up   -> 释放，计数加 1
 ```
 
-共享内存和信号量经常组合：
+和共享内存搭配时可以理解成：
 
-<MermaidDiagram
-  title="共享内存 + 信号量"
-  chart={`sequenceDiagram
-    participant A as Process A
-    participant S as Semaphore
-    participant M as Shared Memory
-    participant B as Process B
-    A->>S: wait / 获取写权限
-    A->>M: 写入数据
-    A->>S: post / 通知可读
-    B->>S: wait / 等待数据
-    B->>M: 读取数据
-    B->>S: post / 释放资源`}
-/>
+```text
+Process A 写共享内存
+        ↓
+post semaphore
+        ↓
+Process B 被唤醒
+        ↓
+读取共享内存
+```
 
-一句话：
+所以：
 
-> **共享内存负责“传数据”，信号量负责“排队和协调”。**
+> **共享内存负责“放数据”，信号量负责“排顺序”。**
 
 ## 10. Socket
 
-Socket 可以用于本机进程通信，也可以跨主机通信。
-
-常见类型：
+Socket 既可以用于本机 IPC，也可以跨主机通信。
 
 ```text
 TCP Socket
@@ -558,7 +573,7 @@ UDP Socket
 Unix Domain Socket
 ```
 
-TCP Socket 基本流程：
+如果双方只在同一台 Linux 主机上，Unix Domain Socket 是非常常见的选择；如果跨网络，则通常使用 TCP/UDP Socket。
 
 <MermaidDiagram
   title="TCP Socket 基本流程"
@@ -577,18 +592,55 @@ TCP Socket 基本流程：
     S->>S: close()`}
 />
 
-如果只是同一台 Linux 机器内通信，Unix Domain Socket 往往更合适；如果需要跨机器，就使用 TCP/UDP Socket。
+## 11. 为什么共享内存通常更快
 
-## 11. 动态库编译：为什么它不属于 IPC
-
-你截图里把“信号量和动态库编译”放在一起，但从概念上要分清：
+如果 Process A 要把一大块数据交给 Process B，Pipe 可以简化理解为：
 
 ```text
-信号量 -> IPC / 同步机制
-动态库 -> 程序链接与代码复用机制
+A 用户空间
+   ↓ copy
+内核缓冲区
+   ↓ copy
+B 用户空间
 ```
 
-一个简单动态库：
+共享内存则更像：
+
+```text
+Process A VA ----\
+                  >---- Same Physical Memory
+Process B VA ----/
+```
+
+建立映射时需要内核参与，但之后双方可以直接访问同一片共享物理内存，因此非常适合大数据量、高频通信。
+
+代价是程序员需要自己处理：
+
+- 同步；
+- 互斥；
+- 数据一致性；
+- 生命周期。
+
+## 12. Pipe、FIFO、消息队列怎么区分
+
+| 对比 | Pipe | FIFO | Message Queue |
+| :--- | :--- | :--- | :--- |
+| 数据模型 | 字节流 | 字节流 | 一条条消息 |
+| 是否有文件名 | 否 | 是 | 不是普通文件 |
+| 常见关系 | 父子进程 | 任意进程 | 任意进程 |
+| 消息边界 | 无 | 无 | 有 |
+
+一句话：
+
+> **Pipe 是匿名水管，FIFO 是有门牌号的水管，Message Queue 是一个装信封的邮箱。**
+
+## 13. 动态库编译和 IPC 是什么关系
+
+你截图里还列了“信号量和动态库编译”。这里需要区分：**动态库本身不是 IPC。**
+
+动态库 `.so` 是 Linux 程序复用代码的一种方式。多个进程可以装载同一个动态库，其只读代码页在物理内存层面可能被系统共享，但每个进程依然拥有自己的进程地址空间和可写数据状态。
+
+例如：
 
 ```c
 // add.c
@@ -598,138 +650,68 @@ int add(int a, int b)
 }
 ```
 
-编译成 `.so`：
+编译动态库：
 
 ```bash
 gcc -fPIC -c add.c -o add.o
 gcc -shared add.o -o libadd.so
 ```
 
-主程序：
-
-```c
-#include <stdio.h>
-
-extern int add(int a, int b);
-
-int main(void)
-{
-    printf("%d\n", add(1, 2));
-    return 0;
-}
-```
-
-链接：
+程序链接：
 
 ```bash
 gcc main.c -L. -ladd -o app
 ```
 
-运行时如果系统找不到动态库，可以临时设置：
+运行时如果系统找不到 `.so`，可以临时设置：
 
 ```bash
 export LD_LIBRARY_PATH=$PWD:$LD_LIBRARY_PATH
-./app
 ```
 
-动态库解决的是“多个程序复用同一份库代码”，并不是让两个正在运行的进程互相传消息。
-
-## 12. 共享内存为什么通常最快
-
-假设 Process A 要传 1 MB 数据给 Process B。
-
-Pipe 的概念路径：
+所以：
 
 ```text
-A 用户空间
-    ↓ copy
-内核缓冲区
-    ↓ copy
-B 用户空间
+IPC       -> 解决进程之间如何通信
+动态库 .so -> 解决代码如何复用和动态装载
 ```
 
-共享内存：
-
-```text
-A 虚拟地址 ----\
-                 -> 同一块物理内存
-B 虚拟地址 ----/
-```
-
-因此对于大块、高频数据，共享内存通常更高效。
-
-但它也把更多责任交给程序员：
-
-- 谁先写；
-- 谁后读；
-- 多个进程同时修改怎么办；
-- 数据什么时候有效；
-- 共享区什么时候销毁。
-
-所以共享内存常和信号量、互斥锁配合使用。
-
-## 13. 常见 IPC 怎么选
-
-| 需求 | 推荐方式 |
-| :--- | :--- |
-| 父子进程简单传字节流 | Pipe |
-| 无亲缘关系进程传字节流 | FIFO |
-| 发送异步通知 | Signal |
-| 大量高速数据 | Shared Memory |
-| 一条一条传消息 | Message Queue |
-| 做同步、互斥、资源计数 | Semaphore |
-| 本机或跨主机通信 | Socket |
+## 14. 怎么选择 IPC
 
 <MermaidDiagram
-  title="IPC 方式选择"
+  title="Linux IPC 选择思路"
   chart={`flowchart TD
-    A[需要进程间通信] --> B{是否跨主机?}
+    A[需要进程间交互] --> B{需要跨主机?}
     B -->|是| C[Socket]
-    B -->|否| D{主要是大量数据?}
+    B -->|否| D{大量高速数据?}
     D -->|是| E[Shared Memory]
-    E --> F[配合 Semaphore / Mutex]
-    D -->|否| G{只是事件通知?}
-    G -->|是| H[Signal]
-    G -->|否| I{需要消息边界?}
-    I -->|是| J[Message Queue]
-    I -->|否| K{是否无亲缘关系?}
-    K -->|是| L[FIFO]
-    K -->|否| M[Pipe]`}
+    E --> F[搭配 Semaphore / Mutex]
+    D -->|否| G{需要消息边界?}
+    G -->|是| H[Message Queue]
+    G -->|否| I{只是事件通知?}
+    I -->|是| J[Signal / Semaphore]
+    I -->|否| K{有亲缘关系?}
+    K -->|是| L[Pipe]
+    K -->|否| M[FIFO / Unix Domain Socket]`}
 />
 
-## 14. 常用 Linux IPC 排查命令
+## 15. 常用排查命令
 
-查看 System V IPC 对象：
+查看 System V IPC：
 
 ```bash
 ipcs
 ```
 
-查看共享内存：
+分别查看：
 
 ```bash
-ipcs -m
+ipcs -m    # shared memory
+ipcs -q    # message queue
+ipcs -s    # semaphore
 ```
 
-查看消息队列：
-
-```bash
-ipcs -q
-```
-
-查看信号量：
-
-```bash
-ipcs -s
-```
-
-删除共享内存：
-
-```bash
-ipcrm -m <shmid>
-```
-
-查看某个进程打开的文件描述符：
+查看进程打开的 fd：
 
 ```bash
 ls -l /proc/<pid>/fd
@@ -741,32 +723,31 @@ ls -l /proc/<pid>/fd
 ss -anp
 ```
 
-查看进程和线程：
+## 16. 总结
 
-```bash
-ps -ef
-ps -T -p <pid>
-top -H
-```
-
-## 15. 总结
-
-这部分可以直接压缩成下面这张知识图：
+Linux IPC 可以按下面这条线记：
 
 ```text
-进程 vs 线程
-    ↓
-进程地址空间隔离
-    ↓
-需要 IPC
-    ↓
-Pipe      -> 父子进程字节流
-FIFO      -> 有名字的管道
-Signal    -> 异步通知
-SharedMem -> 共享同一物理内存
-MsgQueue  -> 一条一条消息
-Semaphore -> 同步 / 资源计数
-Socket    -> 本机或跨主机
+Pipe
+  -> 有亲缘关系进程的匿名字节流
+
+FIFO
+  -> 有名字的字节流管道
+
+Signal
+  -> 异步通知
+
+Shared Memory
+  -> 共享同一块物理内存，高速传大数据
+
+Message Queue
+  -> 一条条消息，有边界
+
+Semaphore
+  -> 同步和资源计数
+
+Socket
+  -> 本机或跨主机通信
 ```
 
 面试中如果被问到“Linux 进程间通信有哪些方式”，可以直接回答：
