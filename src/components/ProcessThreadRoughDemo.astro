@@ -1,0 +1,66 @@
+<section class="pt-rough not-prose" data-pt-rough>
+  <div class="pt-rough__head">
+    <div>
+      <h3>进程和线程：到底哪些东西是共享的？</h3>
+      <p>把一个进程想成“一个房间”，线程是房间里的“多个工人”。工人共享房间里的资源，但每个人有自己的工作现场。</p>
+    </div>
+    <button type="button" data-redraw>重新手绘</button>
+  </div>
+  <div class="pt-rough__paper">
+    <svg viewBox="0 0 1160 660" role="img" aria-label="Linux 进程和线程资源关系手绘图">
+      <g data-layer></g>
+      <g class="pt-labels">
+        <text x="70" y="58" class="pt-title">Process A</text>
+        <text x="70" y="92" class="pt-note">独立虚拟地址空间</text>
+
+        <text x="122" y="182" class="pt-thread">Thread 1</text>
+        <text x="122" y="220" class="pt-small">栈 / 寄存器 / PC</text>
+        <text x="122" y="254" class="pt-small">自己的执行现场</text>
+
+        <text x="430" y="182" class="pt-thread">Thread 2</text>
+        <text x="430" y="220" class="pt-small">栈 / 寄存器 / PC</text>
+        <text x="430" y="254" class="pt-small">自己的执行现场</text>
+
+        <text x="194" y="374" class="pt-shared">进程内共享资源</text>
+        <text x="170" y="414" class="pt-small">代码段 / 全局变量 / 堆 / 打开的文件</text>
+
+        <text x="800" y="58" class="pt-title">Process B</text>
+        <text x="800" y="92" class="pt-note">另一套独立地址空间</text>
+        <text x="842" y="198" class="pt-thread">Thread 1</text>
+        <text x="842" y="236" class="pt-small">自己的栈和寄存器</text>
+        <text x="785" y="382" class="pt-shared">自己的全局变量和堆</text>
+
+        <text x="410" y="548" class="pt-arrow-label">进程之间要通信 → IPC</text>
+        <text x="365" y="602" class="pt-caption">线程：共享多，通信方便，但需要锁保护共享数据</text>
+        <text x="365" y="632" class="pt-caption">进程：隔离强，一个进程崩溃通常不会直接破坏另一个进程的地址空间</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<style is:global>
+  .pt-rough{margin:1rem 0 2rem}.pt-rough__head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:.7rem}.pt-rough__head h3{margin:0;font-size:1rem}.pt-rough__head p{margin:.25rem 0 0;max-width:52rem;font-size:.76rem;line-height:1.6;opacity:.72}.pt-rough__head button{flex:none;padding:.44rem .72rem;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:.6rem;background:transparent;color:inherit;font-size:.7rem;cursor:pointer}.pt-rough__paper{overflow-x:auto;border:1px solid rgba(148,163,184,.24);border-radius:.9rem;background:#fbfaf5}.pt-rough__paper svg{display:block;width:100%;min-width:900px;height:auto}.pt-labels text{font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace;fill:#222}.pt-title{font-size:27px;font-weight:800}.pt-note{font-size:18px;fill:#666!important}.pt-thread{font-size:23px;font-weight:800;fill:#2d6698!important}.pt-shared{font-size:22px;font-weight:800;fill:#287a49!important}.pt-small{font-size:17px;fill:#555!important}.pt-arrow-label{font-size:21px;font-weight:800;fill:#9a5e20!important}.pt-caption{font-size:17px;font-weight:700}.pt-rough__paper .rough-fade{opacity:.8}@media(max-width:760px){.pt-rough__head{flex-direction:column}.pt-rough__head button{align-self:flex-start}}
+</style>
+
+<script is:inline type="module">
+  const roughUrl="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
+  async function init(root){
+    if(root.dataset.initialized==="true")return;root.dataset.initialized="true";
+    const svg=root.querySelector("svg"),layer=root.querySelector("[data-layer]"),btn=root.querySelector("[data-redraw]");
+    if(!svg||!layer||!btn)return;
+    const {default:rough}=await import(roughUrl);let seed=112;
+    const arrow=(rc,x1,y1,x2,y2,color="#555")=>{const o={stroke:color,strokeWidth:2.1,roughness:1.35,bowing:1.1,seed};layer.appendChild(rc.line(x1,y1,x2,y2,o));const a=Math.atan2(y2-y1,x2-x1),s=13;layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a-.55),y2-s*Math.sin(a-.55),o));layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a+.55),y2-s*Math.sin(a+.55),o));};
+    const draw=()=>{layer.replaceChildren();const rc=rough.svg(svg);const base={stroke:"#333",strokeWidth:1.7,roughness:1.45,bowing:1.05,seed};const add=n=>layer.appendChild(n);
+      add(rc.rectangle(42,28,650,458,{...base,stroke:"#3e718e",fill:"#eef6fb",fillStyle:"hachure",hachureGap:14}));
+      add(rc.rectangle(92,138,230,150,{...base,stroke:"#3c76a8",fill:"#eef5ff",fillStyle:"hachure",hachureGap:10}));
+      add(rc.rectangle(400,138,230,150,{...base,stroke:"#3c76a8",fill:"#eef5ff",fillStyle:"hachure",hachureGap:10}));
+      add(rc.rectangle(122,332,480,112,{...base,stroke:"#3c8b57",fill:"#eef9ef",fillStyle:"hachure",hachureGap:10}));
+      add(rc.rectangle(758,28,360,458,{...base,stroke:"#8061a6",fill:"#f7effc",fillStyle:"hachure",hachureGap:14}));
+      add(rc.rectangle(812,148,250,128,{...base,stroke:"#5d6f98",fill:"#f1f4fb",fillStyle:"hachure",hachureGap:10}));
+      add(rc.rectangle(800,335,270,86,{...base,stroke:"#8061a6",fill:"#f6eefc",fillStyle:"hachure",hachureGap:10}));
+      arrow(rc,322,214,400,214,"#3c76a8");arrow(rc,692,520,758,520,"#a06b2a");
+      seed+=1;
+    };draw();btn.addEventListener("click",draw);
+  }
+  document.querySelectorAll("[data-pt-rough]").forEach(init);document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-pt-rough]").forEach(init));
+</script>
