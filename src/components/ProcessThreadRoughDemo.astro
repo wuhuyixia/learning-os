@@ -1,66 +1,140 @@
-<section class="pt-rough not-prose" data-pt-rough>
-  <div class="pt-rough__head">
+<section class="pt-demo not-prose" data-pt-demo>
+  <div class="pt-demo__head">
     <div>
-      <h3>进程和线程：到底哪些东西是共享的？</h3>
-      <p>把一个进程想成“一个房间”，线程是房间里的“多个工人”。工人共享房间里的资源，但每个人有自己的工作现场。</p>
+      <h3>进程、线程与虚拟内存布局</h3>
+      <p>结合两张图来理解：每个进程有自己的虚拟地址空间；同一进程内的线程共享代码、全局数据和堆，但每个线程有自己的栈和 CPU 执行现场。</p>
     </div>
     <button type="button" data-redraw>重新手绘</button>
   </div>
-  <div class="pt-rough__paper">
-    <svg viewBox="0 0 1160 660" role="img" aria-label="Linux 进程和线程资源关系手绘图">
-      <g data-layer></g>
-      <g class="pt-labels">
-        <text x="70" y="58" class="pt-title">Process A</text>
-        <text x="70" y="92" class="pt-note">独立虚拟地址空间</text>
 
-        <text x="122" y="182" class="pt-thread">Thread 1</text>
-        <text x="122" y="220" class="pt-small">栈 / 寄存器 / PC</text>
-        <text x="122" y="254" class="pt-small">自己的执行现场</text>
+  <div class="pt-demo__tabs" role="tablist" aria-label="进程线程演示切换">
+    <button type="button" data-tab="relation" class="is-active">进程与线程</button>
+    <button type="button" data-tab="memory">虚拟内存布局</button>
+  </div>
 
-        <text x="430" y="182" class="pt-thread">Thread 2</text>
-        <text x="430" y="220" class="pt-small">栈 / 寄存器 / PC</text>
-        <text x="430" y="254" class="pt-small">自己的执行现场</text>
+  <div class="pt-demo__panel is-active" data-panel="relation">
+    <div class="pt-demo__paper">
+      <svg viewBox="0 0 1160 660" role="img" aria-label="Linux 进程和线程资源关系手绘图">
+        <g data-relation-layer></g>
+        <g class="pt-labels">
+          <text x="70" y="58" class="pt-title">Process A</text>
+          <text x="70" y="92" class="pt-note">独立虚拟地址空间</text>
 
-        <text x="194" y="374" class="pt-shared">进程内共享资源</text>
-        <text x="170" y="414" class="pt-small">代码段 / 全局变量 / 堆 / 打开的文件</text>
+          <text x="122" y="182" class="pt-thread">Thread 1</text>
+          <text x="122" y="220" class="pt-small">独立 Stack</text>
+          <text x="122" y="250" class="pt-small">寄存器 / PC</text>
 
-        <text x="800" y="58" class="pt-title">Process B</text>
-        <text x="800" y="92" class="pt-note">另一套独立地址空间</text>
-        <text x="842" y="198" class="pt-thread">Thread 1</text>
-        <text x="842" y="236" class="pt-small">自己的栈和寄存器</text>
-        <text x="785" y="382" class="pt-shared">自己的全局变量和堆</text>
+          <text x="430" y="182" class="pt-thread">Thread 2</text>
+          <text x="430" y="220" class="pt-small">独立 Stack</text>
+          <text x="430" y="250" class="pt-small">寄存器 / PC</text>
 
-        <text x="410" y="548" class="pt-arrow-label">进程之间要通信 → IPC</text>
-        <text x="365" y="602" class="pt-caption">线程：共享多，通信方便，但需要锁保护共享数据</text>
-        <text x="365" y="632" class="pt-caption">进程：隔离强，一个进程崩溃通常不会直接破坏另一个进程的地址空间</text>
-      </g>
-    </svg>
+          <text x="194" y="374" class="pt-shared">进程内共享资源</text>
+          <text x="170" y="414" class="pt-small">.text / .data / .bss / Heap / 文件</text>
+
+          <text x="800" y="58" class="pt-title">Process B</text>
+          <text x="800" y="92" class="pt-note">另一套独立地址空间</text>
+          <text x="842" y="198" class="pt-thread">Thread 1</text>
+          <text x="842" y="236" class="pt-small">自己的 Stack / 寄存器</text>
+          <text x="790" y="382" class="pt-shared">自己的 .data / .bss / Heap</text>
+
+          <text x="410" y="548" class="pt-arrow-label">进程之间要交换数据 → IPC</text>
+          <text x="345" y="602" class="pt-caption">线程：共享多，通信方便；但共享变量要用锁或其他同步机制保护</text>
+          <text x="345" y="632" class="pt-caption">进程：地址空间隔离，一个进程修改普通变量不会直接改到另一个进程</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="pt-demo__panel" data-panel="memory">
+    <div class="pt-memory__intro">
+      <p>下面使用经典的 <strong>32 位 Linux 进程地址空间</strong>帮助理解。`0x00000000 ~ 0xFFFFFFFF` 一共是 4 GB 虚拟地址。教学资料里常画成“3 GB 用户空间 + 1 GB 内核空间”，但这个比例与具体架构和内核配置有关，64 位 Linux 的实际地址布局也不同。</p>
+    </div>
+
+    <div class="pt-memory__controls" aria-label="选择变量查看所在区域">
+      <button type="button" data-segment="text">函数代码</button>
+      <button type="button" data-segment="data">已初始化全局/static</button>
+      <button type="button" data-segment="bss">未初始化全局/static</button>
+      <button type="button" data-segment="heap">malloc</button>
+      <button type="button" data-segment="stack">局部变量</button>
+      <button type="button" data-segment="thread">线程栈</button>
+      <button type="button" data-segment="all" class="is-active">全部</button>
+    </div>
+
+    <div class="pt-demo__paper">
+      <svg viewBox="0 0 1160 840" role="img" aria-label="Linux 32 位进程虚拟内存布局手绘图">
+        <g data-memory-layer></g>
+        <g class="pt-labels">
+          <text x="48" y="42" class="pt-address">0xFFFFFFFF</text>
+          <text x="48" y="812" class="pt-address">0x00000000</text>
+
+          <text x="414" y="86" class="pt-kernel">内核空间（示意约 1 GB）</text>
+          <text x="76" y="151" class="pt-note">用户空间（示意约 3 GB）</text>
+
+          <text x="132" y="742" class="pt-seg" data-label="text">.text 代码段（只读/可执行）</text>
+          <text x="132" y="683" class="pt-seg" data-label="data">.data 已初始化全局 / static</text>
+          <text x="132" y="624" class="pt-seg" data-label="bss">.bss 未初始化全局 / static</text>
+          <text x="132" y="544" class="pt-seg" data-label="heap">Heap 堆：malloc / calloc / realloc</text>
+          <text x="132" y="488" class="pt-note">↑ 通常向高地址方向增长</text>
+
+          <text x="690" y="246" class="pt-seg" data-label="stack">Thread 1 Stack</text>
+          <text x="865" y="246" class="pt-seg" data-label="thread">Thread 2 Stack</text>
+          <text x="700" y="285" class="pt-note">局部变量 / 参数 / 返回现场</text>
+          <text x="864" y="315" class="pt-note">各线程独立</text>
+          <text x="784" y="363" class="pt-note">↓ 栈通常向低地址方向增长</text>
+
+          <text x="545" y="446" class="pt-note">mmap / 动态库 / 共享映射等区域</text>
+
+          <text x="94" y="206" class="pt-code-title">代码里的变量放到哪里？</text>
+          <text x="94" y="242" class="pt-code">int globalVar = 10;          → .data</text>
+          <text x="94" y="274" class="pt-code">static int staticVar = 20;  → .data</text>
+          <text x="94" y="306" class="pt-code">int globalUninit;           → .bss</text>
+          <text x="94" y="338" class="pt-code">static int staticUninit;    → .bss</text>
+          <text x="94" y="370" class="pt-code">void f(void) {</text>
+          <text x="116" y="402" class="pt-code">int local = 30;             → Stack</text>
+          <text x="116" y="434" class="pt-code">int *p = malloc(sizeof(int)); → p在Stack，*p在Heap</text>
+          <text x="94" y="466" class="pt-code">}</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="pt-memory__explain" data-explain>
+      <strong>整体看：</strong> `.text/.data/.bss/Heap` 属于进程级资源，同一个进程里的线程共享；Stack 属于线程自己的执行现场，因此每个线程都有独立栈。
+    </div>
+
+    <div class="pt-memory__tips">
+      <div><strong>static</strong><span>无论写在函数外还是函数内，只要是静态存储期对象，就不会放在普通局部变量栈里；是否进入 `.data` 或 `.bss` 取决于是否有非零初始化。</span></div>
+      <div><strong>register</strong><span>C 语言的 `register` 只是给编译器的提示，现代编译器可能忽略它；变量最终在寄存器还是被溢出到栈，由优化器决定。</span></div>
+      <div><strong>malloc</strong><span>指针变量本身如果是局部变量通常在 Stack，但 `malloc()` 申请到的那块动态内存在 Heap。</span></div>
+    </div>
   </div>
 </section>
 
 <style is:global>
-  .pt-rough{margin:1rem 0 2rem}.pt-rough__head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:.7rem}.pt-rough__head h3{margin:0;font-size:1rem}.pt-rough__head p{margin:.25rem 0 0;max-width:52rem;font-size:.76rem;line-height:1.6;opacity:.72}.pt-rough__head button{flex:none;padding:.44rem .72rem;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:.6rem;background:transparent;color:inherit;font-size:.7rem;cursor:pointer}.pt-rough__paper{overflow-x:auto;border:1px solid rgba(148,163,184,.24);border-radius:.9rem;background:#fbfaf5}.pt-rough__paper svg{display:block;width:100%;min-width:900px;height:auto}.pt-labels text{font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace;fill:#222}.pt-title{font-size:27px;font-weight:800}.pt-note{font-size:18px;fill:#666!important}.pt-thread{font-size:23px;font-weight:800;fill:#2d6698!important}.pt-shared{font-size:22px;font-weight:800;fill:#287a49!important}.pt-small{font-size:17px;fill:#555!important}.pt-arrow-label{font-size:21px;font-weight:800;fill:#9a5e20!important}.pt-caption{font-size:17px;font-weight:700}.pt-rough__paper .rough-fade{opacity:.8}@media(max-width:760px){.pt-rough__head{flex-direction:column}.pt-rough__head button{align-self:flex-start}}
+  .pt-demo{margin:1rem 0 2rem}.pt-demo__head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:.7rem}.pt-demo__head h3{margin:0;font-size:1rem}.pt-demo__head p{margin:.25rem 0 0;max-width:54rem;font-size:.76rem;line-height:1.6;opacity:.72}.pt-demo__head button,.pt-demo__tabs button,.pt-memory__controls button{padding:.44rem .72rem;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:.6rem;background:transparent;color:inherit;font-size:.7rem;cursor:pointer;transition:transform .18s ease,background .18s ease}.pt-demo button:hover{transform:translateY(-1px);background:color-mix(in srgb,currentColor 5%,transparent)}.pt-demo__head>button{flex:none}.pt-demo__tabs,.pt-memory__controls{display:flex;gap:.45rem;flex-wrap:wrap;margin:.6rem 0 .8rem}.pt-demo__tabs button.is-active,.pt-memory__controls button.is-active{font-weight:800;background:color-mix(in srgb,currentColor 8%,transparent);border-color:color-mix(in srgb,currentColor 45%,transparent)}.pt-demo__panel{display:none}.pt-demo__panel.is-active{display:block}.pt-demo__paper{overflow-x:auto;border:1px solid rgba(148,163,184,.24);border-radius:.9rem;background:#fbfaf5}.pt-demo__paper svg{display:block;width:100%;min-width:900px;height:auto}.pt-labels text{font-family:"Comic Sans MS","KaiTi","STKaiti",ui-monospace,monospace;fill:#222}.pt-title{font-size:27px;font-weight:800}.pt-note{font-size:18px;fill:#666!important}.pt-thread{font-size:23px;font-weight:800;fill:#2d6698!important}.pt-shared{font-size:22px;font-weight:800;fill:#287a49!important}.pt-small{font-size:17px;fill:#555!important}.pt-arrow-label{font-size:21px;font-weight:800;fill:#9a5e20!important}.pt-caption{font-size:17px;font-weight:700}.pt-address{font-size:17px;font-weight:800}.pt-kernel{font-size:25px;font-weight:800;fill:#7c4a88!important}.pt-seg{font-size:19px;font-weight:800;transition:opacity .2s ease,filter .2s ease}.pt-code-title{font-size:20px;font-weight:800;fill:#855b1d!important}.pt-code{font-size:16px;fill:#444!important}.pt-memory__intro{padding:.72rem .82rem;margin-bottom:.7rem;border-left:3px solid color-mix(in srgb,currentColor 38%,transparent);background:color-mix(in srgb,currentColor 3%,transparent);font-size:.76rem;line-height:1.65}.pt-memory__intro p{margin:0}.pt-memory__explain{margin-top:.75rem;padding:.72rem .82rem;border-radius:.7rem;background:color-mix(in srgb,currentColor 4%,transparent);font-size:.75rem;line-height:1.6}.pt-memory__tips{display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-top:.7rem}.pt-memory__tips div{padding:.7rem;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:.7rem}.pt-memory__tips strong{display:block;font-size:.76rem;margin-bottom:.22rem}.pt-memory__tips span{font-size:.69rem;line-height:1.55;opacity:.72}.pt-demo[data-focus]:not([data-focus="all"]) [data-label]{opacity:.22}.pt-demo[data-focus="text"] [data-label="text"],.pt-demo[data-focus="data"] [data-label="data"],.pt-demo[data-focus="bss"] [data-label="bss"],.pt-demo[data-focus="heap"] [data-label="heap"],.pt-demo[data-focus="stack"] [data-label="stack"],.pt-demo[data-focus="thread"] [data-label="thread"]{opacity:1;filter:drop-shadow(0 0 1px currentColor)}@media(max-width:760px){.pt-demo__head{flex-direction:column}.pt-demo__head>button{align-self:flex-start}.pt-memory__tips{grid-template-columns:1fr}}
 </style>
 
 <script is:inline type="module">
   const roughUrl="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js";
   async function init(root){
     if(root.dataset.initialized==="true")return;root.dataset.initialized="true";
-    const svg=root.querySelector("svg"),layer=root.querySelector("[data-layer]"),btn=root.querySelector("[data-redraw]");
-    if(!svg||!layer||!btn)return;
+    const relationSvg=root.querySelector('[data-panel="relation"] svg');
+    const relationLayer=root.querySelector('[data-relation-layer]');
+    const memorySvg=root.querySelector('[data-panel="memory"] svg');
+    const memoryLayer=root.querySelector('[data-memory-layer]');
+    const redraw=root.querySelector('[data-redraw]');
+    const tabs=[...root.querySelectorAll('[data-tab]')];
+    const panels=[...root.querySelectorAll('[data-panel]')];
+    const segButtons=[...root.querySelectorAll('[data-segment]')];
+    const explain=root.querySelector('[data-explain]');
+    if(!relationSvg||!relationLayer||!memorySvg||!memoryLayer||!redraw)return;
     const {default:rough}=await import(roughUrl);let seed=112;
-    const arrow=(rc,x1,y1,x2,y2,color="#555")=>{const o={stroke:color,strokeWidth:2.1,roughness:1.35,bowing:1.1,seed};layer.appendChild(rc.line(x1,y1,x2,y2,o));const a=Math.atan2(y2-y1,x2-x1),s=13;layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a-.55),y2-s*Math.sin(a-.55),o));layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a+.55),y2-s*Math.sin(a+.55),o));};
-    const draw=()=>{layer.replaceChildren();const rc=rough.svg(svg);const base={stroke:"#333",strokeWidth:1.7,roughness:1.45,bowing:1.05,seed};const add=n=>layer.appendChild(n);
-      add(rc.rectangle(42,28,650,458,{...base,stroke:"#3e718e",fill:"#eef6fb",fillStyle:"hachure",hachureGap:14}));
-      add(rc.rectangle(92,138,230,150,{...base,stroke:"#3c76a8",fill:"#eef5ff",fillStyle:"hachure",hachureGap:10}));
-      add(rc.rectangle(400,138,230,150,{...base,stroke:"#3c76a8",fill:"#eef5ff",fillStyle:"hachure",hachureGap:10}));
-      add(rc.rectangle(122,332,480,112,{...base,stroke:"#3c8b57",fill:"#eef9ef",fillStyle:"hachure",hachureGap:10}));
-      add(rc.rectangle(758,28,360,458,{...base,stroke:"#8061a6",fill:"#f7effc",fillStyle:"hachure",hachureGap:14}));
-      add(rc.rectangle(812,148,250,128,{...base,stroke:"#5d6f98",fill:"#f1f4fb",fillStyle:"hachure",hachureGap:10}));
-      add(rc.rectangle(800,335,270,86,{...base,stroke:"#8061a6",fill:"#f6eefc",fillStyle:"hachure",hachureGap:10}));
-      arrow(rc,322,214,400,214,"#3c76a8");arrow(rc,692,520,758,520,"#a06b2a");
-      seed+=1;
-    };draw();btn.addEventListener("click",draw);
+    const arrow=(layer,rc,x1,y1,x2,y2,color="#555",width=2.1)=>{const o={stroke:color,strokeWidth:width,roughness:1.35,bowing:1.1,seed};layer.appendChild(rc.line(x1,y1,x2,y2,o));const a=Math.atan2(y2-y1,x2-x1),s=13;layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a-.55),y2-s*Math.sin(a-.55),o));layer.appendChild(rc.line(x2,y2,x2-s*Math.cos(a+.55),y2-s*Math.sin(a+.55),o));};
+    const drawRelation=()=>{relationLayer.replaceChildren();const rc=rough.svg(relationSvg),b={stroke:"#333",strokeWidth:1.7,roughness:1.45,bowing:1.05,seed},add=n=>relationLayer.appendChild(n);add(rc.rectangle(42,28,650,458,{...b,stroke:"#3e718e",fill:"#eef6fb",fillStyle:"hachure",hachureGap:14}));add(rc.rectangle(92,138,230,150,{...b,stroke:"#3c76a8",fill:"#eef5ff",fillStyle:"hachure",hachureGap:10}));add(rc.rectangle(400,138,230,150,{...b,stroke:"#3c76a8",fill:"#eef5ff",fillStyle:"hachure",hachureGap:10}));add(rc.rectangle(122,332,480,112,{...b,stroke:"#3c8b57",fill:"#eef9ef",fillStyle:"hachure",hachureGap:10}));add(rc.rectangle(758,28,360,458,{...b,stroke:"#8061a6",fill:"#f7effc",fillStyle:"hachure",hachureGap:14}));add(rc.rectangle(812,148,250,128,{...b,stroke:"#5d6f98",fill:"#f1f4fb",fillStyle:"hachure",hachureGap:10}));add(rc.rectangle(800,335,270,86,{...b,stroke:"#8061a6",fill:"#f6eefc",fillStyle:"hachure",hachureGap:10}));arrow(relationLayer,rc,322,214,400,214,"#3c76a8");arrow(relationLayer,rc,692,520,758,520,"#a06b2a");};
+    const drawMemory=()=>{memoryLayer.replaceChildren();const rc=rough.svg(memorySvg),b={stroke:"#333",strokeWidth:1.7,roughness:1.4,bowing:1,seed},add=n=>memoryLayer.appendChild(n);add(rc.rectangle(420,54,650,718,{...b,stroke:"#3f5668",fill:"#fbfbf7",fillStyle:"hachure",hachureGap:18}));add(rc.rectangle(420,54,650,104,{...b,stroke:"#7f4e91",fill:"#f4eafa",fillStyle:"hachure",hachureGap:10}));add(rc.rectangle(420,706,650,66,{...b,stroke:"#3e719f",fill:"#edf5ff",fillStyle:"hachure",hachureGap:9}));add(rc.rectangle(420,647,650,59,{...b,stroke:"#3a8a55",fill:"#eef9ef",fillStyle:"hachure",hachureGap:9}));add(rc.rectangle(420,588,650,59,{...b,stroke:"#a77a28",fill:"#fff7e3",fillStyle:"hachure",hachureGap:9}));add(rc.rectangle(420,500,650,88,{...b,stroke:"#b35d42",fill:"#fff0eb",fillStyle:"hachure",hachureGap:10}));add(rc.rectangle(420,378,650,122,{...b,stroke:"#767676",fill:"#f4f4f1",fillStyle:"hachure",hachureGap:13}));add(rc.rectangle(650,192,170,144,{...b,stroke:"#3979ae",fill:"#edf5ff",fillStyle:"hachure",hachureGap:9}));add(rc.rectangle(838,192,170,144,{...b,stroke:"#3979ae",fill:"#edf5ff",fillStyle:"hachure",hachureGap:9}));arrow(memoryLayer,rc,745,205,745,318,"#3979ae");arrow(memoryLayer,rc,926,205,926,318,"#3979ae");arrow(memoryLayer,rc,746,568,746,516,"#b35d42");add(rc.line(420,158,1070,158,{...b,stroke:"#c45050",strokeWidth:2.2}));};
+    const draw=()=>{drawRelation();drawMemory();seed+=1};draw();redraw.addEventListener('click',draw);
+    tabs.forEach(btn=>btn.addEventListener('click',()=>{tabs.forEach(x=>x.classList.toggle('is-active',x===btn));panels.forEach(p=>p.classList.toggle('is-active',p.dataset.panel===btn.dataset.tab));}));
+    const messages={all:'<strong>整体看：</strong> `.text/.data/.bss/Heap` 属于进程级资源，同一个进程里的线程共享；Stack 属于线程自己的执行现场，因此每个线程都有独立栈。',text:'<strong>.text：</strong> 主要放机器指令，也就是程序代码。一个进程里的线程执行的是同一份代码，因此共享代码段。',data:'<strong>.data：</strong> 典型存放已经初始化的全局变量和 static 变量，例如 `int g = 10;`。',bss:'<strong>.bss：</strong> 典型存放未显式初始化或初始化为 0 的全局/static 变量，程序装载时会被初始化为 0。',heap:'<strong>Heap：</strong> `malloc/calloc/realloc` 获得的动态内存通常来自堆或 mmap 区域；多个线程可以共享访问，因此要注意同步。',stack:'<strong>Stack：</strong> 普通局部变量、函数调用现场等通常位于当前线程的栈中；线程退出后，其线程栈也随之回收。',thread:'<strong>线程栈：</strong> 同一进程中每个线程都有自己的栈，所以 Thread 1 的局部变量不会和 Thread 2 的普通局部变量放在同一个栈帧里。'};
+    segButtons.forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.segment||'all';root.dataset.focus=key;segButtons.forEach(x=>x.classList.toggle('is-active',x===btn));if(explain)explain.innerHTML=messages[key]||messages.all;}));root.dataset.focus='all';
   }
-  document.querySelectorAll("[data-pt-rough]").forEach(init);document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-pt-rough]").forEach(init));
+  document.querySelectorAll('[data-pt-demo]').forEach(init);document.addEventListener('astro:page-load',()=>document.querySelectorAll('[data-pt-demo]').forEach(init));
 </script>
