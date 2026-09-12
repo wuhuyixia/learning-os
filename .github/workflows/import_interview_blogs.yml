@@ -1,0 +1,59 @@
+name: Import embedded interview blogs
+on:
+  push:
+    branches: [blog-import-final]
+permissions:
+  contents: write
+jobs:
+  import:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build blog articles from source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/yann12704/IMU-Learn.git /tmp/interview-src
+          git -C /tmp/interview-src checkout -q 614cee8dafca89bd9f40d435206b85b72290cc8f
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('/tmp/interview-src/read')
+          out=Path('src/content/blog')
+          items=[
+          ('01_C语言基础面试题.md','C-C++/C语言基础问答-嵌入式.md','C 语言基础问答（嵌入式）','面向嵌入式开发整理 C 语言基础问答，覆盖数据类型、指针、内存、预处理、位操作、结构体与常见代码题。','2026-02-08','C/C++',['C','嵌入式','面经']),
+          ('02_C++基础面试题.md','C-C++/C++基础问答-嵌入式.md','C++ 基础问答（嵌入式）','面向嵌入式开发整理 C++ 基础问答，覆盖面向对象、内存管理、STL、智能指针、模板、并发与常见语言特性。','2026-02-18','C/C++',['C++','嵌入式','面经']),
+          ('11_数据结构基础面试题.md','C-C++/数据结构基础问答.md','数据结构基础问答','以 C 语言为主整理数组、链表、栈、队列、树、堆、哈希、图、排序和查找等常见数据结构问题。','2026-02-28','C/C++',['数据结构','C','面经']),
+          ('03_单片机原理基础面试题.md','STM32/单片机原理基础问答.md','单片机原理基础问答','整理 MCU 与单片机常见基础问题，覆盖 GPIO、中断、定时器、ADC、存储器与常用外设。','2026-03-08','STM32',['MCU','STM32','面经']),
+          ('04_ARM体系结构面试题.md','STM32/ARM体系结构基础问答.md','ARM 体系结构基础问答','整理 ARM 体系结构基础问题，覆盖 Cortex-M/A/R、寄存器、异常、中断、指令集与处理器工作模式。','2026-03-18','STM32',['ARM','Cortex-M','面经']),
+          ('12_嵌入式硬件基础面试题.md','Hardware/嵌入式硬件基础问答.md','嵌入式硬件基础问答','整理嵌入式硬件常见基础问题，覆盖电路、元器件、电源、PCB、信号完整性、EMC 与测试仪器。','2026-03-28','Hardware',['硬件','电路','面经']),
+          ('09_FreeRTOS开发基础面试题.md','FreeRTOS/FreeRTOS开发基础问答.md','FreeRTOS 开发基础问答','整理 FreeRTOS 常见基础问题，覆盖任务调度、队列、信号量、互斥锁、软件定时器、内存管理与中断。','2026-04-08','FreeRTOS',['FreeRTOS','RTOS','面经']),
+          ('10_低速通信协议基础面试题.md','Communication Protocol/低速通信协议基础问答.md','低速通信协议基础问答','整理嵌入式常见低速通信协议问题，覆盖 UART、SPI、I2C、CAN、RS485、1-Wire 与 Modbus。','2026-04-18','Communication Protocol',['通信协议','嵌入式','面经']),
+          ('05_操作系统原理面试题.md','Embedded Linux/操作系统原理基础问答.md','操作系统原理基础问答','整理操作系统常见基础问题，覆盖进程线程、调度、内存管理、同步互斥、死锁与文件系统。','2026-04-28','Linux',['操作系统','Linux','面经']),
+          ('06_Linux应用开发基础面试题.md','Embedded Linux/Linux应用开发基础问答.md','Linux 应用开发基础问答','整理 Linux 应用开发常见基础问题，覆盖 Shell、文件 I/O、进程线程、IPC、同步机制与网络编程。','2026-05-08','Linux',['Linux','系统编程','面经']),
+          ('08_Linux驱动开发基础面试题.md','Embedded Linux/Linux驱动开发基础问答.md','Linux 驱动开发基础问答','整理 Linux 驱动开发常见基础问题，覆盖字符设备、设备树、Platform、中断、内存管理与并发同步。','2026-05-18','Linux',['Linux','驱动','面经']),
+          ('07_计算机网络面试题.md','Communication Protocol/计算机网络基础问答.md','计算机网络基础问答','整理嵌入式开发常见网络问题，覆盖 TCP/UDP、TCP/IP、Socket、HTTP、DNS、MQTT 与常见网络机制。','2026-05-28','Communication Protocol',['TCP/IP','网络','面经']),
+          ('13_开发工具与效率指南面试题.md','Embedded Linux/嵌入式开发工具基础问答.md','嵌入式开发工具基础问答','整理嵌入式开发常用工具问题，覆盖 Git、编译构建、GDB、调试器、Make/CMake 与常见效率工具。','2026-06-08','Linux',['Git','调试','面经']),
+          ('15_嵌入式校招简历编写指导.md','面经/嵌入式简历编写指导.md','嵌入式简历编写指导','围绕嵌入式岗位简历结构、专业技能、项目经历、表达方式和常见问题整理一份实用编写指南。','2026-06-18','面经',['简历','嵌入式','面经']),
+          ('14_面试技巧与心态面试题.md','面经/嵌入式面试技巧与常见问答.md','嵌入式面试技巧与常见问答','整理嵌入式求职过程中的自我介绍、项目表达、技术追问、职业规划与面试心态等常见问题。','2026-06-28','面经',['面经','求职']),
+          ('16_大厂嵌入式面经真题汇总.md','面经/嵌入式面经真题汇总.md','嵌入式面经真题汇总','按公司与岗位整理嵌入式、BSP、驱动与 RTOS 方向常见技术问题及回答。','2026-07-08','面经',['面经','嵌入式'])]
+          for src,dst,title,desc,date,cat,tags in items:
+              text=(root/src).read_text(encoding='utf-8')
+              m=re.search(r'^## 一、.*$',text,re.M)
+              if not m: raise RuntimeError(f'first section missing: {src}')
+              body=text[m.start():].strip()
+              front='---\n'+f'title: {title}\n'+f'description: {desc}\n'+f'pubDate: {date}\n'+'draft: false\n'+'categories:\n'+f'  - {cat}\n'+'tags:\n'+''.join(f'  - {t}\n' for t in tags)+'---\n\n'
+              target=out/dst
+              target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_text(front+f'# {title}\n\n'+body+'\n',encoding='utf-8')
+          PY
+          rm -rf .blog-import .bundle
+          rm -f .github/workflows/import_interview_blogs.yml
+          git add -A
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'docs: add embedded interview question blogs'
+          git push
