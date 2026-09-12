@@ -2,21 +2,23 @@ name: Clean interview blog content
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   cleanup:
-    if: github.actor != 'github-actions[bot]'
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Remove duplicated table and promotional footer text
+      - name: Clean blog content
         shell: bash
         run: |
           set -euo pipefail
@@ -24,33 +26,29 @@ jobs:
           from pathlib import Path
           import re
 
-          root = Path('src/content/blog')
+          root = Path("src/content/blog")
           promo_terms = (
-              '嵌入式校招菌',
-              '嵌入式校招excel',
-              '欢迎关注获取更多嵌入式校招信息',
-              '一次付费永久有效',
-              '嵌入式微信/飞书交流群',
-              '对话框回复：**加群**',
-              '对话框回复：加群',
+              "嵌入式校招菌",
+              "嵌入式校招excel",
+              "欢迎关注获取更多嵌入式校招信息",
+              "一次付费永久有效",
+              "嵌入式微信/飞书交流群",
+              "对话框回复：**加群**",
+              "对话框回复：加群",
           )
 
+          files = list(root.rglob("*.md")) + list(root.rglob("*.mdx"))
           changed = []
-          for path in list(root.rglob('*.md')) + list(root.rglob('*.mdx')):
-              text = path.read_text(encoding='utf-8')
-              original = text
-
-              # 删除导入资料中残留的公众号、加群、付费表格等推广行。
-              lines = text.splitlines()
+          for path in files:
+              original = path.read_text(encoding="utf-8")
+              lines = original.splitlines()
               lines = [line for line in lines if not any(term in line for term in promo_terms)]
-              text = '\n'.join(lines) + ('\n' if original.endswith('\n') else '')
+              text = "\n".join(lines) + ("\n" if original.endswith("\n") else "")
+              text = re.sub(r"(?m)^>\s*$\n?", "", text)
+              text = re.sub(r"\n{4,}", "\n\n\n", text)
 
-              # 清理删除推广行后可能留下的空引用行与过多空行。
-              text = re.sub(r'(?m)^>\s*$\n?', '', text)
-              text = re.sub(r'\n{4,}', '\n\n\n', text)
-
-              if path.as_posix().endswith('C-C++/C语言基础问答-嵌入式.md'):
-                  duplicate_table = '''| 存储类别 | 关键字 | 生命周期 | 作用域 | 存储位置 |
+              if path.as_posix().endswith("C-C++/C语言基础问答-嵌入式.md"):
+                  table1 = """| 存储类别 | 关键字 | 生命周期 | 作用域 | 存储位置 |
 |----------|--------|----------|--------|----------|
 | 自动 | `auto`(默认) | 函数内 | 局部 | 栈 |
 | 静态 | `static` | 程序全程 | 局部/本文件 | .data/.bss |
@@ -58,33 +56,34 @@ jobs:
 | 寄存器 | `register` | 函数内 | 局部 | 寄存器(建议) |
 
 
-'''
-                  if duplicate_table in text:
-                      text = text.replace(duplicate_table, '', 1)
+"""
+                  text = text.replace(table1, "", 1)
 
               if text != original:
-                  path.write_text(text, encoding='utf-8')
+                  path.write_text(text, encoding="utf-8")
                   changed.append(path.as_posix())
 
-          c_path = root / 'C-C++' / 'C语言基础问答-嵌入式.md'
-          c_text = c_path.read_text(encoding='utf-8')
-          header = '| 存储类别 | 关键字 | 生命周期 | 作用域 | 存储位置 |'
+          c_path = root / "C-C++" / "C语言基础问答-嵌入式.md"
+          c_text = c_path.read_text(encoding="utf-8")
+          header = "| 存储类别 | 关键字 | 生命周期 | 作用域 | 存储位置 |"
           if c_text.count(header) != 1:
-              raise SystemExit(f'Q12 table check failed: expected 1 table, found {c_text.count(header)}')
+              raise SystemExit(f"Q12 duplicate check failed: {c_text.count(header)} tables remain")
 
           leftovers = []
-          for path in list(root.rglob('*.md')) + list(root.rglob('*.mdx')):
-              text = path.read_text(encoding='utf-8')
+          for path in files:
+              text = path.read_text(encoding="utf-8")
               if any(term in text for term in promo_terms):
                   leftovers.append(path.as_posix())
           if leftovers:
-              raise SystemExit('promotional text still exists in: ' + ', '.join(leftovers))
+              raise SystemExit("promotional text remains in: " + ", ".join(leftovers))
 
-          print(f'updated {len(changed)} blog files')
-          for path in changed:
-              print(path)
+          print("updated", len(changed), "files")
           PY
 
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
           rm -f .github/workflows/cleanup_interview_blogs.yml
           git add -A
           git config user.name "github-actions[bot]"
