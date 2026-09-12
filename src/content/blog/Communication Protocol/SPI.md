@@ -185,7 +185,6 @@ SPI_DataSize_16b     // 16 bit
 ![SPI内部结构框图](/learning-os/image/STM32/SPI2.png)
 
 
-
 ```c
 typedef struct
 {
@@ -244,7 +243,5 @@ void App_SPI_MasterTransmitReceive(SPI_TypeDef *SPIx,
     while (SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_BSY) == SET);
 }
 ```
-
-
 
 

@@ -73,7 +73,6 @@ YMODEM 是一种基于块传输的串口文件传输协议，使用 1K 数据块
 ~~~
 
 
-
 ![添加自定义功能点](/learning-os/image/STM32/OTA/OTA.png)
 
 ![添加自定义功能点](/learning-os/image/STM32/OTA/OTA1.png)
