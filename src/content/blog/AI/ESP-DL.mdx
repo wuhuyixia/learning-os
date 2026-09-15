@@ -1,0 +1,304 @@
+---
+title: ESP-DL 入门：神经网络如何量化并部署到 ESP 芯片
+description: 简要梳理从 PC 端训练模型、导出 ONNX、使用 ESP-PPQ 量化生成 .espdl，到 ESP32-S3/ESP32-P4 板端加载和推理的完整流程。
+pubDate: 2026-09-15
+draft: false
+categories:
+  - AI
+tags:
+  - ESP-DL
+  - Quantization
+  - Edge AI
+  - ESP32-S3
+  - ONNX
+---
+
+import MermaidDiagram from "@components/MermaidDiagram.astro";
+
+# ESP-DL 入门：神经网络如何量化并部署到 ESP 芯片
+
+在 PC 上训练一个神经网络并不难，真正到了 MCU 或 SoC 上，问题通常变成了：**模型太大、计算太慢、内存不够。**
+
+ESP-DL 就是为这类场景准备的。它是乐鑫面向 ESP 系列芯片提供的轻量级神经网络推理框架，负责在芯片端加载并运行已经转换好的模型。
+
+如果只看主线，整个过程可以压缩成一句话：
+
+> **先在 PC 上训练浮点模型，再量化成适合 ESP 芯片执行的整数模型，最后生成 `.espdl` 文件烧到板子里做推理。**
+
+<MermaidDiagram
+  title="ESP-DL 模型部署主流程"
+  chart={`flowchart LR
+    A[PyTorch / TensorFlow\n训练 FP32 模型] --> B[导出 ONNX]
+    B --> C[准备校准数据]
+    C --> D[ESP-PPQ\nPTQ 量化]
+    D --> E[导出 .espdl]
+    E --> F[ESP-IDF 工程]
+    F --> G[ESP32-S3 / ESP32-P4\n加载并推理]`}
+/>
+
+## 1. 为什么要量化？
+
+神经网络在 PC 上通常使用 FP32 浮点数：
+
+```text
+权重：32 bit
+激活：32 bit
+```
+
+这在 PC 或 GPU 上问题不大，但到了 ESP32-S3 这类资源受限设备，就会占用更多 Flash、RAM 和计算时间。
+
+量化的核心思想，就是把浮点数映射成更小的整数，例如 INT8：
+
+```text
+FP32:  0.7321
+        ↓ 量化
+INT8:  47
+```
+
+推理结束后，再根据量化参数把整数结果恢复成近似浮点值。
+
+ESP-DL 当前的 `.espdl` 模型支持常见的：
+
+| 量化方式 | 权重 | 激活 | 特点 |
+| :--- | :--- | :--- | :--- |
+| `w8a8` | INT8 | INT8 | 速度快、模型小，最常用 |
+| `w16a16` | INT16 | INT16 | 精度更高，但开销更大 |
+| `w8a16` | INT8 | INT16 | 在精度和速度之间折中 |
+
+因此一般会先尝试 `w8a8`，如果量化后精度下降明显，再考虑更高精度或混合精度。
+
+## 2. 第一步：先把模型训练好
+
+ESP-DL 主要负责**部署和推理**，训练通常还是在 PyTorch、TensorFlow 等框架中完成。
+
+例如训练完成后得到：
+
+```text
+model.pth
+```
+
+随后导出 ONNX：
+
+```python
+import torch
+
+dummy = torch.randn(1, 3, 224, 224)
+torch.onnx.export(
+    model,
+    dummy,
+    "model.onnx",
+    input_names=["input"],
+    output_names=["output"]
+)
+```
+
+如果原模型来自 TensorFlow、PaddlePaddle 等框架，通常也建议先转换到 ONNX，再进入后续部署流程。
+
+在量化之前，还要先确认模型中的算子是否被 ESP-DL 支持，例如卷积、全连接、Add、Mul 等。
+
+## 3. 第二步：用 ESP-PPQ 做量化
+
+ESP-DL 使用 ESP-PPQ 完成量化和格式转换。
+
+最常见的是 **PTQ（Post Training Quantization，训练后量化）**：模型已经训练好了，不重新训练，只拿一批具有代表性的样本做校准。
+
+所谓“校准数据”，就是让量化工具看一遍真实输入的大致数值范围。例如图像分类模型可以取几十到几百张训练集或验证集图片。
+
+量化代码的核心形式如下：
+
+```python
+from esp_ppq.api import espdl_quantize_onnx
+
+espdl_quantize_onnx(
+    onnx_import_file="model.onnx",
+    espdl_export_file="model.espdl",
+    calib_dataloader=dataloader,
+    calib_steps=32,
+    input_shape=[1, 3, 224, 224],
+    target="esp32s3",
+    quant_type="w8a8",
+    device="cpu",
+)
+```
+
+执行后，最关键的产物是：
+
+```text
+model.espdl
+```
+
+它就是板端真正要运行的模型文件。
+
+官方工具还会生成 `.info` 和 `.json` 等辅助文件，用于检查模型结构、量化信息和调试结果。
+
+## 4. 第三步：量化后先检查精度
+
+量化不是“文件变小”这么简单，它会引入数值误差。
+
+因此完整流程应该是：
+
+```text
+FP32 原模型精度
+      ↓
+量化成 INT8
+      ↓
+重新跑验证集
+      ↓
+比较精度下降是否可接受
+```
+
+例如：
+
+```text
+FP32 accuracy = 92.4%
+INT8 accuracy = 91.8%
+```
+
+这种下降通常可以接受。
+
+如果变成：
+
+```text
+FP32 accuracy = 92.4%
+INT8 accuracy = 76.0%
+```
+
+就说明需要重新检查校准数据、算子、量化参数，或者改用 INT16 / 混合精度。
+
+所以实际项目中真正要平衡的是：
+
+```text
+模型大小  ↔  推理速度  ↔  RAM 占用  ↔  精度
+```
+
+## 5. 第四步：把 `.espdl` 放进 ESP-IDF 工程
+
+得到 `.espdl` 后，就进入板端部署阶段。
+
+模型可以放在：
+
+- Flash 的 `.rodata`；
+- 独立 Flash 分区；
+- SD 卡。
+
+最容易理解的是直接把模型嵌入 Flash，然后创建 `dl::Model` 对象。
+
+例如：
+
+```cpp
+#include "dl_model_base.hpp"
+
+extern const uint8_t model_espdl[] asm("_binary_model_espdl_start");
+
+dl::Model *model = new dl::Model(
+    (const char *)model_espdl,
+    fbs::MODEL_LOCATION_IN_FLASH_RODATA
+);
+```
+
+随后可以获取输入输出 Tensor：
+
+```cpp
+auto inputs = model->get_inputs();
+auto outputs = model->get_outputs();
+
+dl::TensorBase *input = inputs.begin()->second;
+dl::TensorBase *output = outputs.begin()->second;
+```
+
+准备好输入数据后，核心推理动作其实很简单：
+
+```cpp
+model->run();
+```
+
+真正的项目一般还会在前面加上图像缩放、归一化等预处理，在后面加入分类、检测框解析等后处理。
+
+## 6. 推理时数据到底怎么走？
+
+可以把板端过程理解成：
+
+<MermaidDiagram
+  title="板端一次推理的数据流"
+  chart={`flowchart LR
+    A[摄像头 / 传感器数据] --> B[预处理]
+    B --> C[写入输入 Tensor]
+    C --> D[model.run]
+    D --> E[ESP-DL 算子执行]
+    E --> F[输出 Tensor]
+    F --> G[反量化 / 后处理]
+    G --> H[分类结果 / 检测框]`}
+/>
+
+对于 INT8 模型，输入和输出往往不是直接的浮点数。ESP-DL 会使用量化尺度和 exponent 在整数与浮点值之间转换。
+
+因此部署时需要特别保证三件事一致：
+
+- 输入尺寸一致；
+- 预处理方式一致；
+- 量化目标芯片一致。
+
+尤其是不同芯片平台生成的 `.espdl` 模型，不应随意混用。
+
+## 7. 实际开发时最容易踩的坑
+
+如果一个模型在 PC 上正常，但板端效果很差，可以优先检查：
+
+```text
+① ESP-DL 是否支持模型里的全部算子
+② 输入 shape 是否一致
+③ RGB / BGR 顺序是否一致
+④ resize、归一化是否和训练时一致
+⑤ 校准数据是否具有代表性
+⑥ target 是否与实际芯片一致
+⑦ INT8 量化后的精度是否已经明显下降
+```
+
+很多“板端模型不准”的问题，并不是 ESP-DL 推理错了，而是**前处理或量化阶段已经和原模型不一致**。
+
+## 8. 一张图记住整个流程
+
+```text
+PC 端
+
+数据集
+  ↓
+训练 FP32 模型
+  ↓
+导出 ONNX
+  ↓
+准备校准数据
+  ↓
+ESP-PPQ 量化
+  ↓
+验证量化精度
+  ↓
+生成 model.espdl
+
+--------------------------------
+
+ESP 芯片端
+
+加载 .espdl
+  ↓
+准备输入 Tensor
+  ↓
+model->run()
+  ↓
+读取输出 Tensor
+  ↓
+反量化 / 后处理
+  ↓
+得到最终结果
+```
+
+ESP-DL 本身并不是一个“训练框架”，更准确地说，它负责的是**把已经训练好的神经网络压缩、转换并高效运行在 ESP 芯片上**。
+
+理解了“训练 → ONNX → 校准 → 量化 → `.espdl` → 板端推理”这条主线之后，再去看 MobileNet、YOLO 等具体模型的部署，会清晰很多。
+
+## 参考资料
+
+- [ESP-DL 官方介绍](https://docs.espressif.com/projects/esp-dl/en/latest/introduction/readme.html)
+- [ESP-DL 模型量化教程](https://docs.espressif.com/projects/esp-dl/zh_CN/latest/tutorials/how_to_quantize_model.html)
+- [ESP-DL 模型加载与测试](https://docs.espressif.com/projects/esp-dl/zh_CN/latest/tutorials/how_to_load_test_profile_model.html)
+- [ESP-DL 模型推理教程](https://docs.espressif.com/projects/esp-dl/zh_CN/latest/tutorials/how_to_run_model.html)
