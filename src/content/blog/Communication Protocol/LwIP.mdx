@@ -1,0 +1,344 @@
+---
+title: lwIP 协议栈入门：MCU 是怎么联网的？
+description: 用通俗方式理解 lwIP 的作用、数据收发路径、pbuf、netif、tcpip_thread 与 Socket API，并通过动态演示和精简代码完成一次 TCP 通信。
+pubDate: 2026-09-15
+draft: false
+categories:
+  - Communication Protocol
+tags:
+  - lwIP
+  - TCP/IP
+  - STM32
+  - ESP32
+  - FreeRTOS
+---
+
+import LwIPFlowDemo from "@components/LwIPFlowDemo.astro";
+
+# lwIP 协议栈入门：MCU 是怎么联网的？
+
+前面理解了 TCP/IP，真正到了 STM32、ESP32 这类嵌入式设备上，还差一个关键问题：
+
+> **TCP、UDP、IP 这些协议，到底是谁在代码里实现的？**
+
+答案之一就是 **lwIP（lightweight IP）**。
+
+lwIP 是一个面向嵌入式设备的轻量级 TCP/IP 协议栈。它把 TCP、UDP、IP、ICMP、ARP、DHCP 等网络协议做成可移植的软件模块，让资源有限的 MCU 也可以拥有网络通信能力。
+
+可以先把它理解成：
+
+```text
+你的应用程序
+    ↓
+lwIP 协议栈
+    ↓
+网卡驱动
+    ↓
+PHY / Wi-Fi 芯片
+    ↓
+网络
+```
+
+也就是说，**lwIP 位于“应用程序”和“网卡驱动”之间**。
+
+<LwIPFlowDemo />
+
+## 1. 为什么 MCU 需要 lwIP？
+
+普通 PC 上，TCP/IP 协议栈由 Linux、Windows 等操作系统提供，所以写网络程序时通常直接调用：
+
+```c
+socket();
+connect();
+send();
+recv();
+```
+
+但裸机 MCU 并没有完整操作系统，自然也没有现成的 TCP/IP 协议栈。
+
+如果自己从头实现 TCP 重传、滑动窗口、IP 分片、ARP、DHCP，工作量会非常大。lwIP 就是把这部分复杂工作封装起来。
+
+例如你的 STM32 应用只想发送：
+
+```text
+hello
+```
+
+背后可能会经历：
+
+```text
+hello
+  ↓ TCP：加端口、序号等信息
+TCP Segment
+  ↓ IP：加源 IP、目标 IP
+IP Packet
+  ↓ Ethernet：加 MAC 地址
+Ethernet Frame
+  ↓
+网卡发送
+```
+
+应用层通常不需要自己处理这些协议细节。
+
+## 2. lwIP 中最值得先认识的几个模块
+
+刚接触 lwIP 时，不需要一上来阅读整个源码。先认识下面几个概念就够了：
+
+| 模块 | 可以怎么理解 | 主要作用 |
+| :--- | :--- | :--- |
+| `pbuf` | 网络数据包的“快递盒” | 保存和组织收发数据 |
+| `netif` | 虚拟网卡对象 | 把 lwIP 与 Ethernet/Wi-Fi 驱动连接起来 |
+| `tcpip_thread` | 网络协议栈的“总调度员” | 在 RTOS 模式下集中处理 lwIP 核心逻辑 |
+| TCP/UDP | 传输层 | 连接、端口、可靠传输或数据报 |
+| IP | 网络层 | IP 地址、路由、分组处理 |
+| Socket API | 应用层入口 | 让应用用类似 Linux Socket 的方式联网 |
+
+### pbuf：网络数据放在哪里？
+
+lwIP 不会把每个网络包都简单理解成一块普通数组，而是大量使用 `pbuf` 管理数据。
+
+可以粗略理解为：
+
+```c
+struct pbuf {
+    void *payload;      // 真正的数据
+    uint16_t len;       // 当前 pbuf 中的数据长度
+    uint16_t tot_len;   // 整条 pbuf 链总长度
+    struct pbuf *next;  // 下一个 pbuf
+};
+```
+
+实际结构比这里复杂，但学习时只要记住：
+
+> **pbuf 就是 lwIP 内部用于搬运网络数据的核心缓冲结构，而且可以像链表一样串起来。**
+
+因此驱动收到一个以太网帧后，常见流程就是：申请 `pbuf` → 填入数据 → 交给 lwIP。
+
+### netif：lwIP 怎么知道你用的是哪块网卡？
+
+`netif` 是 network interface 的缩写，可以理解为“网卡在 lwIP 里的软件代表”。
+
+它里面会保存：
+
+- IP 地址；
+- 子网掩码；
+- 网关；
+- MAC 地址相关信息；
+- 底层发送函数；
+- 网卡状态。
+
+所以无论底下是 STM32 的 Ethernet MAC，还是 Wi-Fi 模块，lwIP 上层都可以通过统一的 `netif` 接口工作。
+
+## 3. 一次数据发送到底发生了什么？
+
+假设应用执行：
+
+```c
+send(sock, "hello", 5, 0);
+```
+
+可以把过程压缩成这条链：
+
+```text
+应用任务
+  ↓
+Socket API
+  ↓
+tcpip_thread
+  ↓
+TCP
+  ↓
+IP
+  ↓
+netif / pbuf
+  ↓
+Ethernet 或 Wi-Fi 驱动
+  ↓
+硬件发送
+```
+
+接收时方向相反：
+
+```text
+网卡收到帧
+  ↓
+驱动 / DMA
+  ↓
+pbuf
+  ↓
+netif
+  ↓
+IP
+  ↓
+TCP / UDP
+  ↓
+Socket 接收缓冲
+  ↓
+recv()
+```
+
+这也是调试 lwIP 最重要的一条主线：**先判断问题卡在哪一层。**
+
+## 4. lwIP 的三类 API 怎么选？
+
+lwIP 官方提供三种主要编程接口：Raw API、Sequential/Netconn API 和 BSD-style Socket API。
+
+| API | 特点 | 适合场景 |
+| :--- | :--- | :--- |
+| Raw API | 回调驱动、开销低、贴近协议栈 | 裸机、极限资源优化 |
+| Netconn API | 顺序式接口，比 Raw 更容易用 | RTOS 环境、需要较低开销 |
+| Socket API | 最像 Linux 网络编程 | 入门、移植现有网络程序 |
+
+如果你现在只是想把网络功能跑通，**优先学 Socket API 最省心**。
+
+需要注意的是，不同平台会对 lwIP 做自己的适配。例如 ESP-IDF 官方推荐应用优先使用 BSD Sockets；其文档还特别提醒，除 Socket API 外，使用其他 lwIP API 时要注意线程安全问题。
+
+## 5. 最小 TCP 客户端示例
+
+下面代码故意只保留核心流程：创建 Socket → 连接服务器 → 发送 → 接收 → 关闭。
+
+```c
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+void tcp_client(void)
+{
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        return;
+    }
+
+    struct sockaddr_in server = {0};
+    server.sin_family = AF_INET;
+    server.sin_port = htons(8080);
+    inet_pton(AF_INET, "192.168.1.100", &server.sin_addr);
+
+    if (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
+        close(sock);
+        return;
+    }
+
+    const char *msg = "hello lwIP";
+    send(sock, msg, strlen(msg), 0);
+
+    char buf[64] = {0};
+    int len = recv(sock, buf, sizeof(buf) - 1, 0);
+    if (len > 0) {
+        buf[len] = '\0';
+        printf("recv: %s\n", buf);
+    }
+
+    close(sock);
+}
+```
+
+最值得记住的不是代码细节，而是这条 Socket 主线：
+
+```text
+socket()
+   ↓
+connect()
+   ↓
+send() / recv()
+   ↓
+close()
+```
+
+如果写 TCP 服务器，则通常变成：
+
+```text
+socket → bind → listen → accept → recv/send → close
+```
+
+## 6. lwIP 和 FreeRTOS 是什么关系？
+
+两者不是同一种东西。
+
+- **FreeRTOS**：负责任务调度、队列、信号量、软件定时器等；
+- **lwIP**：负责 TCP/IP 网络协议。
+
+它们经常一起出现，是因为 lwIP 可以运行在 RTOS 环境下。
+
+在常见的 RTOS 移植中，可以把结构理解成：
+
+```text
+Sensor Task ─┐
+MQTT Task ───┼── Socket API ── tcpip_thread ── 网卡
+Web Task ────┘
+```
+
+多个应用任务可以提出网络请求，但协议栈核心通常由专门的 TCP/IP 线程处理。ESP-IDF 的 lwIP 实现同样会创建专用 TCP/IP FreeRTOS 任务来处理来自其他任务的 Socket 请求。
+
+这也是为什么不能简单认为：
+
+> “加了 `volatile`，多个任务随便调用 lwIP 内部接口就安全了。”
+
+线程安全要由 API 本身的调用规则、消息传递或核心锁来保证。
+
+## 7. 网络不通时，按层排查
+
+lwIP 最容易把人绕晕的地方，是“网络不通”背后可能完全不是 TCP 的问题。
+
+可以按下面顺序检查：
+
+```text
+① 网卡起来了吗？
+   ↓
+② link up 了吗？
+   ↓
+③ 有 IP / 掩码 / 网关吗？
+   ↓
+④ 能 ARP 到局域网设备吗？
+   ↓
+⑤ 能 ping 通目标吗？
+   ↓
+⑥ TCP connect 成功吗？
+   ↓
+⑦ send / recv 是否正常？
+```
+
+例如：
+
+- **连 IP 都没有**：优先看 DHCP、静态 IP 和 `netif`；
+- **同网段也 ping 不通**：优先看 PHY、MAC、ARP、驱动；
+- **ping 通但 connect 失败**：看目标端口、服务器是否监听、防火墙；
+- **connect 成功但收不到业务数据**：再看应用协议和 `recv()` 逻辑。
+
+不要一看到“网络不通”，就直接钻进 TCP 源码。
+
+## 8. 最后用一句话串起来
+
+如果把整个 lwIP 压缩成一张脑图，可以记成：
+
+```text
+应用
+ │
+ │ Socket / Netconn / Raw API
+ ▼
+lwIP
+ ├─ TCP / UDP
+ ├─ IP / ICMP
+ ├─ ARP
+ ├─ pbuf
+ └─ netif
+      │
+      ▼
+网卡驱动
+      │
+      ▼
+Ethernet / Wi-Fi 硬件
+```
+
+所以学习 lwIP 时最重要的不是背 API，而是理解：
+
+> **应用数据如何经过协议栈，最终变成网卡真正能够发送的帧；接收时又如何反向回到应用。**
+
+把这条数据链弄清楚后，再去看 Socket、`pbuf`、`netif`、DHCP 或 TCP 源码，就不会觉得它们是互不相关的一堆函数了。
+
+## 参考资料
+
+- lwIP 官方文档：<https://www.nongnu.org/lwip/>
+- lwIP Raw API / API 模型：<https://www.nongnu.org/lwip/2_0_x/raw_api.html>
+- ESP-IDF lwIP 编程指南：<https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-guides/lwip.html>
