@@ -1,0 +1,556 @@
+---
+title: PMBus 协议入门：电源芯片是怎么和 MCU 通信的？
+description: 从 I2C/SMBus 出发，通俗理解 PMBus 的通信方式、常用命令、LINEAR11/LINEAR16 数据格式、PEC 校验以及 MCU 端读取流程。
+pubDate: 2026-09-16
+draft: false
+categories:
+  - Communication Protocol
+tags:
+  - PMBus
+  - SMBus
+  - I2C
+  - Power Management
+  - BMS
+---
+
+import MermaidDiagram from "@components/MermaidDiagram.astro";
+
+# PMBus 协议入门：电源芯片是怎么和 MCU 通信的？
+
+在嵌入式系统里，MCU 不仅要控制 GPIO、UART、CAN，还经常需要管理各种电源器件，例如 DC/DC、数字电源模块、服务器 PSU、热插拔控制器和电源监控芯片。
+
+MCU 怎么知道电源现在是多少伏？输出了多少安？温度多高？有没有过压、过流或者过温？
+
+这就是 **PMBus（Power Management Bus）** 要解决的问题。
+
+可以先把 PMBus 理解成：
+
+> **在 SMBus/I2C 这条两线总线上，为“电源管理”定义了一套标准命令和数据格式。**
+
+例如 MCU 想读取输入电压、输出电流和温度，不需要每家芯片厂商都重新约定一套完全不同的寄存器语义，PMBus 已经定义了一组常见命令：
+
+```text
+READ_VIN          -> 读取输入电压
+READ_VOUT         -> 读取输出电压
+READ_IOUT         -> 读取输出电流
+READ_TEMPERATURE  -> 读取温度
+STATUS_WORD       -> 读取故障状态
+```
+
+## 1. PMBus、SMBus 和 I2C 是什么关系？
+
+这三个概念很容易混在一起，可以从下往上理解：
+
+```text
+PMBus
+  ↑
+定义电源管理命令、状态、数据格式
+  │
+SMBus
+  ↑
+定义更加规范的系统管理通信方式
+  │
+I2C
+  ↑
+提供 SDA + SCL 两线通信基础
+```
+
+也就是说：
+
+```text
+I2C：解决“数据怎么在线上传”
+SMBus：解决“设备之间怎么规范地通信”
+PMBus：解决“电源设备之间具体说什么”
+```
+
+<MermaidDiagram
+  title="I2C、SMBus 与 PMBus 的关系"
+  chart={`flowchart BT
+    A[I2C\nSDA + SCL / START / STOP / ACK]
+    B[SMBus\n规范化事务 / 超时 / PEC]
+    C[PMBus\n电压 / 电流 / 温度 / 故障 / 电源控制]
+    A --> B
+    B --> C`}
+/>
+
+因此，一个 MCU 如果已经有 I2C 外设，通常就具备实现 PMBus Controller 的基础。
+
+## 2. PMBus 硬件接口
+
+最基本的 PMBus 通信仍然使用：
+
+```text
+SCL  -> 时钟
+SDA  -> 数据
+GND  -> 共地
+```
+
+SDA 和 SCL 通常采用开漏结构，因此需要上拉电阻。
+
+```text
+3.3 V
+ │
+ R
+ │
+SDA ───────── MCU
+ │
+ └────────── Power Device
+
+3.3 V
+ │
+ R
+ │
+SCL ───────── MCU
+ │
+ └────────── Power Device
+```
+
+部分 PMBus 设备还会提供 `SMBALERT#`，可以把它理解成电源设备主动告诉控制器：
+
+> “我这里出现异常了，你来读一下状态。”
+
+这样 MCU 就不必一直高频轮询。
+
+## 3. PMBus 的核心其实是“命令”
+
+PMBus 和普通 I2C 传感器最大的区别之一，是它强调 **Command Code**。
+
+常见命令例如：
+
+| Command | Code | 含义 |
+| :--- | :---: | :--- |
+| `PAGE` | `0x00` | 选择电源页 |
+| `OPERATION` | `0x01` | 控制输出开关 |
+| `VOUT_COMMAND` | `0x21` | 设置输出电压 |
+| `STATUS_WORD` | `0x79` | 读取综合状态 |
+| `READ_VIN` | `0x88` | 读取输入电压 |
+| `READ_VOUT` | `0x8B` | 读取输出电压 |
+| `READ_IOUT` | `0x8C` | 读取输出电流 |
+| `READ_TEMPERATURE_1` | `0x8D` | 读取温度 |
+
+需要特别注意：
+
+> **PMBus Command Code 不应该简单理解成芯片内部寄存器地址。**
+
+它更像协议定义好的“命令编号”。芯片内部具体怎么保存这些数据，是厂商自己的实现。
+
+## 4. 读取一个电压到底发生了什么？
+
+假设设备地址为：
+
+```text
+0x58
+```
+
+MCU 想读取：
+
+```text
+READ_VIN = 0x88
+```
+
+一次典型 Word Read 可以理解成：
+
+```text
+START
+  ↓
+设备地址 + Write
+  ↓
+0x88
+  ↓
+Repeated START
+  ↓
+设备地址 + Read
+  ↓
+Data Low
+  ↓
+Data High
+  ↓
+STOP
+```
+
+<MermaidDiagram
+  title="READ_VIN 的一次典型读取过程"
+  chart={`sequenceDiagram
+    participant MCU as MCU / Controller
+    participant PSU as PMBus Device
+    MCU->>PSU: START + Address + W
+    MCU->>PSU: READ_VIN (0x88)
+    MCU->>PSU: Repeated START + Address + R
+    PSU-->>MCU: Data Low Byte
+    PSU-->>MCU: Data High Byte
+    MCU->>PSU: STOP`}
+/>
+
+Word 数据通常是低字节先传、高字节后传。
+
+例如总线上收到：
+
+```text
+34 12
+```
+
+可以组合成：
+
+```c
+uint16_t raw = ((uint16_t)0x12 << 8) | 0x34;
+```
+
+即：
+
+```text
+raw = 0x1234
+```
+
+## 5. 为什么读到的 Raw 值不能直接当电压？
+
+PMBus 最容易让初学者困惑的地方就在这里。
+
+设备返回的是一个编码后的 16 bit 数值，它不一定能直接当作电压、电流或温度。
+
+最常见的数据格式有：
+
+```text
+LINEAR11
+LINEAR16
+DIRECT
+```
+
+其中 LINEAR11 和 LINEAR16 最值得先掌握。
+
+## 6. LINEAR11：输入电压、电流、温度常见格式
+
+LINEAR11 一共 16 bit：
+
+```text
+15              11 10                    0
+┌─────────────────┬───────────────────────┐
+│   Exponent N    │      Mantissa Y       │
+│      5 bit      │        11 bit         │
+└─────────────────┴───────────────────────┘
+```
+
+其中：
+
+```text
+N：5 bit 有符号补码
+Y：11 bit 有符号补码
+```
+
+真实值：
+
+```text
+X = Y × 2^N
+```
+
+例如：
+
+```text
+N = -2
+Y = 48
+```
+
+则：
+
+```text
+X = 48 × 2^-2
+  = 12
+```
+
+如果当前命令是 `READ_VIN`，那么就是 12 V。
+
+对应的 C 语言解析可以写成：
+
+```c
+#include <stdint.h>
+#include <math.h>
+
+float pmbus_linear11_to_float(uint16_t raw)
+{
+    int16_t exponent;
+    int16_t mantissa;
+
+    exponent = (raw >> 11) & 0x1F;
+    if (exponent & 0x10) {
+        exponent |= 0xFFE0;
+    }
+
+    mantissa = raw & 0x07FF;
+    if (mantissa & 0x0400) {
+        mantissa |= 0xF800;
+    }
+
+    return (float)mantissa * powf(2.0f, exponent);
+}
+```
+
+这里最关键的是符号扩展，因为指数和尾数都可能是负数。
+
+## 7. LINEAR16：输出电压常见格式
+
+LINEAR16 和 LINEAR11 最大的区别是：
+
+```text
+LINEAR11：指数和尾数都放在同一个 16 bit 数据里
+LINEAR16：16 bit 主要保存数值 Y，指数 N 由其他信息提供
+```
+
+输出电压相关命令，例如：
+
+```text
+READ_VOUT
+VOUT_COMMAND
+```
+
+经常会使用这种方式。
+
+计算仍然类似：
+
+```text
+Voltage = Y × 2^N
+```
+
+其中：
+
+```text
+Y -> READ_VOUT 返回值
+N -> 通常从 VOUT_MODE 得到
+```
+
+例如：
+
+```text
+READ_VOUT = 0x3000
+N = -12
+```
+
+那么：
+
+```text
+Voltage = 12288 × 2^-12 = 3 V
+```
+
+因此如果 `READ_VOUT` 的 Raw 值看起来很大，不代表电压真的很大，必须结合 `VOUT_MODE` 一起解析。
+
+## 8. PAGE：多路电源怎么区分？
+
+很多数字电源芯片不止控制一路电压，例如：
+
+```text
+Rail 0 -> CPU 1.0 V
+Rail 1 -> DDR 1.2 V
+Rail 2 -> FPGA 0.9 V
+```
+
+PMBus 使用 `PAGE` 来选择当前操作哪一路：
+
+```text
+PAGE = 0
+READ_VOUT
+    ↓
+读取 Rail 0
+
+PAGE = 1
+READ_VOUT
+    ↓
+读取 Rail 1
+```
+
+所以调试多路电源时，如果 `READ_VOUT` 返回的电压和预期完全不一样，先检查当前 `PAGE`。
+
+## 9. STATUS_WORD：不仅能读数值，还能查故障
+
+PMBus 不只是读取电压、电流和温度，它还可以读取详细故障状态。
+
+常见状态命令包括：
+
+```text
+STATUS_WORD
+STATUS_VOUT
+STATUS_IOUT
+STATUS_INPUT
+STATUS_TEMPERATURE
+```
+
+用于判断：
+
+```text
+过压
+欠压
+过流
+过温
+输入异常
+通信故障
+```
+
+因此一个典型电源管理任务，往往会周期读取：
+
+```text
+READ_VIN
+READ_VOUT
+READ_IOUT
+READ_TEMPERATURE_1
+STATUS_WORD
+```
+
+这样 MCU 不仅知道“电源有没有输出”，还知道“当前是否健康”。
+
+## 10. PEC 是什么？
+
+PMBus/SMBus 还可以使用：
+
+```text
+PEC
+Packet Error Checking
+```
+
+可以把它理解成一层通信校验：
+
+```text
+Address
+Command
+Data
+   ↓
+CRC-8
+   ↓
+PEC
+```
+
+接收端重新计算 PEC，如果和收到的值一致，说明这次通信没有检测到总线位错误。
+
+带 PEC 的事务可能类似：
+
+```text
+START
+Address
+Command
+Data Low
+Data High
+PEC
+STOP
+```
+
+但 PEC 是否启用要看具体芯片手册和系统配置。
+
+## 11. MCU 端可以怎么分层？
+
+假设底层已经有一个 SMBus/I2C Word Read：
+
+```c
+uint16_t pmbus_read_word(uint8_t addr, uint8_t command);
+```
+
+读取输入电压就可以写成：
+
+```c
+#define PMBUS_READ_VIN   0x88
+
+float pmbus_read_vin(uint8_t addr)
+{
+    uint16_t raw = pmbus_read_word(addr, PMBUS_READ_VIN);
+    return pmbus_linear11_to_float(raw);
+}
+```
+
+应用层只需要：
+
+```c
+float vin = pmbus_read_vin(0x58);
+printf("VIN = %.2f V\r\n", vin);
+```
+
+整个软件层次可以理解成：
+
+```text
+Application
+    ↓
+pmbus_read_vin()
+    ↓
+PMBus Command
+    ↓
+SMBus Word Read
+    ↓
+I2C Driver
+    ↓
+SCL / SDA
+```
+
+这种分层比把所有 I2C 时序、命令和数据解析都塞进一个函数里更清晰。
+
+## 12. 调试 PMBus 时怎么排查？
+
+遇到“PMBus 读不到数据”，建议从底层往上检查：
+
+```text
+SCL / SDA 有波形吗？
+        ↓
+设备地址正确吗？
+        ↓
+设备 ACK 了吗？
+        ↓
+Command Code 正确吗？
+        ↓
+Read Word 时序正确吗？
+        ↓
+高低字节是否拼反？
+        ↓
+数据格式是 LINEAR11 / LINEAR16 / DIRECT？
+        ↓
+单位和指数是否解析正确？
+```
+
+常见问题主要有：
+
+- 7 bit 地址和 8 bit 地址混淆；
+- Word 高低字节拼反；
+- 把 Command Code 当普通寄存器地址；
+- LINEAR11 没做符号扩展；
+- `READ_VOUT` 忘记结合 `VOUT_MODE`；
+- 多路电源忘记切 `PAGE`；
+- 设备要求 PEC，但程序没有处理。
+
+如果有逻辑分析仪，直接观察 START、Address、ACK、Command、Repeated START 和 Data，通常比盲目修改代码更高效。
+
+## 13. 一张图记住 PMBus
+
+```text
+             MCU / BMC
+                 │
+          PMBus Controller
+                 │
+         SMBus / I2C Driver
+                 │
+        SDA ───────── SCL
+                 │
+       ┌─────────┼─────────┐
+       │         │         │
+     PSU       DC/DC     Hot Swap
+       │         │         │
+   VIN/VOUT   VOUT/IOUT   STATUS
+   TEMP       TEMP        FAULT
+```
+
+PMBus 并没有取代 I2C。
+
+更准确地说：
+
+> **I2C 提供总线，SMBus 规定通信方式，PMBus 再给这些通信定义“电源管理的语言”。**
+
+学习 PMBus 时，先抓住这条主线：
+
+```text
+总线时序
+   ↓
+Command
+   ↓
+数据格式
+   ↓
+状态与故障
+```
+
+掌握 `READ_VIN`、`READ_VOUT`、`READ_IOUT`、`STATUS_WORD`、`PAGE`、LINEAR11 和 LINEAR16 之后，已经能够覆盖大多数 PMBus 入门调试场景。
+
+## 参考资料
+
+- [PMBus Current Specifications](https://pmbus.org/current-specifications/)
+- [PMBus FAQ](https://pmbus.org/Resources/FAQ/)
+- [SMBus Specification](https://www.smbus.org/specs/)
