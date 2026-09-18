@@ -1,0 +1,76 @@
+<section class="pcb-demo not-prose" data-pcb-demo>
+  <div class="pcb-demo__head">
+    <div>
+      <h3>PCB 到底保存了什么？</h3>
+      <p>点击字段查看作用。橙色字段更直接参与“恢复执行现场”，蓝色字段更多用于进程资源管理。</p>
+    </div>
+    <div class="pcb-demo__legend">
+      <span><i class="context"></i>执行现场</span>
+      <span><i class="resource"></i>进程资源</span>
+    </div>
+  </div>
+
+  <div class="pcb-demo__grid">
+    <div class="pcb-demo__code" aria-label="Process Control Block 概念结构">
+      <div class="pcb-line"><span class="kw">struct</span> <strong>ProcessControlBlock</strong> &#123;</div>
+      <button class="pcb-line field resource" data-field="pid"><span>pid</span>: u16,</button>
+      <button class="pcb-line field resource" data-field="state"><span>state</span>: ProcessState,</button>
+      <button class="pcb-line field context" data-field="pc"><span>program_counter</span>: u16,</button>
+      <button class="pcb-line field context" data-field="gpr"><span>general_purpose_registers</span>: [u8; 4],</button>
+      <button class="pcb-line field context" data-field="ir"><span>instruction_register</span>: u8,</button>
+      <button class="pcb-line field context" data-field="flags"><span>flags</span>: [u1; 3],</button>
+      <button class="pcb-line field context" data-field="sp"><span>stack_pointer</span>: u16,</button>
+      <button class="pcb-line field context" data-field="index"><span>index_registers</span>: [u16; 2],</button>
+      <button class="pcb-line field resource" data-field="memory"><span>memory_limits</span>: [u16; 2],</button>
+      <button class="pcb-line field resource" data-field="io"><span>io_devices</span>: Vec&lt;IO_Device&gt;,</button>
+      <button class="pcb-line field resource" data-field="files"><span>open_files</span>: Vec&lt;File&gt;,</button>
+      <div class="pcb-line">&#125;</div>
+    </div>
+
+    <div class="pcb-demo__detail">
+      <div class="pcb-demo__badge" data-badge>执行现场</div>
+      <h4 data-title>Program Counter（PC）</h4>
+      <p data-desc>记录进程下一条要执行的指令位置。上下文恢复时，PC 决定进程从哪里继续。</p>
+      <div class="pcb-demo__flow" data-flow>切出 P1 → 保存 PC=0x1003 → 恢复 P1 → 从 0x1003 继续</div>
+      <p class="pcb-demo__note">这是教学模型。Linux 的真实上下文会分布在 <code>task_struct</code>、内核栈和体系结构相关结构中，并不是一个固定数组。</p>
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  .pcb-demo{--ctx:#f97316;--res:#0ea5e9;margin:1.2rem 0 1.8rem;padding:1rem;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:1rem;background:color-mix(in srgb,var(--color-bg,#fff) 97%,#64748b 3%)}
+  .pcb-demo__head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.9rem}.pcb-demo__head h3{margin:0;font-size:1rem}.pcb-demo__head p{margin:.3rem 0 0;font-size:.72rem;line-height:1.5;opacity:.7}
+  .pcb-demo__legend{display:flex;gap:.75rem;flex:none;font-size:.62rem;opacity:.75}.pcb-demo__legend i{display:inline-block;width:.58rem;height:.58rem;border-radius:50%;margin-right:.28rem}.pcb-demo__legend i.context{background:var(--ctx)}.pcb-demo__legend i.resource{background:var(--res)}
+  .pcb-demo__grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:.8rem}
+  .pcb-demo__code{padding:.75rem;border-radius:.75rem;background:#0b1020;color:#dbeafe;font:500 .69rem/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;overflow:auto}.pcb-line{display:block;width:100%;padding:.12rem .35rem;text-align:left;border:0;background:transparent;color:inherit;font:inherit;border-radius:.35rem;white-space:nowrap}.pcb-line.field{cursor:pointer}.pcb-line.field:hover,.pcb-line.field.is-active{background:rgba(255,255,255,.08)}.pcb-line.field.context span{color:#fb923c}.pcb-line.field.resource span{color:#38bdf8}.pcb-line .kw{color:#c084fc}
+  .pcb-demo__detail{padding:.9rem;border:1px solid color-mix(in srgb,currentColor 13%,transparent);border-radius:.75rem;background:color-mix(in srgb,var(--color-bg,#fff) 96%,#94a3b8 4%)}.pcb-demo__badge{display:inline-block;padding:.2rem .42rem;border-radius:999px;background:color-mix(in srgb,var(--ctx) 13%,transparent);color:var(--ctx);font-size:.58rem;font-weight:700}.pcb-demo__badge.resource{background:color-mix(in srgb,var(--res) 13%,transparent);color:var(--res)}.pcb-demo__detail h4{margin:.65rem 0 .38rem;font-size:.86rem}.pcb-demo__detail p{margin:.35rem 0;font-size:.69rem;line-height:1.55}.pcb-demo__flow{margin:.7rem 0;padding:.6rem .68rem;border-radius:.55rem;background:color-mix(in srgb,currentColor 5%,transparent);font:600 .62rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}.pcb-demo__note{opacity:.62}.pcb-demo__note code{font-size:.62rem}
+  @media(max-width:760px){.pcb-demo__head{flex-direction:column}.pcb-demo__grid{grid-template-columns:1fr}.pcb-demo__legend{flex-wrap:wrap}}
+</style>
+
+<script is:inline>
+  function initPcbDemo(root){
+    if(root.dataset.initialized==="true") return;
+    root.dataset.initialized="true";
+    const info={
+      pid:["resource","进程 ID（PID）","操作系统用它唯一标识一个进程。","创建/查找/发送信号/资源管理时用于定位进程"],
+      state:["resource","进程状态","记录 RUNNING、READY、BLOCKED 等调度状态。","调度器根据状态判断进程是否可以获得 CPU"],
+      pc:["context","Program Counter（PC）","记录进程下一条要执行的指令位置。上下文恢复时，PC 决定进程从哪里继续。","切出 P1 → 保存 PC=0x1003 → 恢复 P1 → 从 0x1003 继续"],
+      gpr:["context","通用寄存器","保存计算中的临时值、参数和中间结果。","保存 R0/R1/... → 别的进程使用 CPU → 再恢复原值"],
+      ir:["context","Instruction Register（概念字段）","教学模型中表示当前指令。真实处理器/内核不一定把 IR 作为可独立保存的 PCB 字段。","帮助理解“CPU 此刻正在执行哪条指令”"],
+      flags:["context","状态寄存器 / FLAGS","保存零标志、符号标志、中断控制等体系结构相关状态。","恢复 FLAGS → CPU 继续保持切换前的条件状态"],
+      sp:["context","Stack Pointer（SP）","指向当前进程或线程栈顶，是函数调用和局部变量恢复的关键。","保存 SP → 恢复后仍能回到原来的调用栈"],
+      index:["context","索引 / 体系结构相关寄存器","某些 CPU 还有需要随任务保存的专用或扩展寄存器。","具体保存哪些寄存器取决于 CPU 架构和 ABI"],
+      memory:["resource","内存管理信息","描述进程地址空间、边界或页表等内存资源。","进程切换时可能伴随地址空间相关状态切换"],
+      io:["resource","I/O 资源","表示进程正在使用或等待的设备资源。","进程可能因为等待 I/O 从 RUNNING 进入 BLOCKED"],
+      files:["resource","打开的文件","保存文件描述相关资源，使进程恢复后仍可继续访问文件、Socket 等。","上下文切换不会把文件重新打开，资源关系仍由内核维护"]
+    };
+    const title=root.querySelector("[data-title]"),desc=root.querySelector("[data-desc]"),flow=root.querySelector("[data-flow]"),badge=root.querySelector("[data-badge]");
+    root.querySelectorAll("[data-field]").forEach(btn=>btn.addEventListener("click",()=>{
+      root.querySelectorAll("[data-field]").forEach(x=>x.classList.remove("is-active"));btn.classList.add("is-active");
+      const [type,t,d,f]=info[btn.dataset.field];title.textContent=t;desc.textContent=d;flow.textContent=f;badge.textContent=type==="context"?"执行现场":"进程资源";badge.className="pcb-demo__badge"+(type==="resource"?" resource":"");
+    }));
+    root.querySelector('[data-field="pc"]')?.classList.add("is-active");
+  }
+  document.querySelectorAll("[data-pcb-demo]").forEach(initPcbDemo);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-pcb-demo]").forEach(initPcbDemo));
+</script>
