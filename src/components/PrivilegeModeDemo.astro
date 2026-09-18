@@ -1,0 +1,112 @@
+<section class="mode-demo not-prose" data-mode-demo>
+  <div class="mode-demo__head">
+    <div>
+      <h3>用户态、内核态与特权指令</h3>
+      <p>点击普通指令、系统调用或特权指令，观察 CPU 当前模式以及操作系统如何介入。</p>
+    </div>
+    <div class="mode-demo__controls">
+      <button type="button" data-act="mov">执行 MOV</button>
+      <button type="button" data-act="syscall">执行 SYSCALL</button>
+      <button type="button" data-act="halt">尝试 HALT</button>
+      <button type="button" data-act="return">返回用户态</button>
+    </div>
+  </div>
+
+  <div class="mode-demo__layout">
+    <div class="mode-demo__apps">
+      <div class="mode-demo__app">Browser</div>
+      <div class="mode-demo__app">Terminal</div>
+      <div class="mode-demo__app">Editor</div>
+      <div class="mode-demo__app">Client</div>
+    </div>
+
+    <div class="mode-demo__os" data-os>
+      <div>
+        <strong>OPERATING SYSTEM</strong>
+        <span data-mode-label>User Mode</span>
+      </div>
+      <div class="mode-demo__bit">Mode Bit <b data-mode-bit>1</b></div>
+    </div>
+
+    <div class="mode-demo__cpu">
+      <div class="mode-demo__cpu-head">
+        <strong>CPU Privilege Check</strong>
+        <span data-current-ins>等待指令</span>
+      </div>
+      <div class="mode-demo__instruction-grid">
+        <button data-ins="MOV" data-kind="normal">MOV</button>
+        <button data-ins="ADD" data-kind="normal">ADD</button>
+        <button data-ins="PUSH" data-kind="normal">PUSH</button>
+        <button data-ins="SYSCALL" data-kind="trap">SYSCALL</button>
+        <button data-ins="HALT" data-kind="priv">HALT</button>
+        <button data-ins="MMU" data-kind="priv">MMU</button>
+        <button data-ins="IN/OUT" data-kind="priv">IN / OUT</button>
+        <button data-ins="SYSRET" data-kind="kernel">SYSRET</button>
+      </div>
+    </div>
+
+    <div class="mode-demo__hardware">
+      <div>CPU</div>
+      <div>RAM</div>
+      <div>Disk</div>
+      <div>I/O Device</div>
+    </div>
+  </div>
+
+  <div class="mode-demo__status" data-status>
+    当前处于 User Mode。普通应用可以执行常规指令，但不能直接执行受限的系统控制操作。
+  </div>
+</section>
+
+<style is:global>
+  .mode-demo{--user:#38bdf8;--kernel:#f59e0b;--danger:#ef4444;margin:1.2rem 0 1.8rem;padding:1rem;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:1rem;background:color-mix(in srgb,var(--color-bg,#fff) 97%,#64748b 3%)}
+  .mode-demo__head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:.9rem}.mode-demo__head h3{margin:0;font-size:1rem}.mode-demo__head p{margin:.3rem 0 0;font-size:.72rem;line-height:1.5;opacity:.7}
+  .mode-demo__controls{display:flex;gap:.4rem;flex-wrap:wrap}.mode-demo__controls button{border:1px solid color-mix(in srgb,currentColor 22%,transparent);border-radius:.55rem;padding:.42rem .62rem;background:transparent;color:inherit;font-size:.66rem;cursor:pointer}
+  .mode-demo__layout{display:grid;grid-template-columns:1fr;gap:.55rem}.mode-demo__apps{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem}.mode-demo__app{padding:.58rem;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:.65rem;text-align:center;font-size:.66rem}
+  .mode-demo__os{display:flex;justify-content:space-between;align-items:center;padding:.75rem .85rem;border:2px solid var(--user);border-radius:.72rem;background:color-mix(in srgb,var(--user) 8%,transparent);transition:.25s}.mode-demo__os.is-kernel{border-color:var(--kernel);background:color-mix(in srgb,var(--kernel) 10%,transparent)}.mode-demo__os strong{display:block;font-size:.78rem}.mode-demo__os span{font-size:.62rem;opacity:.7}.mode-demo__bit{font-size:.64rem}.mode-demo__bit b{display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;margin-left:.3rem;border-radius:.35rem;background:currentColor;color:var(--color-bg,#fff)}
+  .mode-demo__cpu{padding:.75rem;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:.72rem}.mode-demo__cpu-head{display:flex;justify-content:space-between;gap:.5rem;margin-bottom:.6rem;font-size:.68rem}.mode-demo__cpu-head span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;opacity:.72}
+  .mode-demo__instruction-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}.mode-demo__instruction-grid button{padding:.55rem .35rem;border:1px solid color-mix(in srgb,currentColor 13%,transparent);border-radius:.5rem;background:transparent;color:inherit;font:700 .62rem ui-monospace,SFMono-Regular,Menlo,monospace;cursor:pointer}.mode-demo__instruction-grid button[data-kind="normal"]{color:var(--user)}.mode-demo__instruction-grid button[data-kind="trap"]{color:#a78bfa}.mode-demo__instruction-grid button[data-kind="priv"],.mode-demo__instruction-grid button[data-kind="kernel"]{color:var(--kernel)}.mode-demo__instruction-grid button.is-active{box-shadow:0 0 0 2px color-mix(in srgb,currentColor 18%,transparent);transform:translateY(-1px)}
+  .mode-demo__hardware{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem}.mode-demo__hardware div{padding:.55rem;border-radius:.58rem;background:color-mix(in srgb,currentColor 5%,transparent);text-align:center;font-size:.63rem}
+  .mode-demo__status{margin-top:.7rem;padding:.68rem .78rem;border-radius:.65rem;background:color-mix(in srgb,currentColor 5%,transparent);font-size:.69rem;line-height:1.55}
+  @media(max-width:720px){.mode-demo__head{flex-direction:column}.mode-demo__apps,.mode-demo__instruction-grid,.mode-demo__hardware{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<script is:inline>
+  function initModeDemo(root){
+    if(root.dataset.initialized==="true") return;
+    root.dataset.initialized="true";
+    const os=root.querySelector("[data-os]"),bit=root.querySelector("[data-mode-bit]"),label=root.querySelector("[data-mode-label]"),status=root.querySelector("[data-status]"),current=root.querySelector("[data-current-ins]");
+    let mode="user";
+    function render(){
+      os.classList.toggle("is-kernel",mode==="kernel");
+      bit.textContent=mode==="user"?"1":"0";
+      label.textContent=mode==="user"?"User Mode":"Kernel / Privileged Mode";
+    }
+    function setActive(name){
+      root.querySelectorAll("[data-ins]").forEach(b=>b.classList.toggle("is-active",b.dataset.ins===name));
+      current.textContent=name;
+    }
+    function execute(name,kind){
+      setActive(name);
+      if(kind==="normal"){
+        status.textContent=mode==="user"?name+" 是普通指令，可以在用户态正常执行。":name+" 在内核态同样可以执行。";
+      }else if(kind==="trap"){
+        mode="kernel";render();status.textContent="SYSCALL 触发受控陷入：CPU 从用户态进入内核态，由操作系统代替应用执行受保护操作。";
+      }else if(kind==="priv"){
+        if(mode==="user"){mode="kernel";render();status.textContent=name+" 属于这里的“特权操作”示意。用户态不能直接执行，会触发异常/陷入，由内核接管。";}
+        else status.textContent="当前已经在内核态，内核具备执行这类受保护系统操作的权限。";
+      }else if(kind==="kernel"){
+        if(mode==="kernel"){mode="user";render();status.textContent="SYSRET / 异常返回：恢复用户态上下文，CPU 回到应用继续执行。";}
+        else status.textContent="当前已经处于用户态。";
+      }
+    }
+    root.querySelectorAll("[data-ins]").forEach(b=>b.addEventListener("click",()=>execute(b.dataset.ins,b.dataset.kind)));
+    root.querySelector('[data-act="mov"]')?.addEventListener("click",()=>execute("MOV","normal"));
+    root.querySelector('[data-act="syscall"]')?.addEventListener("click",()=>execute("SYSCALL","trap"));
+    root.querySelector('[data-act="halt"]')?.addEventListener("click",()=>execute("HALT","priv"));
+    root.querySelector('[data-act="return"]')?.addEventListener("click",()=>execute("SYSRET","kernel"));
+    render();
+  }
+  document.querySelectorAll("[data-mode-demo]").forEach(initModeDemo);
+  document.addEventListener("astro:page-load",()=>document.querySelectorAll("[data-mode-demo]").forEach(initModeDemo));
+</script>
