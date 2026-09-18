@@ -1,0 +1,342 @@
+<section class="ctx-demo not-prose" data-context-demo>
+  <div class="ctx-demo__head">
+    <div>
+      <h3>进程上下文切换动态演示</h3>
+      <p>CPU 先运行 P1，操作系统保存 P1 的寄存器现场，再恢复 P2；切回 P1 后从原来的 PC 继续执行。</p>
+    </div>
+    <div class="ctx-demo__controls" role="group" aria-label="上下文切换演示控制">
+      <button type="button" data-action="auto">▶ 自动演示</button>
+      <button type="button" data-action="step">单步执行</button>
+      <button type="button" data-action="switch">切换进程</button>
+      <button type="button" data-action="reset">重置</button>
+    </div>
+  </div>
+
+  <div class="ctx-demo__stage">
+    <div class="ctx-card ctx-cpu" data-cpu-card>
+      <div class="ctx-card__title">
+        <span>CPU</span>
+        <span class="ctx-badge p1" data-current-badge>P1 RUNNING</span>
+      </div>
+
+      <div class="ctx-registers">
+        <div class="ctx-reg"><span>R0</span><strong data-reg="r0">0</strong></div>
+        <div class="ctx-reg"><span>R1</span><strong data-reg="r1">0</strong></div>
+        <div class="ctx-reg"><span>R2</span><strong data-reg="r2">0</strong></div>
+        <div class="ctx-reg"><span>R3</span><strong data-reg="r3">0</strong></div>
+      </div>
+
+      <div class="ctx-special">
+        <div><span>PC</span><strong data-reg="pc">0x1000</strong></div>
+        <div><span>SP</span><strong data-reg="sp">0x7FF0</strong></div>
+        <div><span>FLAGS</span><strong data-reg="flags">Z=0 N=0</strong></div>
+        <div class="ctx-ir"><span>IR</span><strong data-reg="ir">等待取指</strong></div>
+      </div>
+
+      <div class="ctx-cpu-note">正在运行的进程，其“现场”此刻主要在 CPU 寄存器里。</div>
+    </div>
+
+    <div class="ctx-transfer" aria-hidden="true">
+      <div class="ctx-transfer__line"></div>
+      <div class="ctx-transfer__packet" data-packet>CTX</div>
+      <span data-transfer-label>运行</span>
+    </div>
+
+    <div class="ctx-card ctx-os" data-os-card>
+      <div class="ctx-card__title">
+        <span>OPERATING SYSTEM</span>
+        <span class="ctx-badge neutral" data-scheduler>SCHEDULER IDLE</span>
+      </div>
+
+      <div class="ctx-pcb" data-pcb="p1">
+        <div class="ctx-pcb__name p1">PCB · P1</div>
+        <div class="ctx-pcb__state" data-state="p1">RUNNING</div>
+        <div class="ctx-pcb__values">
+          <span>R0=<b data-pcb-p1="r0">0</b></span>
+          <span>R1=<b data-pcb-p1="r1">0</b></span>
+          <span>PC=<b data-pcb-p1="pc">0x1000</b></span>
+          <span>SP=<b data-pcb-p1="sp">0x7FF0</b></span>
+        </div>
+      </div>
+
+      <div class="ctx-pcb" data-pcb="p2">
+        <div class="ctx-pcb__name p2">PCB · P2</div>
+        <div class="ctx-pcb__state" data-state="p2">READY</div>
+        <div class="ctx-pcb__values">
+          <span>R0=<b data-pcb-p2="r0">0</b></span>
+          <span>R1=<b data-pcb-p2="r1">0</b></span>
+          <span>PC=<b data-pcb-p2="pc">0x2000</b></span>
+          <span>SP=<b data-pcb-p2="sp">0x8FF0</b></span>
+        </div>
+      </div>
+
+      <div class="ctx-os-note">PCB 中保存的是进程离开 CPU 时需要恢复的关键执行现场。真实系统保存内容依架构与内核实现而异。</div>
+    </div>
+  </div>
+
+  <div class="ctx-memory">
+    <div class="ctx-space p1" data-space="p1">
+      <div class="ctx-space__head">
+        <strong>Process 1 · Virtual Address Space</strong>
+        <span>Data[0x1100] = <b data-memory="p1">0</b></span>
+      </div>
+      <div class="ctx-code">
+        <div data-ins="p1-0"><code>0x1000</code><span>LOAD R0, 12</span></div>
+        <div data-ins="p1-1"><code>0x1001</code><span>LOAD R1, 20</span></div>
+        <div data-ins="p1-2"><code>0x1002</code><span>ADD R0, R1</span></div>
+        <div data-ins="p1-3"><code>0x1003</code><span>STORE R0, [0x1100]</span></div>
+      </div>
+    </div>
+
+    <div class="ctx-space p2" data-space="p2">
+      <div class="ctx-space__head">
+        <strong>Process 2 · Virtual Address Space</strong>
+        <span>Data[0x2100] = <b data-memory="p2">0</b></span>
+      </div>
+      <div class="ctx-code">
+        <div data-ins="p2-0"><code>0x2000</code><span>LOAD R0, 100</span></div>
+        <div data-ins="p2-1"><code>0x2001</code><span>LOAD R1, 35</span></div>
+        <div data-ins="p2-2"><code>0x2002</code><span>ADD R0, R1</span></div>
+        <div data-ins="p2-3"><code>0x2003</code><span>STORE R0, [0x2100]</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ctx-demo__status" aria-live="polite" data-status>
+    P1 已获得 CPU。点击“单步执行”观察寄存器变化，或点击“自动演示”完整观察一次 P1 → P2 → P1 的切换。
+  </div>
+
+  <div class="ctx-demo__legend">
+    <span><i class="p1"></i>P1</span>
+    <span><i class="p2"></i>P2</span>
+    <span>PC = Program Counter，SP = Stack Pointer，IR = 当前指令</span>
+  </div>
+</section>
+
+<style is:global>
+  .ctx-demo{--p1:#f97316;--p2:#0ea5e9;margin:1.35rem 0 2rem;padding:1rem;border:1px solid color-mix(in srgb,currentColor 15%,transparent);border-radius:1rem;background:color-mix(in srgb,var(--color-bg,#fff) 97%,#64748b 3%);overflow:hidden}
+  .ctx-demo__head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem}
+  .ctx-demo__head h3{margin:0;font-size:1rem}.ctx-demo__head p{margin:.35rem 0 0;max-width:720px;font-size:.75rem;line-height:1.55;opacity:.72}
+  .ctx-demo__controls{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:flex-end}
+  .ctx-demo__controls button{border:1px solid color-mix(in srgb,currentColor 25%,transparent);border-radius:.62rem;padding:.48rem .68rem;background:transparent;color:inherit;font-size:.7rem;cursor:pointer}
+  .ctx-demo__controls button:hover{background:color-mix(in srgb,currentColor 6%,transparent)}.ctx-demo__controls button:disabled{opacity:.45;cursor:not-allowed}
+  .ctx-demo__stage{display:grid;grid-template-columns:minmax(0,1fr) 76px minmax(0,1.1fr);gap:.7rem;align-items:stretch}
+  .ctx-card{border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:.85rem;padding:.85rem;background:color-mix(in srgb,var(--color-bg,#fff) 94%,#334155 6%);transition:box-shadow .25s,border-color .25s,transform .25s}
+  .ctx-card__title{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.75rem;font-size:.78rem;font-weight:800;letter-spacing:.04em}
+  .ctx-badge{padding:.2rem .42rem;border-radius:999px;font-size:.58rem;letter-spacing:.02em}.ctx-badge.p1{color:var(--p1);background:color-mix(in srgb,var(--p1) 12%,transparent)}.ctx-badge.p2{color:var(--p2);background:color-mix(in srgb,var(--p2) 12%,transparent)}.ctx-badge.neutral{opacity:.65;background:color-mix(in srgb,currentColor 7%,transparent)}
+  .ctx-registers{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem}.ctx-reg,.ctx-special>div{border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:.55rem;padding:.48rem;background:color-mix(in srgb,var(--color-bg,#fff) 96%,#94a3b8 4%)}
+  .ctx-reg span,.ctx-special span{display:block;margin-bottom:.16rem;font-size:.58rem;opacity:.62}.ctx-reg strong,.ctx-special strong{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem}
+  .ctx-special{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.45rem;margin-top:.45rem}.ctx-special .ctx-ir{grid-column:1/-1}.ctx-cpu-note,.ctx-os-note{margin-top:.65rem;font-size:.62rem;line-height:1.45;opacity:.62}
+  .ctx-transfer{position:relative;display:flex;min-height:210px;align-items:center;justify-content:center}.ctx-transfer__line{position:absolute;left:8px;right:8px;height:2px;background:color-mix(in srgb,currentColor 18%,transparent)}.ctx-transfer__packet{position:absolute;z-index:2;padding:.28rem .4rem;border-radius:.45rem;background:#475569;color:white;font:700 .58rem ui-monospace,SFMono-Regular,Menlo,monospace;opacity:0;transform:translateX(-20px)}.ctx-transfer>span{position:absolute;top:calc(50% + 12px);font-size:.58rem;opacity:.55}
+  .ctx-transfer.is-saving .ctx-transfer__packet{opacity:1;background:var(--p1);animation:ctx-save .8s ease both}.ctx-transfer.is-loading .ctx-transfer__packet{opacity:1;background:var(--p2);animation:ctx-load .8s ease both}
+  @keyframes ctx-save{from{transform:translateX(-30px)}to{transform:translateX(30px)}}@keyframes ctx-load{from{transform:translateX(30px)}to{transform:translateX(-30px)}}
+  .ctx-pcb{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:.55rem;padding:.58rem .65rem;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:.65rem;margin:.5rem 0;transition:border-color .2s,background .2s,transform .2s}.ctx-pcb.is-active{transform:translateX(3px);border-color:currentColor;background:color-mix(in srgb,currentColor 4%,transparent)}
+  .ctx-pcb__name{font-size:.7rem;font-weight:800}.ctx-pcb__name.p1{color:var(--p1)}.ctx-pcb__name.p2{color:var(--p2)}.ctx-pcb__state{font-size:.55rem;padding:.18rem .34rem;border-radius:.35rem;background:color-mix(in srgb,currentColor 8%,transparent);opacity:.78}
+  .ctx-pcb__values{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;font:500 .58rem ui-monospace,SFMono-Regular,Menlo,monospace}.ctx-pcb__values b{font-weight:800}
+  .ctx-memory{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.8rem}.ctx-space{border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:.8rem;overflow:hidden;transition:border-color .25s,box-shadow .25s}.ctx-space.is-running.p1{border-color:var(--p1);box-shadow:0 0 0 2px color-mix(in srgb,var(--p1) 10%,transparent)}.ctx-space.is-running.p2{border-color:var(--p2);box-shadow:0 0 0 2px color-mix(in srgb,var(--p2) 10%,transparent)}
+  .ctx-space__head{display:flex;justify-content:space-between;gap:.5rem;padding:.55rem .65rem;font-size:.63rem;background:color-mix(in srgb,currentColor 5%,transparent)}.ctx-space__head span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;opacity:.7}
+  .ctx-code>div{display:grid;grid-template-columns:72px 1fr;gap:.5rem;padding:.38rem .65rem;border-top:1px solid color-mix(in srgb,currentColor 9%,transparent);font-size:.63rem;transition:background .2s,transform .2s}.ctx-code code{padding:0;background:transparent;opacity:.62}.ctx-code>div.is-pc{font-weight:800;transform:translateX(3px)}.ctx-space.p1 .ctx-code>div.is-pc{background:color-mix(in srgb,var(--p1) 11%,transparent)}.ctx-space.p2 .ctx-code>div.is-pc{background:color-mix(in srgb,var(--p2) 11%,transparent)}
+  .ctx-cpu.flash-save{border-color:var(--p1);box-shadow:0 0 0 3px color-mix(in srgb,var(--p1) 13%,transparent)}.ctx-cpu.flash-load{border-color:var(--p2);box-shadow:0 0 0 3px color-mix(in srgb,var(--p2) 13%,transparent)}
+  .ctx-demo__status{margin-top:.8rem;padding:.7rem .8rem;border-radius:.7rem;background:color-mix(in srgb,currentColor 5%,transparent);font-size:.7rem;line-height:1.55}.ctx-demo__legend{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.55rem;font-size:.6rem;opacity:.62}.ctx-demo__legend i{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;margin-right:.28rem}.ctx-demo__legend i.p1{background:var(--p1)}.ctx-demo__legend i.p2{background:var(--p2)}
+  @media(max-width:820px){.ctx-demo__head{flex-direction:column}.ctx-demo__controls{justify-content:flex-start}.ctx-demo__stage{grid-template-columns:1fr}.ctx-transfer{min-height:52px}.ctx-transfer__line{top:50%;left:35%;right:35%}.ctx-memory{grid-template-columns:1fr}.ctx-registers{grid-template-columns:repeat(2,1fr)}.ctx-pcb{grid-template-columns:1fr auto}.ctx-pcb__values{grid-column:1/-1;justify-content:flex-start}}
+</style>
+
+<script is:inline>
+  function initContextSwitchDemo(root) {
+    if (root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const cpuCard = root.querySelector("[data-cpu-card]");
+    const osCard = root.querySelector("[data-os-card]");
+    const transfer = root.querySelector(".ctx-transfer");
+    const status = root.querySelector("[data-status]");
+    const badge = root.querySelector("[data-current-badge]");
+    const scheduler = root.querySelector("[data-scheduler]");
+    const buttons = [...root.querySelectorAll("button[data-action]")];
+
+    const programs = {
+      p1: {
+        name: "P1", base: 0x1000, sp: 0x7ff0, memory: 0,
+        instructions: [
+          { text: "LOAD R0, 12", run: (c) => c.r0 = 12 },
+          { text: "LOAD R1, 20", run: (c) => c.r1 = 20 },
+          { text: "ADD R0, R1", run: (c) => { c.r0 += c.r1; c.flags = c.r0 === 0 ? "Z=1 N=0" : "Z=0 N=0"; } },
+          { text: "STORE R0, [0x1100]", run: (c, p) => p.memory = c.r0 },
+        ],
+      },
+      p2: {
+        name: "P2", base: 0x2000, sp: 0x8ff0, memory: 0,
+        instructions: [
+          { text: "LOAD R0, 100", run: (c) => c.r0 = 100 },
+          { text: "LOAD R1, 35", run: (c) => c.r1 = 35 },
+          { text: "ADD R0, R1", run: (c) => { c.r0 += c.r1; c.flags = c.r0 === 0 ? "Z=1 N=0" : "Z=0 N=0"; } },
+          { text: "STORE R0, [0x2100]", run: (c, p) => p.memory = c.r0 },
+        ],
+      },
+    };
+
+    let saved = {};
+    let cpu = {};
+    let current = "p1";
+    let busy = false;
+    let autoRunning = false;
+
+    function hex(value) {
+      return "0x" + Number(value).toString(16).toUpperCase();
+    }
+
+    function initialContext(id) {
+      return { r0:0, r1:0, r2:0, r3:0, pcIndex:0, sp:programs[id].sp, flags:"Z=0 N=0", ir:"等待取指" };
+    }
+
+    function pcValue(id, context) {
+      return programs[id].base + Math.min(context.pcIndex, programs[id].instructions.length);
+    }
+
+    function render() {
+      ["r0","r1","r2","r3"].forEach((key) => {
+        const el = root.querySelector(`[data-reg="${key}"]`);
+        if (el) el.textContent = cpu[key];
+      });
+      root.querySelector('[data-reg="pc"]').textContent = hex(pcValue(current, cpu));
+      root.querySelector('[data-reg="sp"]').textContent = hex(cpu.sp);
+      root.querySelector('[data-reg="flags"]').textContent = cpu.flags;
+      root.querySelector('[data-reg="ir"]').textContent = cpu.ir;
+
+      badge.textContent = programs[current].name + " RUNNING";
+      badge.className = "ctx-badge " + current;
+
+      ["p1","p2"].forEach((id) => {
+        const ctx = id === current ? cpu : saved[id];
+        ["r0","r1"].forEach((key) => {
+          const el = root.querySelector(`[data-pcb-${id}="${key}"]`);
+          if (el) el.textContent = saved[id][key];
+        });
+        root.querySelector(`[data-pcb-${id}="pc"]`).textContent = hex(pcValue(id, saved[id]));
+        root.querySelector(`[data-pcb-${id}="sp"]`).textContent = hex(saved[id].sp);
+        root.querySelector(`[data-state="${id}"]`).textContent = id === current ? "RUNNING" : "READY";
+        root.querySelector(`[data-space="${id}"]`).classList.toggle("is-running", id === current);
+        root.querySelector(`[data-memory="${id}"]`).textContent = programs[id].memory;
+
+        programs[id].instructions.forEach((_, index) => {
+          root.querySelector(`[data-ins="${id}-${index}"]`)?.classList.toggle("is-pc", id === current && index === ctx.pcIndex);
+        });
+      });
+    }
+
+    async function stepInstruction() {
+      if (busy || autoRunning) return;
+      const program = programs[current];
+      if (cpu.pcIndex >= program.instructions.length) {
+        status.textContent = `${program.name} 已执行完当前示例程序，可以切换到另一个进程或重置演示。`;
+        return;
+      }
+      busy = true;
+      const index = cpu.pcIndex;
+      const ins = program.instructions[index];
+      cpu.ir = ins.text;
+      render();
+      status.textContent = `${program.name} 取指：${ins.text}`;
+      await sleep(280);
+      ins.run(cpu, program);
+      cpu.pcIndex += 1;
+      render();
+      status.textContent = `${program.name} 执行完成：${ins.text}。PC 前进到 ${hex(pcValue(current, cpu))}。`;
+      busy = false;
+    }
+
+    async function switchProcess(forceTarget) {
+      if (busy) return;
+      busy = true;
+      const from = current;
+      const to = forceTarget || (from === "p1" ? "p2" : "p1");
+      scheduler.textContent = "SCHEDULER ACTIVE";
+      status.textContent = `时钟中断/调度点到来：内核准备把 CPU 从 ${programs[from].name} 切换到 ${programs[to].name}。`;
+
+      cpuCard.classList.add("flash-save");
+      transfer.classList.add("is-saving");
+      transfer.querySelector("[data-transfer-label]").textContent = "保存现场";
+      await sleep(650);
+
+      saved[from] = { ...cpu, ir:"等待恢复" };
+      root.querySelector(`[data-pcb="${from}"]`)?.classList.add("is-active");
+      render();
+      status.textContent = `① 保存 ${programs[from].name}：通用寄存器、PC、SP、FLAGS 等关键现场写回 PCB。`;
+      await sleep(650);
+
+      cpuCard.classList.remove("flash-save");
+      transfer.classList.remove("is-saving");
+      root.querySelector(`[data-pcb="${from}"]`)?.classList.remove("is-active");
+
+      current = to;
+      cpu = { ...saved[to], ir:"恢复完成，准备取指" };
+      transfer.classList.add("is-loading");
+      cpuCard.classList.add("flash-load");
+      transfer.querySelector("[data-transfer-label]").textContent = "恢复现场";
+      root.querySelector(`[data-pcb="${to}"]`)?.classList.add("is-active");
+      render();
+      status.textContent = `② 恢复 ${programs[to].name}：从 PCB 装回寄存器现场，CPU 的 PC 回到 ${hex(pcValue(to, cpu))}。`;
+      await sleep(750);
+
+      transfer.classList.remove("is-loading");
+      cpuCard.classList.remove("flash-load");
+      root.querySelector(`[data-pcb="${to}"]`)?.classList.remove("is-active");
+      scheduler.textContent = "SCHEDULER IDLE";
+      transfer.querySelector("[data-transfer-label]").textContent = "运行";
+      render();
+      status.textContent = `③ ${programs[to].name} 获得 CPU，并从上次保存的 PC 位置继续执行。`;
+      busy = false;
+    }
+
+    function reset() {
+      autoRunning = false;
+      busy = false;
+      programs.p1.memory = 0;
+      programs.p2.memory = 0;
+      saved = { p1:initialContext("p1"), p2:initialContext("p2") };
+      current = "p1";
+      cpu = { ...saved.p1 };
+      scheduler.textContent = "SCHEDULER IDLE";
+      cpuCard.classList.remove("flash-save","flash-load");
+      transfer.classList.remove("is-saving","is-loading");
+      transfer.querySelector("[data-transfer-label]").textContent = "运行";
+      buttons.forEach((b) => b.disabled = false);
+      render();
+      status.textContent = "P1 已获得 CPU。点击“单步执行”观察寄存器变化，或点击“自动演示”完整观察一次 P1 → P2 → P1 的切换。";
+    }
+
+    async function autoplay() {
+      if (busy || autoRunning) return;
+      reset();
+      autoRunning = true;
+      buttons.forEach((b) => b.disabled = b.dataset.action !== "reset");
+      status.textContent = "自动演示开始：先让 P1 执行三条指令。";
+      await sleep(500);
+
+      for (let i=0;i<3;i++) {
+        autoRunning = false; await stepInstruction(); autoRunning = true; await sleep(520);
+      }
+      autoRunning = false; await switchProcess("p2"); autoRunning = true; await sleep(550);
+
+      for (let i=0;i<4;i++) {
+        autoRunning = false; await stepInstruction(); autoRunning = true; await sleep(500);
+      }
+      autoRunning = false; await switchProcess("p1"); autoRunning = true; await sleep(550);
+
+      autoRunning = false; await stepInstruction();
+      status.textContent = "演示完成：P1 恢复后没有从头开始，而是从保存的 PC=0x1003 继续执行 STORE，最终 Data[0x1100] = 32。";
+      buttons.forEach((b) => b.disabled = false);
+    }
+
+    root.querySelector('[data-action="step"]')?.addEventListener("click", stepInstruction);
+    root.querySelector('[data-action="switch"]')?.addEventListener("click", () => switchProcess());
+    root.querySelector('[data-action="reset"]')?.addEventListener("click", reset);
+    root.querySelector('[data-action="auto"]')?.addEventListener("click", autoplay);
+
+    reset();
+  }
+
+  document.querySelectorAll("[data-context-demo]").forEach(initContextSwitchDemo);
+  document.addEventListener("astro:page-load", () => document.querySelectorAll("[data-context-demo]").forEach(initContextSwitchDemo));
+</script>
