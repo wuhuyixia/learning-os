@@ -1,0 +1,241 @@
+---
+title: 寻路算法可视化：从 BFS 到 A*、Floyd 和 Bellman-Ford
+description: 参考 Unity 寻路可视化项目的核心思路，用浏览器交互网格理解 BFS、DFS、Greedy、Dijkstra、A*、双向 BFS、Floyd 和 Bellman-Ford。
+pubDate: 2026-09-18
+draft: false
+categories:
+  - Algorithm
+tags:
+  - Pathfinding
+  - BFS
+  - Dijkstra
+  - A*
+  - Graph
+---
+
+import PathfindingVisualizerDemo from "@components/PathfindingVisualizerDemo.astro";
+
+# 寻路算法可视化：从 BFS 到 A*、Floyd 和 Bellman-Ford
+
+寻路算法如果只看伪代码，往往很难形成直觉。真正容易理解的方法，是把搜索过程画出来。
+
+下面的交互演示参考 GitHub 项目 **Vanwater/pathfinding-visualizer** 的核心思想：用网格节点表示图，用颜色区分 Frontier、Visited 和最终 Path，并加入障碍、权重和逐步动画。
+
+<PathfindingVisualizerDemo />
+
+这个浏览器版本没有照搬 Unity 场景，而是保留最值得学习的算法主线：
+
+~~~text
+Grid
+  ↓
+Node
+  ↓
+Neighbors
+  ↓
+Frontier / Open Set
+  ↓
+Visited / Closed Set
+  ↓
+Parent
+  ↓
+回溯最终路径
+~~~
+
+## 1. 网格为什么可以看成图？
+
+一个格子就是一个节点，相邻格子之间有边。四方向移动时，一个节点最多连接上、下、左、右四个邻居。障碍节点不加入邻接列表，于是算法自然不会穿墙。
+
+原项目中的邻居查找，本质就是按四个方向检查边界和障碍。
+
+## 2. BFS：像水波一样逐层扩散
+
+BFS 使用队列，先访问距离 1 的节点，再访问距离 2、3……因为队列是 FIFO，所以在无权图中第一次到达终点时，就得到最少步数路径。
+
+核心思想：
+
+~~~csharp
+Queue<Node> q = new Queue<Node>();
+q.Enqueue(start);
+
+while (q.Count > 0) {
+    Node cur = q.Dequeue();
+
+    foreach (Node nb in GetNeighbors(cur)) {
+        if (!visited) {
+            nb.parent = cur;
+            q.Enqueue(nb);
+        }
+    }
+}
+~~~
+
+## 3. DFS：先沿一条路走到底
+
+DFS 把队列换成栈。它会优先深入当前分支，走不通再回退。
+
+因此 DFS 很适合体现“深度优先”的思想，但它不保证最短路径。
+
+## 4. Greedy：只看离终点还有多远
+
+Greedy Best-First Search 主要看启发式函数：
+
+~~~text
+f(n) = h(n)
+~~~
+
+在规则网格中常用曼哈顿距离：
+
+~~~text
+h = |x1 - x2| + |y1 - y2|
+~~~
+
+它方向感很强，但只看“还差多远”，不看“已经花了多少代价”，所以遇到障碍或高代价格子时可能绕远。
+
+## 5. Dijkstra：当前总代价最小的先扩展
+
+Dijkstra 关注从起点到当前节点的累计代价 g(n)。
+
+每次选择 g 最小的未处理节点，并进行松弛：
+
+~~~csharp
+float newCost = g[cur] + MoveCost(nb);
+
+if (newCost < g[nb]) {
+    g[nb] = newCost;
+    nb.parent = cur;
+}
+~~~
+
+它适合非负权图。如果所有格子的代价都一样，搜索形态会很像 BFS。
+
+## 6. A*：Dijkstra 加上方向感
+
+A* 同时考虑已经走过的代价和到终点的估计：
+
+~~~text
+f(n) = g(n) + h(n)
+~~~
+
+可以简单记成：
+
+~~~text
+Dijkstra：只看过去
+Greedy：只看未来
+A*：过去 + 未来
+~~~
+
+启发式函数合适时，A* 往往能比 Dijkstra 少扩展很多节点。
+
+## 7. 双向 BFS：两头一起找
+
+双向 BFS 同时从起点和终点扩散：
+
+~~~text
+Start → → →    ← ← ← End
+          相遇
+~~~
+
+当两边第一次相交，就把两段 parent 链拼起来。在无权图中，它经常能显著减少搜索范围。
+
+## 8. Floyd：一次计算所有点对最短路
+
+Floyd-Warshall 与前面的搜索算法思路不同，它通过动态规划反复更新距离矩阵：
+
+~~~text
+dist[i][j] =
+min(
+  dist[i][j],
+  dist[i][k] + dist[k][j]
+)
+~~~
+
+含义是：如果允许节点 k 作为中转点，i 到 j 会不会更短。
+
+它适合节点数量较小的全源最短路问题，但时间复杂度是 O(V³)。
+
+## 9. Bellman-Ford：反复松弛所有边
+
+Bellman-Ford 会重复检查所有边：
+
+~~~csharp
+if (dist[from] + weight < dist[to]) {
+    dist[to] = dist[from] + weight;
+    parent[to] = from;
+}
+~~~
+
+最多执行 |V|-1 轮。如果之后还能继续变小，就说明存在负环。
+
+它可以处理负权边，这是和 Dijkstra 的重要区别之一。
+
+## 10. 为什么要记录 parent？
+
+搜索过程中，每个新节点都会记录“我是从谁来的”。
+
+例如：
+
+~~~text
+A → B → C → D
+
+parent[B] = A
+parent[C] = B
+parent[D] = C
+~~~
+
+到达终点后，从 D 一直沿 parent 回溯到 A，再反转顺序，就得到最终路径。
+
+所以可以记住：
+
+> 搜索算法负责找到终点，parent 负责把路径还原出来。
+
+## 11. 原项目里的代码是怎样分层的？
+
+原 Unity 项目主要分为两个核心脚本：
+
+~~~text
+DemoController
+├─ BFS / DFS / Greedy / Dijkstra / A*
+├─ Bi-BFS / Floyd / Bellman-Ford
+├─ 工具按钮和交互
+├─ 搜索动画
+└─ 统计信息
+
+GridMap
+├─ 网格节点
+├─ 邻居查找
+├─ 权重
+├─ 节点状态
+└─ 材质、标签和波浪动画
+~~~
+
+这样的拆分很值得学习：算法只关心节点、邻居、代价、parent；颜色、动画和标签交给显示层处理。
+
+## 12. 一张表记住区别
+
+| 算法 | 主要结构 | 考虑权重 | 是否保证最优 | 直觉 |
+| :--- | :--- | :---: | :---: | :--- |
+| BFS | Queue | 否 | 无权图是 | 一层层扩散 |
+| DFS | Stack | 否 | 否 | 一条路走到底 |
+| Greedy | Priority | 否 | 否 | 只朝终点靠近 |
+| Dijkstra | Priority | 是 | 非负权是 | 累计代价最小 |
+| A* | Priority | 是 | 条件满足时是 | 已走代价 + 未来估计 |
+| Bi-BFS | 两个 Queue | 否 | 无权图是 | 两头一起找 |
+| Floyd | 距离矩阵 | 是 | 无负环时是 | 枚举中转点 |
+| Bellman-Ford | Edge Relaxation | 是 | 无负环时是 | 反复松弛所有边 |
+
+这些算法虽然实现不同，但都围绕几个共同概念展开：
+
+~~~text
+节点
+邻居
+Frontier
+Visited
+Distance / Cost
+Parent
+~~~
+
+把这些状态动态画出来之后，寻路算法会比单纯背代码直观得多。
+
+## 参考项目
+
+- [Vanwater/pathfinding-visualizer](https://github.com/Vanwater/pathfinding-visualizer)
