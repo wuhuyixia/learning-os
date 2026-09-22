@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <style>
+      .t{font-family:Arial,"Microsoft YaHei",sans-serif;fill:#1f2937}
+      .h{font-size:38px;font-weight:700}
+      .b{font-size:27px;font-weight:700}
+      .s{font-size:23px}
+      .box{stroke-width:3;rx:18}
+      .p{fill:#e0f2fe;stroke:#0284c7}
+      .m{fill:#ede9fe;stroke:#7c3aed}
+      .c{fill:#fef3c7;stroke:#d97706}
+      .line{stroke:#64748b;stroke-width:4;fill:none}
+      .dash{stroke:#ef4444;stroke-width:4;stroke-dasharray:10 8;fill:none}
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <text x="600" y="58" text-anchor="middle" class="t h">菱形继承：为什么需要虚基类？</text>
+
+  <rect x="470" y="100" width="260" height="80" class="box p"/><text x="600" y="150" text-anchor="middle" class="t b">Person</text>
+  <rect x="210" y="280" width="280" height="80" class="box m"/><text x="350" y="330" text-anchor="middle" class="t b">Student</text>
+  <rect x="710" y="280" width="280" height="80" class="box m"/><text x="850" y="330" text-anchor="middle" class="t b">Employee</text>
+  <rect x="420" y="505" width="360" height="90" class="box c"/><text x="600" y="560" text-anchor="middle" class="t b">StudentHasJob</text>
+
+  <path d="M540 180 L390 280" class="line" marker-end="url(#arrow)"/>
+  <path d="M660 180 L810 280" class="line" marker-end="url(#arrow)"/>
+  <path d="M350 360 L520 505" class="line" marker-end="url(#arrow)"/>
+  <path d="M850 360 L680 505" class="line" marker-end="url(#arrow)"/>
+
+  <path d="M340 395 C250 445,250 580,420 610" class="dash"/>
+  <path d="M860 395 C950 445,950 580,780 610" class="dash"/>
+  <text x="205" y="500" class="t s">普通继承时：</text>
+  <text x="160" y="535" class="t s">可能出现两份 Person</text>
+  <text x="830" y="500" class="t s">虚基类：</text>
+  <text x="810" y="535" class="t s">Person 只保留一份</text>
+
+  <text x="600" y="655" text-anchor="middle" class="t s">核心：virtual 继承用于解决共同基类成员出现多个副本的问题。</text>
+</svg>
