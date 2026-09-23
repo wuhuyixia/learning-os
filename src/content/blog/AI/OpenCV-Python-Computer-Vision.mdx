@@ -1,0 +1,455 @@
+---
+title: OpenCV Python 入门：从读图到轮廓检测
+description: 基于 computervisioneng 的 OpenCV Python 入门课程，按“读取 → 处理 → 分割 → 边缘 → 轮廓”的主线，快速掌握最常用的计算机视觉基础操作。
+pubDate: 2026-09-23
+draft: false
+categories:
+  - AI
+tags:
+  - OpenCV
+  - Python
+  - Computer Vision
+  - Image Processing
+---
+
+# OpenCV Python 入门：从读图到轮廓检测
+
+OpenCV 是计算机视觉里最常用的工具库之一。对于初学者，不需要一开始就学复杂的目标检测或深度学习，先把**图像怎么读、怎么变、怎么分割、怎么找到目标**这条链走通，就已经能完成很多基础视觉任务。
+
+本文根据 [computervisioneng/opencv-python-course-computer-vision](https://github.com/computervisioneng/opencv-python-course-computer-vision) 的课程代码做一次精简整理。原课程大约 3 小时，核心内容可以概括为：
+
+```text
+图像 / 视频输入
+      ↓
+裁剪、缩放
+      ↓
+颜色空间转换
+      ↓
+模糊去噪
+      ↓
+阈值分割
+      ↓
+边缘检测
+      ↓
+绘制结果
+      ↓
+轮廓检测
+```
+
+理解这条流程后，再学习颜色识别、目标检测、OCR、摄像头视觉都会容易很多。
+
+## 1. OpenCV 中的图像是什么？
+
+在程序里，一张图片本质上就是一个 NumPy 数组。
+
+彩色图像一般可以理解为：
+
+```text
+高度 × 宽度 × 通道数
+```
+
+例如一张 720×1280 的彩色图片，形状通常是：
+
+```text
+(720, 1280, 3)
+```
+
+最后的 `3` 表示三个颜色通道。
+
+OpenCV 默认使用 **BGR** 顺序，而不是更常见的 RGB：
+
+```text
+OpenCV: B G R
+常见图像库: R G B
+```
+
+这也是后面做颜色转换时经常遇到的问题。
+
+## 2. 图像、视频和摄像头输入
+
+OpenCV 最基础的三个入口是：
+
+- `cv2.imread()`：读取图片；
+- `cv2.VideoCapture()`：读取视频文件或摄像头；
+- `cv2.imshow()`：显示画面。
+
+下面用一个完整示例把图片、视频和摄像头的基本写法放在一起：
+
+```python
+import cv2
+
+# ---------- 图片 ----------
+img = cv2.imread("image.jpg")
+
+if img is not None:
+    print("image shape:", img.shape)
+    cv2.imshow("image", img)
+    cv2.imwrite("image_copy.jpg", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+# ---------- 视频 / 摄像头 ----------
+# 视频文件：cv2.VideoCapture("video.mp4")
+# 默认摄像头：cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    cv2.imshow("camera", frame)
+
+    # 按 q 退出
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+```
+
+这里最重要的是理解 `ret, frame = cap.read()`：
+
+- `ret` 表示这一帧是否读取成功；
+- `frame` 就是当前这一帧图像。
+
+因此视频处理本质上就是：**不断读取图片，然后逐帧处理。**
+
+## 3. 裁剪和缩放
+
+图像读取进来以后，经常需要先调整尺寸或只保留感兴趣区域。
+
+### 裁剪
+
+因为图像本身就是数组，所以可以直接切片：
+
+```python
+crop = img[y1:y2, x1:x2]
+```
+
+注意顺序是：
+
+```text
+先 y，后 x
+```
+
+也就是“行在前、列在后”。
+
+### 缩放
+
+缩放通常使用：
+
+```python
+resized = cv2.resize(img, (640, 480))
+```
+
+需要注意，`resize()` 里的尺寸顺序是：
+
+```text
+(width, height)
+```
+
+这和 `img.shape` 返回的 `(height, width, channels)` 正好不同，是初学时很常见的易错点。
+
+## 4. 颜色空间：BGR、RGB、GRAY、HSV
+
+不同任务适合不同颜色空间。
+
+最常见的是：
+
+| 颜色空间 | 适合做什么 |
+| --- | --- |
+| BGR | OpenCV 默认显示和处理 |
+| RGB | 和 Matplotlib、深度学习输入对接 |
+| GRAY | 阈值、边缘、轮廓等结构处理 |
+| HSV | 按颜苲范围做目标提取 |
+
+转换统一使用 `cv2.cvtColor()`：
+
+```python
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+rgb  = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+hsv  = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+```
+
+如果目标是“找某种颜色”，HSV 往往比直接使用 BGR 更直观；如果目标是“找轮廓或边缘”，通常先转灰度图。
+
+## 5. 模糊：先把噪声压下去
+
+真实图片通常存在噪声。如果直接做阈值或边缘检测，很容易把噪点也当成目标。
+
+常见的三种模糊方式是：
+
+- 均值模糊 `cv2.blur()`；
+- 高斯模糊 `cv2.GaussianBlur()`；
+- 中值滤波 `cv2.medianBlur()`。
+
+课程中还专门使用了椒盐噪声图片比较三种方法。可以简单记忆：
+
+```text
+普通平滑        → 均值 / 高斯
+椒盐噪声        → 中值滤波通常更合适
+边缘检测前降噪  → 常用高斯模糊
+```
+
+下面把颜色转换、模糊、阈值和边缘检测串成一个完整预处理流程：
+
+```python
+import cv2
+import numpy as np
+
+img = cv2.imread("input.jpg")
+if img is None:
+    raise FileNotFoundError("input.jpg")
+
+# 1. 缩放
+img = cv2.resize(img, (640, 480))
+
+# 2. 转灰度
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+# 3. 高斯模糊，减少噪声
+blur = cv2.GaussianBlur(gray, (7, 7), 0)
+
+# 4. 全局二值化
+_, binary = cv2.threshold(blur, 100, 255, cv2.THRESH_BINARY)
+
+# 5. Canny 边缘检测
+edges = cv2.Canny(blur, 100, 200)
+
+# 6. 膨胀，让边缘更粗、更连续
+kernel = np.ones((3, 3), dtype=np.uint8)
+edges_dilate = cv2.dilate(edges, kernel, iterations=1)
+
+# 7. 腐蚀，可用于缩小前景或恢复膨胀后的边界
+edges_erode = cv2.erode(edges_dilate, kernel, iterations=1)
+
+cv2.imshow("original", img)
+cv2.imshow("binary", binary)
+cv2.imshow("edges", edges)
+cv2.imshow("edges_dilate", edges_dilate)
+cv2.imshow("edges_erode", edges_erode)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+```
+
+这段流程非常值得记住，因为很多传统视觉任务都是在它的基础上继续向后处理。
+
+## 6. 阈值：把图像变成“目标和背景”
+
+阈值处理的目的，是把灰度图进一步简化成黑白两类。
+
+最简单的全局阈值逻辑是：
+
+```text
+像素值 > 阈值  → 白色
+像素值 <= 阈值 → 黑色
+```
+
+对应 `cv2.threshold()`。
+
+但是如果图片亮度不均匀，例如拍摄纸张时左边亮、右边暗，一个固定阈值就可能失效。这时可以使用 `cv2.adaptiveThreshold()`。
+
+自适应阈值不是整张图片共用一个阈值，而是根据局部区域计算阈值，因此比较适合：
+
+- 手写文字；
+- 文档扫描；
+- 光照不均匀的场景。
+
+可以简单理解为：
+
+> 全局阈值是“全班统一及格线”，自适应阈值是“每个小组根据自身情况设置及格线”。
+
+## 7. Canny、膨胀和腐蚀
+
+`cv2.Canny()` 用来提取图像中灰度变化明显的位置，也就是我们看到的物体边缘。
+
+膨胀 `dilate` 会让白色区域变大，常用于加粗边缘、连接断开的线段；腐蚀 `erode` 会让白色区域变小，常用于去小噪点或调整目标形态。
+
+可以直接记成：
+
+```text
+Dilate → 白色变胖
+Erode  → 白色变瘦
+```
+
+## 8. 在图片上画线、框、圆和文字
+
+视觉算法最终通常需要把结果画回图片，例如给检测目标画框、标注类别、显示置信度或标记关键点。
+
+OpenCV 常用的绘图函数有：
+
+```text
+cv2.line()       画线
+cv2.rectangle()  画矩形
+cv2.circle()     画圆
+cv2.putText()    写文字
+```
+
+真正做目标检测项目时，检测框和状态信息基本都会用到这些 API。
+
+## 9. 轮廓检测：从像素找到“物体”
+
+前面的阈值和边缘操作，最终经常是为了得到比较干净的目标区域，然后使用 `cv2.findContours()` 找到目标轮廓。
+
+完整的“二值化 → 找轮廓 → 面积过滤 → 画外接框”可以写成：
+
+```python
+import cv2
+
+img = cv2.imread("objects.jpg")
+if img is None:
+    raise FileNotFoundError("objects.jpg")
+
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+_, binary = cv2.threshold(
+    gray,
+    127,
+    255,
+    cv2.THRESH_BINARY_INV
+)
+
+contours, _ = cv2.findContours(
+    binary,
+    cv2.RETR_TREE,
+    cv2.CHAIN_APPROX_SIMPLE
+)
+
+for contour in contours:
+    area = cv2.contourArea(contour)
+
+    # 过滤掉很小的噪声轮廓
+    if area < 200:
+        continue
+
+    x, y, w, h = cv2.boundingRect(contour)
+
+    cv2.rectangle(
+        img,
+        (x, y),
+        (x + w, y + h),
+        (0, 255, 0),
+        2
+    )
+
+    cv2.putText(
+        img,
+        f"area={int(area)}",
+        (x, max(y - 10, 0)),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (0, 255, 0),
+        1
+    )
+
+cv2.imshow("binary", binary)
+cv2.imshow("result", img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+```
+
+这里的思路比 API 本身更重要：
+
+```text
+原始图像
+  ↓
+灰度化
+  ↓
+二值化
+  ↓
+得到黑白目标区域
+  ↓
+findContours
+  ↓
+过滤小轮廓
+  ↓
+boundingRect
+  ↓
+在原图上画目标框
+```
+
+这已经是一个非常基础但完整的传统计算机视觉检测流程。
+
+## 10. 一张表记住常用 API
+
+| 需求 | OpenCV API |
+| --- | --- |
+| 读图片 | `cv2.imread()` |
+| 保存图片 | `cv2.imwrite()` |
+| 显示图片 | `cv2.imshow()` |
+| 读取视频/摄像头 | `cv2.VideoCapture()` |
+| 修改尺寸 | `cv2.resize()` |
+| 颜苲转换 | `cv2.cvtColor()` |
+| 高斯模糊 | `cv2.GaussianBlur()` |
+| 中值滤波 | `cv2.medianBlur()` |
+| 全局阈值 | `cv2.threshold()` |
+| 自适应阈值 | `cv2.adaptiveThreshold()` |
+| 边缘检测 | `cv2.Canny()` |
+| 膨胀 | `cv2.dilate()` |
+| 腐蚀 | `cv2.erode()` |
+| 找轮廓 | `cv2.findContours()` |
+| 轮廓面积 | `cv2.contourArea()` |
+| 外接矩形 | `cv2.boundingRect()` |
+| 画矩形 | `cv2.rectangle()` |
+| 写文字 | `cv2.putText()` |
+
+## 11. 学完这部分之后能做什么？
+
+这套课程没有直接进入深度学习，而是在打传统视觉基础。
+
+掌握本文内容之后，已经可以继续做：
+
+```text
+颜色识别
+文档二值化
+简单物体计数
+运动区域检测
+轮廓筛选
+摄像头实时处理
+目标框标注
+深度学习模型的图像预处理
+```
+
+原课程 README 还给出了两个后续项目：
+
+- [Color detection](https://github.com/computervisioneng/color-detection-opencv)
+- [Face anonymizer](https://github.com/computervisioneng/face-anonymizer-ptyhon)
+
+它们正好对应两条很典型的学习路线：
+
+```text
+HSV + Mask
+→ 颜色目标检测
+
+目标检测 / 人脸定位
+→ 区域模糊
+→ 隐私匿名化
+```
+
+## 总结
+
+OpenCV 入门最重要的不是记住所有函数，而是形成一条处理思路：
+
+> **先拿到图像，再把数据变得简单、干净，最后从像素中提取出真正关心的目标。**
+
+整个课程可以浓缩成：
+
+```text
+读取
+→ 裁剪 / 缩放
+→ 颜色转换
+→ 模糊去噪
+→ 阈值分割
+→ 边缘检测
+→ 形态学处理
+→ 轮廓检测
+→ 绘制结果
+```
+
+以后无论是继续学习 YOLO、摄像头视觉，还是在嵌入式 Linux / Jetson 上做视觉程序，这些基础操作都会反复出现。
+
+## 参考
+
+- [OpenCV Python Course 仓库](https://github.com/computervisioneng/opencv-python-course-computer-vision)
+- [OpenCV 官方文档](https://docs.opencv.org/)
