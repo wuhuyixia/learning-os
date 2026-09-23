@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1672" height="941" viewBox="0 0 1672 941">
+  <rect width="1672" height="941" fill="#fffdf8"/>
+  <style>
+    text{font-family:"KaiTi","STKaiti","Microsoft YaHei",sans-serif;fill:#161616}
+    .title{font-size:42px;font-weight:700}
+    .h{font-size:28px;font-weight:700}
+    .b{font-size:22px}
+    .s{font-size:19px}
+    .red{fill:#d81919;font-weight:700}
+    .blue{fill:#1e5db8;font-weight:700}
+    .dash{fill:none;stroke:#ef3535;stroke-width:3;stroke-dasharray:10 7;rx:12}
+    .wire{fill:none;stroke:#1c1c1c;stroke-width:4;stroke-linecap:round}
+    .box{stroke:#161616;stroke-width:3;rx:10}
+  </style>
+
+  <path d="M448 58 Q812 30 1187 57" stroke="#f3a9ad" stroke-width="24" opacity=".55" fill="none" stroke-linecap="round"/>
+  <text x="490" y="68" class="title">STM32 低功耗相关的电源域与供电引脚</text>
+
+  <path d="M28 99 Q140 84 293 96" stroke="#f6cf67" stroke-width="22" fill="none" stroke-linecap="round"/>
+  <text x="35" y="107" class="h">各电源引脚说明</text>
+
+  <rect x="25" y="135" width="88" height="38" rx="8" fill="#f7c3c3"/>
+  <text x="33" y="162" class="b">VREF+</text>
+  <text x="124" y="160" class="b">ADC/DAC 的参考正电压，范围约 2.4V～VDDA。</text>
+
+  <rect x="25" y="222" width="88" height="38" rx="8" fill="#f7c3c3"/>
+  <text x="33" y="249" class="b">VREF-</text>
+  <text x="124" y="247" class="b">ADC/DAC 的参考地。</text>
+
+  <rect x="25" y="305" width="88" height="38" rx="8" fill="#f7c3c3"/>
+  <text x="33" y="332" class="b">VREF+</text>
+  <text x="124" y="330" class="b">必须与 VSSA 配合使用。</text>
+
+  <text x="27" y="385" class="b">ADC 输入电压和 DAC 输出电压应位于</text>
+  <text x="27" y="419" class="b">VREF- 与 VREF+ 之间。VREF+ 的精度会</text>
+  <text x="27" y="453" class="b">直接影响 ADC/DAC 转换精度；精度要求高时</text>
+  <text x="27" y="487" class="b">可使用独立精密参考源，否则可按手册连接 VDDA。</text>
+
+  <rect x="25" y="527" width="75" height="38" rx="8" fill="#f7c3c3"/>
+  <text x="33" y="554" class="b">VSSA</text>
+  <text x="115" y="552" class="b">模拟部分公共地。</text>
+
+  <rect x="25" y="600" width="75" height="38" rx="8" fill="#f7c3c3"/>
+  <text x="33" y="627" class="b">VDD</text>
+  <text x="115" y="625" class="b">数字电源引脚，图示范围 2.0V～3.6V。</text>
+
+  <rect x="25" y="680" width="75" height="38" rx="8" fill="#f7c3c3"/>
+  <text x="33" y="707" class="b">VSS</text>
+  <text x="115" y="705" class="b">数字部分公共地。</text>
+
+  <rect x="25" y="758" width="75" height="38" rx="8" fill="#f7c3c3"/>
+  <text x="33" y="785" class="b">VBAT</text>
+  <text x="115" y="783" class="b">后备电源引脚，为后备供电区域供电，</text>
+  <text x="115" y="817" class="b">图示范围 1.8V～3.6V。</text>
+
+  <!-- central chip -->
+  <rect x="615" y="104" width="564" height="793" fill="#fff" stroke="#151515" stroke-width="4"/>
+
+  <!-- pins -->
+  <rect x="595" y="151" width="22" height="26" fill="#fff" stroke="#111" stroke-width="3"/>
+  <rect x="595" y="220" width="22" height="26" fill="#fff" stroke="#111" stroke-width="3"/>
+  <rect x="595" y="286" width="22" height="26" fill="#fff" stroke="#111" stroke-width="3"/>
+  <rect x="595" y="335" width="22" height="26" fill="#fff" stroke="#111" stroke-width="3"/>
+  <rect x="595" y="484" width="22" height="26" fill="#fff" stroke="#111" stroke-width="3"/>
+  <rect x="595" y="541" width="22" height="26" fill="#fff" stroke="#111" stroke-width="3"/>
+  <rect x="595" y="777" width="22" height="26" fill="#fff" stroke="#111" stroke-width="3"/>
+
+  <text x="493" y="171" class="b">(VSSA) VREF+</text>
+  <text x="526" y="241" class="red b">VREF-</text>
+  <text x="492" y="305" class="b">(VDD) VDDA</text>
+  <text x="493" y="330" class="b">(VSS) VSSA</text>
+  <text x="530" y="503" class="red b">VDD</text>
+  <text x="530" y="559" class="blue b">VSS</text>
+  <text x="516" y="795" class="red b">VBAT</text>
+
+  <!-- analog region -->
+  <rect x="716" y="118" width="358" height="255" class="dash"/>
+  <rect x="790" y="139" width="220" height="38" rx="10" fill="#f8cccc"/>
+  <text x="802" y="165" class="h">VDDA 供电区域</text>
+  <rect x="792" y="190" width="190" height="149" class="box" fill="#f7e7a7"/>
+  <text x="824" y="222" class="b">A/D 转换器</text>
+  <text x="824" y="254" class="b">D/A 转换器</text>
+  <text x="824" y="286" class="b">温度传感器</text>
+  <text x="824" y="318" class="b">复位模块 / PLL</text>
+  <path d="M617 164 L792 205" class="wire"/>
+  <path d="M617 233 L792 233" class="wire"/>
+  <path d="M617 299 L792 270" class="wire"/>
+  <path d="M617 348 L792 300" class="wire"/>
+
+  <!-- digital region -->
+  <rect x="672" y="402" width="391" height="244" class="dash"/>
+  <rect x="712" y="416" width="250" height="38" rx="10" fill="#f8cccc"/>
+  <text x="729" y="442" class="h">VDD 供电区域</text>
+  <rect x="691" y="468" width="210" height="156" class="box" fill="#dff2d2"/>
+  <text x="748" y="498" class="b">I/O 电路</text>
+  <rect x="714" y="514" width="164" height="62" class="box" fill="#ddd8f4"/>
+  <text x="739" y="540" class="s">待机电路</text>
+  <text x="731" y="565" class="s">(唤醒逻辑, IWDG)</text>
+  <rect x="714" y="585" width="164" height="31" class="box" fill="#d8ebff"/>
+  <text x="744" y="608" class="s">电压调节器</text>
+
+  <!-- core region -->
+  <rect x="916" y="468" width="120" height="156" class="box" fill="#f7e4bf"/>
+  <text x="938" y="504" class="b">CPU 核心</text>
+  <text x="938" y="538" class="b">存储器</text>
+  <text x="938" y="572" class="b">数字外设</text>
+
+  <rect x="1047" y="403" width="112" height="244" class="dash"/>
+  <text x="1063" y="435" class="h">1.8V</text>
+  <text x="1057" y="467" class="b">供电区域</text>
+  <rect x="1070" y="488" width="68" height="50" rx="8" fill="#ffd5d5" stroke="#d33" stroke-width="2"/>
+  <text x="1080" y="521" class="b">1.8V</text>
+  <text x="1061" y="570" class="s">由内部电压</text>
+  <text x="1061" y="596" class="s">调节器产生</text>
+  <path d="M617 497 L690 497" class="wire"/>
+  <path d="M617 554 L690 554" class="wire"/>
+
+  <!-- low voltage detector -->
+  <rect x="706" y="661" width="230" height="58" class="box" fill="#d8e9ff"/>
+  <text x="756" y="697" class="b">低电压检测器</text>
+  <path d="M795 624 L795 660" class="wire"/>
+
+  <!-- backup -->
+  <rect x="708" y="745" width="363" height="135" class="dash"/>
+  <rect x="746" y="751" width="280" height="38" rx="10" fill="#f8cccc"/>
+  <text x="762" y="778" class="h">后备供电区域</text>
+  <rect x="738" y="801" width="302" height="71" class="box" fill="#dce6fb"/>
+  <text x="760" y="826" class="s">LSE 32K 晶体振荡器</text>
+  <text x="760" y="850" class="s">后备寄存器 / RCC BDCR / RTC</text>
+  <path d="M617 790 L738 830" class="wire"/>
+  <path d="M617 497 Q646 630 650 790 Q690 830 738 830" class="wire"/>
+
+  <!-- right text -->
+  <path d="M1222 97 Q1380 79 1588 98" stroke="#f6cf67" stroke-width="22" fill="none" stroke-linecap="round"/>
+  <text x="1235" y="106" class="h">各供电区域说明</text>
+
+  <rect x="1221" y="130" width="397" height="44" rx="9" fill="#ffd7d7" stroke="#ef3535" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="1234" y="160" class="b">VDDA 供电区域（模拟部分专用电源）</text>
+  <text x="1224" y="199" class="s">由 VDDA 引脚供电，图示电压约 2.0V～3.6V。</text>
+  <text x="1224" y="226" class="s">包括 ADC/DAC、温度传感器、复位模块和 PLL。</text>
+
+  <rect x="1221" y="251" width="397" height="44" rx="9" fill="#ffd7d7" stroke="#ef3535" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="1234" y="281" class="b">VSSA 和 VDDA 属于同一模拟供电区域</text>
+  <text x="1224" y="318" class="s">模拟部分对电源噪声敏感，因此与数字部分区分供电。</text>
+
+  <rect x="1221" y="344" width="397" height="44" rx="9" fill="#ffd7d7" stroke="#ef3535" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="1234" y="374" class="b">VSS 和 VDD 属于数字供电区域</text>
+  <text x="1224" y="411" class="s">包含 I/O、待机相关电路以及内部电压调节器。</text>
+
+  <rect x="1221" y="445" width="397" height="44" rx="9" fill="#ffd7d7" stroke="#ef3535" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="1234" y="475" class="b">电压调节器产生约 1.8V 核心供电</text>
+  <text x="1224" y="512" class="s">为 CPU 内核、存储器和数字外设等提供核心电压。</text>
+
+  <rect x="1221" y="552" width="397" height="44" rx="9" fill="#ffd7d7" stroke="#ef3535" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="1234" y="582" class="b">VBAT 后备供电区域</text>
+  <text x="1224" y="620" class="s">由 VBAT 引脚供电，典型用于保持 RTC、LSE、</text>
+  <text x="1224" y="647" class="s">后备寄存器和 RCC BDCR 等后备域资源。</text>
+
+  <path d="M1227 708 Q1305 691 1416 705" stroke="#f6cf67" stroke-width="18" fill="none" stroke-linecap="round"/>
+  <text x="1238" y="716" class="h">补充说明</text>
+  <text x="1224" y="756" class="s">ADC/DAC 属于模拟模块，对电源噪声较敏感；</text>
+  <text x="1224" y="784" class="s">GPIO、时钟等数字电路频繁切换会产生高频噪声。</text>
+  <text x="1224" y="812" class="s">因此模拟域通常需要更干净的供电和良好去耦。</text>
+</svg>
