@@ -1,0 +1,753 @@
+---
+title: 嵌入式串口通信：从简化帧到工程级协议
+description: 从“为什么 UART 还需要应用层协议”出发，整理帧头、命令字、长度、负载、校验、大小端、ACK、序号、地址和接收状态机等核心设计。
+pubDate: 2026-09-24
+draft: false
+categories:
+  - Communication Protocol
+tags:
+  - UART
+  - Protocol
+  - CRC
+  - State Machine
+  - Embedded
+---
+
+# 嵌入式串口通信：从简化帧到工程级协议
+
+UART 解决的是“字节怎么传”，但它并不知道：
+
+- 哪几个字节属于同一条消息；
+- 这条消息要做什么；
+- 后面还有多少数据；
+- 数据有没有传错；
+- 是否需要应答；
+- 收到半帧、粘包、错帧以后怎么办。
+
+所以真正做项目时，通常还会在 UART 上面再设计一层**自定义通信协议**。
+
+![串口协议设计总览](/learning-os/images/uart-protocol-handdrawn.svg)
+
+## 1. 先理解“帧”
+
+串口收到的是连续字节流，例如：
+
+```text
+55 02 02 0A 0B 19 EE 55 01 00 01 EE ...
+```
+
+如果没有约定，接收端并不知道从哪里开始、在哪里结束。
+
+因此最基础的协议要做一件事：
+
+> **把连续字节流切成一帧一帧有意义的数据。**
+
+一个适合入门和简单设备的帧可以设计为：
+
+| 字段 | 作用 | 常见长度 |
+| --- | --- | ---: |
+| SOF | 帧头，标记一帧开始 | 1~2 Byte |
+| CMD | 命令码，表示要执行的功能 | 1 Byte |
+| LEN | DATA 的长度 | 1~2 Byte |
+| DATA | 参数或业务数据 | 0~N Byte |
+| CHECK | 完整性校验 | 1 Byte |
+| EOF | 帧尾，可选 | 1~2 Byte |
+
+可以把它理解成寄快递：
+
+```text
+SOF      → “包裹从这里开始”
+CMD      → “这个包裹是干什么的”
+LEN      → “里面有多少东西”
+DATA     → “真正的内容”
+CHECK    → “运输过程中有没有损坏”
+EOF      → “包裹到这里结束”
+```
+
+## 2. 为什么经常看到 0x55 和 0xAA？
+
+`0x55` 的二进制是：
+
+```text
+01010101
+```
+
+`0xAA` 是：
+
+```text
+10101010
+```
+
+它们的 0 和 1 交替变化明显，在示波器或逻辑分析仪上比较容易观察，也适合做同步特征。
+
+但需要注意：
+
+> **0x55、0xAA 只是常见选择，不是协议设计的硬性标准。**
+
+更重要的是接收端必须结合：
+
+```text
+帧头 + 长度 + 超时 + 校验 + 状态机
+```
+
+来判断一帧是否真正有效。
+
+否则一旦 DATA 里刚好出现和帧头相同的数据，就可能发生错误同步。
+
+## 3. CMD：告诉设备“要干什么”
+
+假设我们定义：
+
+| CMD | 功能 |
+| --- | --- |
+| `0x01` | 打开 LED |
+| `0x02` | 设置参数 |
+| `0x03` | 读取状态 |
+| `0x04` | 设备复位 |
+
+那么接收端解析出 CMD 后，就可以进行分发：
+
+```c
+switch (frame.cmd)
+{
+    case 0x01:
+        led_on();
+        break;
+
+    case 0x02:
+        set_parameter(frame.data, frame.len);
+        break;
+
+    case 0x03:
+        send_device_status();
+        break;
+
+    default:
+        send_error_response();
+        break;
+}
+```
+
+因此 CMD 本质上就是**应用层功能编号**。
+
+## 4. LEN：为什么长度字段很重要？
+
+假设设置两个参数：
+
+```text
+参数1 = 0x0A
+参数2 = 0x0B
+```
+
+那么：
+
+```text
+LEN  = 2
+DATA = 0A 0B
+```
+
+接收端看到 LEN=2 后，就知道：
+
+> 后面必须再收两个字节，才能得到完整 DATA。
+
+这对于 UART 非常重要，因为 UART 本身没有“数据包边界”。
+
+实际工程中会遇到：
+
+```text
+一帧被拆成多次收到     → 分包
+多帧一次性收到         → 粘包
+只收到一半就中断       → 残帧
+中间出现错误字节       → 错帧
+```
+
+长度字段配合接收状态机，可以很好地处理这些情况。
+
+## 5. 校验：累加和与 CRC
+
+### 5.1 简单累加和
+
+入门项目可以使用累加和：
+
+```text
+CHECK = CMD + LEN + DATA...
+```
+
+例如：
+
+```text
+CMD  = 0x02
+LEN  = 0x02
+DATA = 0x0A 0x0B
+
+SUM = 0x02 + 0x02 + 0x0A + 0x0B
+    = 0x19
+```
+
+接收端重新计算一次，如果结果和收到的 CHECK 相同，就认为这帧大概率没有损坏。
+
+优点是简单、计算快；缺点是检错能力有限。
+
+### 5.2 CRC
+
+工程项目更常见 CRC8 或 CRC16。
+
+| 校验方式 | 优点 | 缺点 | 适用 |
+| --- | --- | --- | --- |
+| 累加和 | 极简单、占用小 | 检错能力一般 | 调试、小项目 |
+| CRC8 | 检错能力更好、开销小 | 比累加和复杂 | 小数据帧 |
+| CRC16 | 可靠性较高 | 多 2 Byte、计算更多 | 工程项目 |
+
+CRC 的重点不是死记某个函数，而是通信双方必须完全一致：
+
+```text
+多项式
+初始值
+输入反转
+输出反转
+最终异或值
+字节顺序
+```
+
+只说“我们都用了 CRC16”并不代表两边一定能算出相同结果。
+
+## 6. 大端和小端
+
+多字节字段必须约定字节顺序。
+
+例如：
+
+```c
+uint32_t value = 0x12345678;
+```
+
+四个字节是：
+
+```text
+12 34 56 78
+```
+
+小端发送可以约定为：
+
+```text
+78 56 34 12
+```
+
+大端发送则为：
+
+```text
+12 34 56 78
+```
+
+| 模式 | 低地址/先发送的一端 | 示例 |
+| --- | --- | --- |
+| 小端 | 低字节在前 | `78 56 34 12` |
+| 大端 | 高字节在前 | `12 34 56 78` |
+
+Cortex-M 常见运行环境通常采用小端存储，但**通信协议不要依赖 CPU 默认字节序**。
+
+更稳妥的做法是明确规定：
+
+> 协议中的 LEN、SEQ、CRC、多字节参数到底按大端还是小端编码。
+
+## 7. 一个简化版协议怎么封包？
+
+下面给出一个完整、独立的简化实现。这里约定：
+
+```text
+SOF = 0x55
+EOF = 0xEE
+LEN = 1 Byte
+CHECK = CMD + LEN + DATA 的低 8 位
+```
+
+```c
+#include <stdint.h>
+#include <stddef.h>
+
+#define PROTO_SOF       0x55
+#define PROTO_EOF       0xEE
+#define PROTO_MAX_DATA  64
+
+static uint8_t proto_checksum(uint8_t cmd,
+                              uint8_t len,
+                              const uint8_t *data)
+{
+    uint8_t sum = cmd + len;
+
+    for (uint8_t i = 0; i < len; ++i)
+    {
+        sum += data[i];
+    }
+
+    return sum;
+}
+
+size_t proto_pack(uint8_t cmd,
+                  const uint8_t *data,
+                  uint8_t len,
+                  uint8_t *out,
+                  size_t out_size)
+{
+    const size_t frame_size = 1U + 1U + 1U + len + 1U + 1U;
+
+    if (out == NULL || len > PROTO_MAX_DATA || out_size < frame_size)
+    {
+        return 0;
+    }
+
+    size_t i = 0;
+
+    out[i++] = PROTO_SOF;
+    out[i++] = cmd;
+    out[i++] = len;
+
+    for (uint8_t n = 0; n < len; ++n)
+    {
+        out[i++] = data[n];
+    }
+
+    out[i++] = proto_checksum(cmd, len, data);
+    out[i++] = PROTO_EOF;
+
+    return i;
+}
+```
+
+例如设置两个参数：
+
+```c
+uint8_t tx_buf[32];
+uint8_t params[] = {0x0A, 0x0B};
+
+size_t n = proto_pack(
+    0x02,
+    params,
+    sizeof(params),
+    tx_buf,
+    sizeof(tx_buf)
+);
+
+uart_send(tx_buf, n);
+```
+
+这种协议适合：
+
+- MCU 与单个传感器；
+- 简单上下位机；
+- 学生项目；
+- 控制命令较少的设备。
+
+当设备数量、可靠性要求和升级需求增加时，就应该进入工程版设计。
+
+## 8. 工程版协议要增加什么？
+
+工程版不应该只是“字段更多”，而是要解决实际问题。
+
+可以设计为：
+
+```text
+SOF
+VER
+FLAGS
+SRC
+DST
+SEQ
+CMD
+LEN
+PAYLOAD
+CRC16
+EOF
+```
+
+| 字段 | 解决的问题 |
+| --- | --- |
+| VER | 新旧协议兼容 |
+| FLAGS | 请求/响应/错误/ACK 等状态 |
+| SRC | 谁发送的 |
+| DST | 发给谁 |
+| SEQ | 请求与应答配对、去重、重传 |
+| CMD | 具体业务功能 |
+| LEN | 变长数据解析 |
+| PAYLOAD | 参数、状态、传感器数据 |
+| CRC16 | 检测传输错误 |
+| SOF/EOF | 辅助帧同步 |
+
+## 9. FLAGS 控制位怎么设计？
+
+一个字节有 8 个 bit，可以把每一位当作开关。
+
+例如：
+
+| Bit | 名称 | 1 表示 |
+| --- | --- | --- |
+| bit0 | ACK_REQ | 发送方要求应答 |
+| bit1 | RESPONSE | 当前帧是响应 |
+| bit2 | ERROR | 当前帧表示失败 |
+| bit3 | EVENT | 主动上报事件 |
+| bit4~7 | Reserved | 留给以后扩展 |
+
+这样一条 CMD 不需要再分成大量“请求命令、响应命令、错误命令”。
+
+例如：
+
+```text
+CMD = SET_PARAM
+FLAGS.ACK_REQ = 1
+```
+
+表示：
+
+> 设置参数，并且执行完以后必须给我一个结果。
+
+## 10. 为什么需要 SEQ 序号？
+
+假设主控发送：
+
+```text
+SEQ = 37
+CMD = SET_PARAM
+```
+
+从机返回：
+
+```text
+SEQ = 37
+RESPONSE = 1
+```
+
+主控就知道：
+
+> 这是对第 37 号请求的回答。
+
+SEQ 还能解决重复数据。
+
+比如从机其实已经执行成功，但 ACK 在路上丢了，主控超时后重新发送同一个 SEQ。
+
+从机发现：
+
+```text
+这个 SEQ 我刚处理过
+```
+
+就可以选择只重新返回 ACK，而不是再次执行危险操作。
+
+对于：
+
+```text
+开阀门
+写 Flash
+扣费
+电机动作
+```
+
+这类命令尤其重要。
+
+## 11. SRC 和 DST：为什么两个设备也值得提前设计地址？
+
+如果系统永远只有 MCU-A 和 MCU-B，地址看起来很多余。
+
+但产品后期经常会变成：
+
+```text
+主控
+ ├─ 电机控制器
+ ├─ BMS
+ ├─ 显示屏
+ ├─ 传感器板
+ └─ 通信网关
+```
+
+这时 SRC/DST 可以直接表示：
+
+```text
+这帧是谁发的
+这帧应该由谁处理
+```
+
+还可以支持广播地址和网关转发。
+
+所以工程协议设计时，要考虑的不是“今天够不够用”，而是：
+
+> **以后扩展时是否需要推翻整个格式。**
+
+## 12. ACK、超时和重传
+
+可靠通信不能只靠 CRC。
+
+CRC 只能回答：
+
+> “收到的数据有没有明显损坏？”
+
+它不能回答：
+
+> “对方到底有没有收到？”
+>
+> “收到以后有没有执行成功？”
+
+因此工程协议通常还要加入：
+
+```text
+请求
+ ↓
+等待 ACK / Response
+ ↓
+收到 → 完成
+ ↓
+超时 → 重发
+ ↓
+超过最大次数 → 上报通信故障
+```
+
+建议每个命令明确规定三件事：
+
+| 项目 | 示例 |
+| --- | --- |
+| 是否需要 ACK | 是 |
+| 超时时间 | 100 ms |
+| 最大重传次数 | 3 次 |
+
+注意：重传机制必须和 SEQ、去重机制一起设计，否则一个命令可能被重复执行。
+
+## 13. 接收端为什么一定要状态机？
+
+最常见的错误写法是：
+
+> UART 一触发空闲中断，就直接认为收到了一整帧，然后按固定位置强行解析。
+
+实际串口可能出现任何切分方式：
+
+```text
+第一次：55 02
+第二次：05 01 02
+第三次：03 04 05 CRC EE
+```
+
+也可能一次收到两帧。
+
+因此接收端应该维护解析状态。
+
+典型过程：
+
+```text
+WAIT_SOF
+   ↓ 找到帧头
+READ_HEADER
+   ↓ 得到 LEN
+READ_PAYLOAD
+   ↓ 收够指定长度
+READ_CRC
+   ↓
+CHECK_FRAME
+   ↓ 校验成功
+DISPATCH
+   ↓
+WAIT_SOF
+```
+
+任何一步出现：
+
+```text
+长度非法
+超时
+CRC 错误
+帧尾错误
+缓冲区溢出
+```
+
+都应该丢弃当前帧，重新寻找下一帧起点。
+
+## 14. 状态机核心实现
+
+下面是一种简化写法，重点看思路而不是具体变量名：
+
+```c
+typedef enum
+{
+    RX_WAIT_SOF = 0,
+    RX_CMD,
+    RX_LEN,
+    RX_DATA,
+    RX_CHECK,
+    RX_EOF
+} RxState;
+
+typedef struct
+{
+    RxState state;
+    uint8_t cmd;
+    uint8_t len;
+    uint8_t data[64];
+    uint8_t index;
+    uint8_t check;
+} ProtoRx;
+
+void proto_rx_byte(ProtoRx *rx, uint8_t byte)
+{
+    switch (rx->state)
+    {
+        case RX_WAIT_SOF:
+            if (byte == PROTO_SOF)
+            {
+                rx->state = RX_CMD;
+                rx->index = 0;
+            }
+            break;
+
+        case RX_CMD:
+            rx->cmd = byte;
+            rx->state = RX_LEN;
+            break;
+
+        case RX_LEN:
+            if (byte > sizeof(rx->data))
+            {
+                rx->state = RX_WAIT_SOF;
+                break;
+            }
+
+            rx->len = byte;
+            rx->index = 0;
+            rx->state = (rx->len == 0) ? RX_CHECK : RX_DATA;
+            break;
+
+        case RX_DATA:
+            rx->data[rx->index++] = byte;
+
+            if (rx->index >= rx->len)
+            {
+                rx->state = RX_CHECK;
+            }
+            break;
+
+        case RX_CHECK:
+            rx->check = byte;
+            rx->state = RX_EOF;
+            break;
+
+        case RX_EOF:
+            if (byte == PROTO_EOF &&
+                rx->check == proto_checksum(rx->cmd,
+                                            rx->len,
+                                            rx->data))
+            {
+                protocol_dispatch(rx->cmd, rx->data, rx->len);
+            }
+
+            rx->state = RX_WAIT_SOF;
+            break;
+
+        default:
+            rx->state = RX_WAIT_SOF;
+            break;
+    }
+}
+```
+
+实际工程还应该再增加：
+
+- 帧接收超时；
+- DMA / 环形缓冲区；
+- CRC16；
+- 错误码；
+- SEQ；
+- ACK 重传；
+- 统计丢包和 CRC 错误次数。
+
+## 15. 协议设计中几个很容易踩的坑
+
+| 问题 | 后果 | 推荐处理 |
+| --- | --- | --- |
+| 没有 LEN | 变长帧难解析 | 明确负载长度 |
+| 只靠帧尾 | DATA 中出现帧尾时易误判 | 长度优先，帧尾辅助 |
+| 直接强转结构体发送 | 受对齐、字节序影响 | 按字节显式编码 |
+| 不限制 LEN 最大值 | 缓冲区越界 | 接收后第一时间检查 |
+| 有 CRC 没有 ACK | 不知道对方是否执行 | 关键命令加入应答 |
+| 有重传没有 SEQ | 可能重复执行 | 请求携带序号 |
+| 协议没有版本号 | 后期升级困难 | 工程版预留 VER |
+| ISR 中直接解析业务 | 中断执行太久 | ISR 收数据，任务中解析 |
+
+## 16. 推荐的分层方式
+
+一个比较清晰的嵌入式串口软件结构可以分成：
+
+```text
+业务层
+  ↓
+命令处理 / 参数管理
+  ↓
+协议层
+  ↓
+封包 / 解包 / CRC / ACK / 状态机
+  ↓
+缓冲层
+  ↓
+RingBuffer / Queue
+  ↓
+驱动层
+  ↓
+UART + DMA + IDLE
+  ↓
+硬件
+```
+
+协议层不应该直接关心：
+
+```text
+UART1 还是 UART3
+DMA 哪个通道
+LED 接哪个 GPIO
+```
+
+它只负责：
+
+> **把字节流变成可靠的消息，再把消息交给业务层。**
+
+这样协议以后迁移到 USB、RS485、TCP 等链路时，很多上层代码都可以继续复用。
+
+## 17. 简化版还是工程版？
+
+可以按项目复杂度选择。
+
+| 场景 | 推荐 |
+| --- | --- |
+| 单片机之间简单控制 | SOF + CMD + LEN + DATA + CHECK |
+| PC 上位机调试设备 | 简化版 + ACK + 错误码 |
+| 多板卡设备 | 加 SRC / DST |
+| 关键控制命令 | CRC16 + ACK + SEQ + 重传 |
+| 长期维护产品 | VER + FLAGS + 完整错误处理 |
+| 高数据量 | DMA + 环形缓冲区 + 状态机 |
+
+不要为了“看起来专业”一开始就堆很多字段，也不要为了省几个字节把协议做得无法维护。
+
+最合适的原则是：
+
+> **简单场景保持简单，工程场景提前为可靠性和扩展性留出空间。**
+
+## 总结
+
+设计串口协议时，可以按下面的顺序思考：
+
+```text
+先解决帧边界
+    ↓
+再定义命令和长度
+    ↓
+再加入完整性校验
+    ↓
+明确多字节字节序
+    ↓
+关键命令增加 ACK
+    ↓
+加入 SEQ 支持配对和去重
+    ↓
+多设备增加 SRC / DST
+    ↓
+接收端使用状态机
+    ↓
+最后再考虑版本、重传和错误恢复
+```
+
+真正可靠的串口通信，并不取决于帧头用了 `0x55` 还是 `0xAA`，而取决于：
+
+> **异常数据到来时，协议还能不能重新同步；丢包以后能不能恢复；重复帧会不会造成重复执行；未来扩展功能时是否还能保持兼容。**
