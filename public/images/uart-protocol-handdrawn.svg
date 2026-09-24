@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="940" viewBox="0 0 1600 940">
+<rect width="1600" height="940" fill="#fffdf7"/>
+<style>
+text{font-family:"KaiTi","STKaiti","Microsoft YaHei",sans-serif;fill:#202020}
+.t{font-size:42px;font-weight:700}.h{font-size:30px;font-weight:700}.b{font-size:22px}.s{font-size:18px}
+.box{stroke:#202020;stroke-width:3;rx:12}.dash{fill:none;stroke:#df4a4a;stroke-width:3;stroke-dasharray:10 7;rx:16}
+.arrow{stroke:#222;stroke-width:4;fill:none;marker-end:url(#m)}
+</style>
+<defs><marker id="m" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#222"/></marker></defs>
+
+<path d="M330 52 Q760 20 1260 55" stroke="#f3c46d" stroke-width="28" fill="none" stroke-linecap="round" opacity=".7"/>
+<text x="430" y="70" class="t">嵌入式串口通信：自定义协议设计</text>
+
+<path d="M30 130 Q160 108 380 128" stroke="#b9ddff" stroke-width="23" fill="none" stroke-linecap="round"/>
+<text x="45" y="139" class="h">1. 简化版：先把“帧”说清楚</text>
+
+<g transform="translate(55 180)">
+  <rect x="0" y="0" width="170" height="86" class="box" fill="#ffd6d6"/>
+  <rect x="170" y="0" width="170" height="86" class="box" fill="#dceeff"/>
+  <rect x="340" y="0" width="160" height="86" class="box" fill="#dcf3d5"/>
+  <rect x="500" y="0" width="320" height="86" class="box" fill="#fff0b9"/>
+  <rect x="820" y="0" width="190" height="86" class="box" fill="#e7ddff"/>
+  <rect x="1010" y="0" width="170" height="86" class="box" fill="#ffd6d6"/>
+  <text x="45" y="35" class="b">SOF 帧头</text><text x="55" y="65" class="s">1~2B</text>
+  <text x="215" y="35" class="b">CMD 命令</text><text x="232" y="65" class="s">1B</text>
+  <text x="375" y="35" class="b">LEN 长度</text><text x="392" y="65" class="s">1~2B</text>
+  <text x="605" y="35" class="b">DATA 数据</text><text x="612" y="65" class="s">0~N B</text>
+  <text x="855" y="35" class="b">CHECK 校验</text><text x="888" y="65" class="s">1B</text>
+  <text x="1052" y="35" class="b">EOF 帧尾</text><text x="1076" y="65" class="s">1~2B</text>
+</g>
+
+<text x="60" y="310" class="b">常见思路：</text>
+<text x="60" y="346" class="b">SOF 用来找一帧的起点；CMD 决定“做什么”；LEN 告诉接收端后面还有多少数据；DATA 放参数；CHECK 验证完整性。</text>
+<text x="60" y="380" class="s">0x55 / 0xAA 常被用作帧头，是因为比特翻转明显、示波器上容易观察；但它们不是强制标准，也不能代替长度、超时和状态机。</text>
+
+<rect x="1020" y="315" width="520" height="170" class="dash"/>
+<text x="1050" y="350" class="h">一次“设置参数”通信</text>
+<rect x="1055" y="382" width="130" height="70" class="box" fill="#d8efd1"/><text x="1088" y="425" class="b">主控 A</text>
+<rect x="1380" y="382" width="130" height="70" class="box" fill="#d8e7ff"/><text x="1412" y="425" class="b">设备 B</text>
+<path d="M1195 403 L1360 403" class="arrow"/><text x="1220" y="392" class="s">CMD + 参数</text>
+<path d="M1360 438 L1195 438" class="arrow"/><text x="1240" y="463" class="s">ACK / ERR</text>
+
+<path d="M30 535 Q195 510 520 532" stroke="#c6efc4" stroke-width="23" fill="none" stroke-linecap="round"/>
+<text x="45" y="543" class="h">2. 工程版：为扩展、应答、重传留位置</text>
+
+<g transform="translate(35 585)">
+  <rect x="0" y="0" width="125" height="92" class="box" fill="#ffd6d6"/>
+  <rect x="125" y="0" width="105" height="92" class="box" fill="#dceeff"/>
+  <rect x="230" y="0" width="125" height="92" class="box" fill="#dcf3d5"/>
+  <rect x="355" y="0" width="130" height="92" class="box" fill="#fff0b9"/>
+  <rect x="485" y="0" width="130" height="92" class="box" fill="#f0e4ff"/>
+  <rect x="615" y="0" width="120" height="92" class="box" fill="#ffdede"/>
+  <rect x="735" y="0" width="120" height="92" class="box" fill="#dceeff"/>
+  <rect x="855" y="0" width="120" height="92" class="box" fill="#dcf3d5"/>
+  <rect x="975" y="0" width="245" height="92" class="box" fill="#fff0b9"/>
+  <rect x="1220" y="0" width="170" height="92" class="box" fill="#e7ddff"/>
+  <rect x="1390" y="0" width="145" height="92" class="box" fill="#ffd6d6"/>
+  <text x="33" y="34" class="s">SOF</text><text x="25" y="64" class="s">帧同步</text>
+  <text x="158" y="34" class="s">VER</text><text x="146" y="64" class="s">版本</text>
+  <text x="260" y="34" class="s">FLAGS</text><text x="260" y="64" class="s">标志</text>
+  <text x="386" y="34" class="s">SRC</text><text x="374" y="64" class="s">源地址</text>
+  <text x="515" y="34" class="s">DST</text><text x="503" y="64" class="s">目的地址</text>
+  <text x="648" y="34" class="s">SEQ</text><text x="637" y="64" class="s">序号</text>
+  <text x="768" y="34" class="s">CMD</text><text x="752" y="64" class="s">命令</text>
+  <text x="892" y="34" class="s">LEN</text><text x="878" y="64" class="s">长度</text>
+  <text x="1053" y="34" class="s">PAYLOAD</text><text x="1058" y="64" class="s">负载</text>
+  <text x="1261" y="34" class="s">CRC16</text><text x="1253" y="64" class="s">强校验</text>
+  <text x="1438" y="34" class="s">EOF</text><text x="1424" y="64" class="s">结束</text>
+</g>
+
+<text x="50" y="720" class="b">为什么加这些字段？</text>
+<text x="50" y="757" class="s">VER：以后升级协议不至于“新旧设备互相听不懂”；FLAGS：区分请求、响应、错误、是否需要 ACK；SRC/DST：支持多节点和转发。</text>
+<text x="50" y="790" class="s">SEQ：把请求与响应配对，也能判断重复包；CRC16：比简单累加和更适合工程环境；LEN + 状态机：解决粘包、分包和不定长负载。</text>
+
+<rect x="1010" y="735" width="530" height="155" class="dash"/>
+<text x="1040" y="770" class="h">接收端不要“收到几个字节就硬解析”</text>
+<rect x="1045" y="804" width="120" height="55" class="box" fill="#ffd6d6"/><text x="1067" y="838" class="s">WAIT_SOF</text>
+<rect x="1200" y="804" width="120" height="55" class="box" fill="#fff0b9"/><text x="1217" y="838" class="s">READ_HEAD</text>
+<rect x="1355" y="804" width="140" height="55" class="box" fill="#dcf3d5"/><text x="1372" y="838" class="s">READ_DATA</text>
+<path d="M1167 831 L1190 831" class="arrow"/><path d="M1322 831 L1345 831" class="arrow"/>
+<text x="1060" y="885" class="s">再做 CRC、超时检查、CMD 分发；异常时丢弃当前帧并重新找 SOF。</text>
+</svg>
