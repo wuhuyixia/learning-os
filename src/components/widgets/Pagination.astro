@@ -3,7 +3,7 @@ import type { PaginationProps } from "@interfaces/data";
 import { Icon } from "astro-icon/components";
 
 const { page, totalPages, baseUrl } = Astro.props as PaginationProps;
-const current = page.current;
+const current = page.currentPage;
 
 type PageItem = number | "ellipsis";
 
@@ -25,7 +25,7 @@ function buildPageItems(total: number, active: number): PageItem[] {
 
 const items = buildPageItems(totalPages, current);
 const pageHref = (number: number) =>
-  number === 1 ? baseUrl : `${baseUrl}/${number}`;
+  number === 1 ? `${baseUrl}/` : `${baseUrl}/${number}/`;
 ---
 
 {totalPages > 1 && (
