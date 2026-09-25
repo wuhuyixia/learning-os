@@ -9,13 +9,17 @@ export type Post = CollectionEntry<"blog"> & {
 
 export interface Page {
   url: {
+    current: string;
     prev?: string;
     next?: string;
+    first?: string;
+    last?: string;
   };
   data: Post[];
   total: number;
   size: number;
-  current: number;
+  currentPage: number;
+  lastPage: number;
 }
 
 export interface PostData {
