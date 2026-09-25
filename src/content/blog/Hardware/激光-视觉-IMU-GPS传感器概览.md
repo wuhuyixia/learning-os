@@ -15,7 +15,7 @@ tags:
   - GNSS
   - Sensor Fusion
   - SLAM
-image: /learning-os/image/blog/sensors/sensor-fusion-overview.svg
+image: /image/blog/sensors/sensor-fusion-overview.svg
 imageFit: contain
 ---
 
@@ -44,13 +44,13 @@ imageFit: contain
 
 ### 1. TOF 飞行时间测距
 
-最直观的激光测距方式是 **TOF（Time of Flight）**。激光发射后打到物体表面，再反射回接收器。若记录光束的往返时间为 \(\Delta t\)，则距离为
+最直观的激光测距方式是 **TOF（Time of Flight）**。激光发射后打到物体表面，再反射回接收器。若记录光束的往返时间为 $\Delta t$，则距离为
 
-\[
+$
 d=\frac{c\Delta t}{2},
-\]
+$
 
-其中 \(c\) 为光速。之所以除以 2，是因为 \(\Delta t\) 包含了“发射器到目标”和“目标回到接收器”两段距离。
+其中 $c$ 为光速。之所以除以 2，是因为 $\Delta t$ 包含了“发射器到目标”和“目标回到接收器”两段距离。
 
 ![LiDAR TOF 测距与扫描方式](/learning-os/image/blog/sensors/lidar-tof-scan.svg)
 
@@ -67,11 +67,11 @@ d=\frac{c\Delta t}{2},
 
 因此，点云中的每个点通常可以写成
 
-\[
+$
 \mathbf p_i=[x_i,\;y_i,\;z_i]^\mathrm T.
-\]
+$
 
-根据测得的距离 \(r\)、水平角 \(\theta\) 和垂直角 \(\phi\)，理想情况下可由球坐标转换得到三维坐标。
+根据测得的距离 $r$、水平角 $\theta$ 和垂直角 $\phi$，理想情况下可由球坐标转换得到三维坐标。
 
 ### 3. 机械式、混合固态与固态 LiDAR
 
@@ -90,16 +90,16 @@ d=\frac{c\Delta t}{2},
 
 需要特别注意：**一帧点云不是同一时刻采出来的。**
 
-假设一帧扫描需要 \(100\,\mathrm{ms}\)。扫描第一个点时机器人位于姿态 \(T(t_k)\)，扫描最后一个点时可能已经移动到了 \(T(t_{k+1})\)。如果直接把这些点当成同一坐标系中的同时刻观测，就会使物体出现弯曲、拉伸或错位。
+假设一帧扫描需要 $100\,\mathrm{ms}$。扫描第一个点时机器人位于姿态 $T(t_k)$，扫描最后一个点时可能已经移动到了 $T(t_{k+1})$。如果直接把这些点当成同一坐标系中的同时刻观测，就会使物体出现弯曲、拉伸或错位。
 
 ![激光点云运动畸变与校正](/learning-os/image/blog/sensors/lidar-motion-distortion.svg)
 
 典型去畸变流程是：
 
-1. 根据扫描角度或点的时间戳确定每个点的测量时刻 \(t_i\)；
+1. 根据扫描角度或点的时间戳确定每个点的测量时刻 $t_i$；
 2. 利用 IMU、轮速计或融合里程计估计扫描周期内的位姿变化；
-3. 插值得到 \(T(t_i)\)；
-4. 将所有点统一变换到同一参考时刻，例如扫描末尾 \(t_{k+1}\)。
+3. 插值得到 $T(t_i)$；
+4. 将所有点统一变换到同一参考时刻，例如扫描末尾 $t_{k+1}$。
 
 这也是为什么很多 LIO（LiDAR-Inertial Odometry）系统中，**IMU 不只是用来提高定位频率，也直接参与点云去畸变。**
 
@@ -115,33 +115,33 @@ d=\frac{c\Delta t}{2},
 
 ### 1. 针孔相机模型
 
-经典相机模型可以理解为：空间点 \(P(X,Y,Z)\) 经过相机光心投影到二维图像平面。
+经典相机模型可以理解为：空间点 $P(X,Y,Z)$ 经过相机光心投影到二维图像平面。
 
 ![针孔相机投影模型](/learning-os/image/blog/sensors/camera-pinhole.svg)
 
 在理想针孔模型中，归一化平面坐标为
 
-\[
+$
 X'=\frac{X}{Z},\qquad
 Y'=\frac{Y}{Z}.
-\]
+$
 
 再经过相机内参，可以得到像素坐标
 
-\[
+$
 u=f_xX'+c_x,\qquad
 v=f_yY'+c_y,
-\]
+$
 
 其中：
 
-- \(f_x,f_y\)：像素单位下的焦距；
-- \(c_x,c_y\)：主点坐标；
-- \((u,v)\)：最终图像像素位置。
+- $f_x,f_y$：像素单位下的焦距；
+- $c_x,c_y$：主点坐标；
+- $(u,v)$：最终图像像素位置。
 
 ### 2. 为什么单目相机会丢失深度？
 
-如果将 \(X,Y,Z\) 同时乘上相同倍数，得到的二维投影仍然相同。因此一张普通单目图像中，同一个像素只表示一条从相机光心出发的射线，目标可能位于这条射线上的不同深度。
+如果将 $X,Y,Z$ 同时乘上相同倍数，得到的二维投影仍然相同。因此一张普通单目图像中，同一个像素只表示一条从相机光心出发的射线，目标可能位于这条射线上的不同深度。
 
 恢复深度通常需要额外信息，例如：
 
@@ -174,17 +174,17 @@ IMU（Inertial Measurement Unit）通常包含三轴加速度计和三轴陀螺�
 
 加速度计可用简化模型表示为
 
-\[
+$
 \tilde{\mathbf a}=\mathbf a+\mathbf b_a+\mathbf n_a,
-\]
+$
 
 陀螺仪可用简化模型表示为
 
-\[
+$
 \tilde{\boldsymbol\omega}=\boldsymbol\omega+\mathbf b_g+\mathbf n_g.
-\]
+$
 
-其中 \(\mathbf b_a,\mathbf b_g\) 是零偏，\(\mathbf n_a,\mathbf n_g\) 是噪声。
+其中 $\mathbf b_a,\mathbf b_g$ 是零偏，$\mathbf n_a,\mathbf n_g$ 是噪声。
 
 ### 2. 为什么 IMU 会漂移？
 
@@ -224,18 +224,18 @@ GPS 是 GNSS 的一个组成部分。更广义的 GNSS 还包括北斗、Galileo
 
 卫星不断广播自身轨道信息与高精度时间信息。接收机根据卫星信号传播时间，可以得到到卫星的**伪距**。
 
-对于卫星 \(i\)，简化模型可写成
+对于卫星 $i$，简化模型可写成
 
-\[
+$
 \rho_i=\|\mathbf p-\mathbf p_i\|+c\delta t+\varepsilon_i,
-\]
+$
 
 其中：
 
-- \(\mathbf p\)：接收机未知位置；
-- \(\mathbf p_i\)：卫星位置；
-- \(c\delta t\)：接收机时钟偏差造成的距离误差；
-- \(\varepsilon_i\)：传播和测量误差。
+- $\mathbf p$：接收机未知位置；
+- $\mathbf p_i$：卫星位置；
+- $c\delta t$：接收机时钟偏差造成的距离误差；
+- $\varepsilon_i$：传播和测量误差。
 
 由于不仅要估计三维位置，还需要估计接收机钟差，所以通常至少需要四颗可用卫星进行基本三维定位。
 
@@ -354,10 +354,10 @@ EKF、ESKF、因子图和非线性优化本质上都要回答：**当前这条�
 
 最终状态往往不仅包含位置与姿态，还包括速度和 IMU Bias，例如
 
-\[
+$
 \mathbf x=
 [\mathbf p,\;\mathbf v,\;\mathbf R,\;\mathbf b_a,\;\mathbf b_g].
-\]
+$
 
 ---
 
