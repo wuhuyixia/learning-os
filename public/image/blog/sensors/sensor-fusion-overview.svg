@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+<title id="title">激光、视觉、IMU 与 GNSS 传感器概览</title>
+<desc id="desc">移动机器人中央，四周展示激光雷达、相机、IMU 和 GNSS 的主要输入输出及互补关系。</desc>
+<defs>
+  <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#f8fbff"/><stop offset="1" stop-color="#eef6ff"/></linearGradient>
+  <linearGradient id="blue" x1="0" x2="1"><stop stop-color="#0f4c9a"/><stop offset="1" stop-color="#2980d9"/></linearGradient>
+  <filter id="shadow"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-opacity=".12"/></filter>
+</defs>
+<rect width="1200" height="675" rx="28" fill="url(#bg)"/>
+<text x="55" y="70" font-size="38" font-weight="700" fill="#123b78" font-family="system-ui, sans-serif">激光 · 视觉 · IMU · GNSS：机器人四类核心传感器</text>
+<g filter="url(#shadow)" font-family="system-ui, sans-serif">
+  <rect x="52" y="112" width="330" height="205" rx="24" fill="white" stroke="#bcdcff"/>
+  <rect x="818" y="112" width="330" height="205" rx="24" fill="white" stroke="#bcdcff"/>
+  <rect x="52" y="357" width="330" height="205" rx="24" fill="white" stroke="#bcdcff"/>
+  <rect x="818" y="357" width="330" height="205" rx="24" fill="white" stroke="#bcdcff"/>
+</g>
+<g font-family="system-ui, sans-serif">
+  <rect x="52" y="112" width="330" height="54" rx="24" fill="url(#blue)"/><text x="78" y="148" fill="white" font-size="25" font-weight="700">LiDAR 激光雷达</text>
+  <circle cx="120" cy="220" r="34" fill="#1a67b8"/><rect x="92" y="211" width="56" height="46" rx="8" fill="#173a66"/><ellipse cx="120" cy="210" rx="28" ry="9" fill="#7fc7ff"/>
+  <path d="M155 205 L260 185 M155 218 L276 218 M155 232 L260 252" stroke="#2992ff" stroke-width="3" stroke-dasharray="7 6"/>
+  <text x="180" y="190" font-size="18" fill="#21354d">距离 / 三维点云</text><text x="180" y="221" font-size="18" fill="#21354d">几何结构</text><text x="180" y="252" font-size="18" fill="#21354d">建图 / 障碍检测</text>
+
+  <rect x="818" y="112" width="330" height="54" rx="24" fill="url(#blue)"/><text x="844" y="148" fill="white" font-size="25" font-weight="700">Camera 视觉相机</text>
+  <rect x="854" y="195" width="74" height="58" rx="10" fill="#25374d"/><circle cx="892" cy="224" r="20" fill="#68b4ff"/><circle cx="892" cy="224" r="11" fill="#0d315d"/>
+  <path d="M932 203 L1010 183 L1010 265 L932 245 Z" fill="#ffb66b" opacity=".28"/>
+  <text x="1024" y="190" font-size="18" fill="#21354d">图像 / 纹理</text><text x="1024" y="221" font-size="18" fill="#21354d">特征 / 语义</text><text x="1024" y="252" font-size="18" fill="#21354d">目标识别</text>
+
+  <rect x="52" y="357" width="330" height="54" rx="24" fill="url(#blue)"/><text x="78" y="393" fill="white" font-size="25" font-weight="700">IMU 惯性测量单元</text>
+  <rect x="82" y="447" width="76" height="60" rx="10" fill="#263d56"/>
+  <path d="M120 478 v-55 M120 478 h55 M120 478 l-37 31" stroke-width="4" stroke="#445" fill="none"/><path d="M120 423 l-6 10 h12 z" fill="#2386ff"/><path d="M175 478 l-10 -6 v12 z" fill="#e43b38"/><path d="M83 509 l9-9 4 12 z" fill="#2aa55b"/>
+  <text x="118" y="421" font-size="16" fill="#2386ff">Z</text><text x="178" y="483" font-size="16" fill="#e43b38">X</text><text x="72" y="523" font-size="16" fill="#2aa55b">Y</text>
+  <text x="190" y="438" font-size="18" fill="#21354d">三轴加速度</text><text x="190" y="470" font-size="18" fill="#21354d">三轴角速度</text><text x="190" y="502" font-size="18" fill="#21354d">高频运动先验</text>
+
+  <rect x="818" y="357" width="330" height="54" rx="24" fill="url(#blue)"/><text x="844" y="393" fill="white" font-size="25" font-weight="700">GPS / GNSS 全球定位</text>
+  <g transform="translate(855 442)"><rect x="30" y="0" width="30" height="22" rx="5" fill="#f5b83d"/><path d="M0 4 h30 v14 H0z M60 4 h30 v14 H60z" fill="#296fc1"/><path d="M45 22 v23" stroke="#465a72" stroke-width="4"/><path d="M22 47 q23 18 46 0 M14 56 q31 28 62 0" fill="none" stroke="#2992ff" stroke-width="3"/></g>
+  <text x="970" y="438" font-size="18" fill="#21354d">经纬度 / 高度</text><text x="970" y="470" font-size="18" fill="#21354d">绝对位置参考</text><text x="970" y="502" font-size="18" fill="#21354d">室外全局导航</text>
+</g>
+
+<g font-family="system-ui, sans-serif" filter="url(#shadow)">
+  <rect x="445" y="213" width="310" height="230" rx="34" fill="white" stroke="#aacff5" stroke-width="2"/>
+  <circle cx="600" cy="290" r="58" fill="#e7f3ff" stroke="#2980d9" stroke-width="4"/>
+  <rect x="552" y="286" width="96" height="56" rx="16" fill="#164d82"/><circle cx="570" cy="343" r="17" fill="#25374d"/><circle cx="630" cy="343" r="17" fill="#25374d"/>
+  <rect x="575" y="245" width="50" height="40" rx="8" fill="#1b68b1"/><ellipse cx="600" cy="245" rx="25" ry="8" fill="#88cfff"/>
+  <text x="600" y="386" text-anchor="middle" font-size="24" font-weight="700" fill="#153e6f">移动机器人</text>
+  <text x="600" y="417" text-anchor="middle" font-size="18" fill="#56718c">Localization · Mapping · Perception</text>
+</g>
+<path d="M382 215 C430 215 432 250 468 270 M818 215 C770 215 768 250 732 270 M382 458 C438 458 444 420 475 393 M818 458 C762 458 756 420 725 393" fill="none" stroke="#6c9fd0" stroke-width="5"/>
+<g fill="#6c9fd0"><path d="M470 269 l-16-4 8 14z"/><path d="M730 269 l16-4-8 14z"/><path d="M477 392 l-12 12 17 1z"/><path d="M723 392 l12 12-17 1z"/></g>
+<rect x="315" y="595" width="570" height="50" rx="25" fill="#dceeff"/>
+<text x="600" y="627" text-anchor="middle" font-size="22" font-weight="650" fill="#184d83" font-family="system-ui, sans-serif">多传感器融合：让“看、量、动、定位”互相补偿</text>
+</svg>

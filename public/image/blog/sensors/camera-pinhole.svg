@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+<title id="title">针孔相机投影模型</title><desc id="desc">三维世界点通过相机中心投影到归一化平面和像素平面。</desc>
+<defs><linearGradient id="h" x1="0" x2="1"><stop stop-color="#0f5baa"/><stop offset="1" stop-color="#55a8e6"/></linearGradient></defs>
+<rect width="1200" height="650" fill="#f9fcff"/><text x="52" y="66" font-family="system-ui,sans-serif" font-size="38" font-weight="750" fill="#123b78">视觉传感器：针孔相机测量模型</text>
+<g font-family="system-ui,sans-serif">
+<rect x="55" y="105" width="815" height="480" rx="28" fill="white" stroke="#bddfff"/><rect x="900" y="105" width="250" height="480" rx="28" fill="white" stroke="#bddfff"/>
+<rect x="900" y="105" width="250" height="58" rx="28" fill="url(#h)"/><text x="925" y="144" fill="white" font-size="24" font-weight="700">核心投影关系</text>
+<g transform="translate(125 350)"><rect x="-35" y="-30" width="70" height="60" rx="9" fill="#263d56"/><circle cx="18" cy="0" r="18" fill="#6eb8f0"/><circle cx="18" cy="0" r="8" fill="#102e4d"/></g>
+<circle cx="160" cy="350" r="6" fill="#d72d2d"/><text x="145" y="330" font-size="18" fill="#273e55">相机中心 O</text>
+<line x1="160" y1="350" x2="825" y2="350" stroke="#304a63" stroke-width="3"/><text x="745" y="338" font-size="18" fill="#304a63">光轴 Z</text>
+<line x1="160" y1="350" x2="690" y2="185" stroke="#e7433c" stroke-width="3"/><circle cx="690" cy="185" r="10" fill="#e7433c"/><text x="705" y="180" font-size="19" fill="#263d56">P(X,Y,Z)</text>
+<rect x="395" y="190" width="8" height="315" fill="#f3b56e" opacity=".65"/><text x="350" y="178" font-size="18" fill="#8d5a25">像平面</text>
+<rect x="555" y="175" width="8" height="340" fill="#6cb9f4" opacity=".7"/><text x="508" y="162" font-size="18" fill="#256aa2">归一化平面 z=1</text>
+<circle cx="558" cy="226" r="7" fill="#e7433c"/><text x="575" y="225" font-size="18" fill="#263d56">pₙ(X′,Y′)</text>
+<circle cx="399" cy="276" r="7" fill="#e7433c"/><text x="416" y="277" font-size="18" fill="#263d56">p(u,v)</text>
+<path d="M160 350 v80 M160 350 h80" stroke="#2b7fd0" stroke-width="4"/><text x="250" y="356" font-size="17" fill="#d43633">X</text><text x="150" y="452" font-size="17" fill="#2aa45d">Y</text>
+<line x1="160" y1="530" x2="399" y2="530" stroke="#555"/><text x="280" y="555" text-anchor="middle" font-size="18" fill="#304a63">焦距 f</text>
+<text x="1025" y="215" text-anchor="middle" font-size="26" font-style="italic" fill="#153e6f">X′ = X / Z</text><text x="1025" y="260" text-anchor="middle" font-size="26" font-style="italic" fill="#153e6f">Y′ = Y / Z</text>
+<line x1="930" y1="292" x2="1120" y2="292" stroke="#d7e8f7"/>
+<text x="1025" y="340" text-anchor="middle" font-size="24" font-style="italic" fill="#153e6f">u = fₓX′ + cₓ</text><text x="1025" y="382" text-anchor="middle" font-size="24" font-style="italic" fill="#153e6f">v = fᵧY′ + cᵧ</text>
+<text x="925" y="440" font-size="17" fill="#425a70">三维点投影到二维图像后，</text><text x="925" y="470" font-size="17" fill="#425a70">深度 Z 不再直接可见。</text><text x="925" y="515" font-size="17" fill="#425a70">因此单目视觉需要运动、</text><text x="925" y="545" font-size="17" fill="#425a70">先验尺度或其他传感器恢复深度。</text>
+</g></svg>

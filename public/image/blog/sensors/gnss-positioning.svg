@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+<title id="title">GNSS 全球定位原理</title><desc id="desc">多颗卫星通过伪距观测确定接收机的全球位置，并展示室外优势和遮挡局限。</desc>
+<defs><linearGradient id="h" x1="0" x2="1"><stop stop-color="#0f5baa"/><stop offset="1" stop-color="#55a8e6"/></linearGradient></defs>
+<rect width="1200" height="650" fill="#f9fcff"/><text x="52" y="66" font-family="system-ui,sans-serif" font-size="38" font-weight="750" fill="#123b78">GPS / GNSS：全球绝对定位的来源</text>
+<g font-family="system-ui,sans-serif">
+<rect x="55" y="105" width="760" height="475" rx="28" fill="white" stroke="#bddfff"/><rect x="845" y="105" width="305" height="475" rx="28" fill="white" stroke="#bddfff"/>
+<rect x="845" y="105" width="305" height="58" rx="28" fill="url(#h)"/><text x="874" y="144" fill="white" font-size="25" font-weight="700">特点与局限</text>
+<path d="M130 525 Q430 325 740 525 Z" fill="#5ea7df"/><path d="M165 525 Q430 365 705 525 Z" fill="#4f91cc"/><text x="430" y="548" text-anchor="middle" fill="white" font-size="18">地球表面</text>
+<circle cx="430" cy="455" r="14" fill="#e74138"/><path d="M430 455 c-30-38-30-65 0-65s30 27 0 65" fill="#e74138"/><circle cx="430" cy="413" r="9" fill="white"/><text x="430" y="490" text-anchor="middle" font-size="18" font-weight="650" fill="#263d56">接收机位置</text>
+<g transform="translate(180 185)"><rect x="-16" y="-12" width="32" height="24" rx="5" fill="#f4b63b"/><rect x="-65" y="-10" width="45" height="20" fill="#2c70ba"/><rect x="20" y="-10" width="45" height="20" fill="#2c70ba"/></g>
+<g transform="translate(430 145)"><rect x="-16" y="-12" width="32" height="24" rx="5" fill="#f4b63b"/><rect x="-65" y="-10" width="45" height="20" fill="#2c70ba"/><rect x="20" y="-10" width="45" height="20" fill="#2c70ba"/></g>
+<g transform="translate(675 200)"><rect x="-16" y="-12" width="32" height="24" rx="5" fill="#f4b63b"/><rect x="-65" y="-10" width="45" height="20" fill="#2c70ba"/><rect x="20" y="-10" width="45" height="20" fill="#2c70ba"/></g>
+<g transform="translate(720 360)"><rect x="-16" y="-12" width="32" height="24" rx="5" fill="#f4b63b"/><rect x="-65" y="-10" width="45" height="20" fill="#2c70ba"/><rect x="20" y="-10" width="45" height="20" fill="#2c70ba"/></g>
+<line x1="180" y1="185" x2="430" y2="455" stroke="#f08a32" stroke-width="3" stroke-dasharray="8 6"/><line x1="430" y1="145" x2="430" y2="455" stroke="#2c86d7" stroke-width="3" stroke-dasharray="8 6"/><line x1="675" y1="200" x2="430" y2="455" stroke="#35a45b" stroke-width="3" stroke-dasharray="8 6"/><line x1="720" y1="360" x2="430" y2="455" stroke="#8255c4" stroke-width="3" stroke-dasharray="8 6"/>
+<text x="278" y="298" font-size="18" fill="#e27019">ρ₁</text><text x="443" y="300" font-size="18" fill="#2674b8">ρ₂</text><text x="575" y="310" font-size="18" fill="#278545">ρ₃</text><text x="595" y="420" font-size="18" fill="#6841a4">ρ₄</text>
+<rect x="150" y="565" width="560" height="43" rx="21" fill="#e9f4ff"/><text x="430" y="592" text-anchor="middle" font-size="20" fill="#184d83">多颗卫星伪距 + 卫星轨道信息 → 三维位置 + 接收机钟差</text>
+<circle cx="900" cy="220" r="28" fill="#dceeff"/><path d="M885 220 h30 M900 205 v30" stroke="#1559a3" stroke-width="4"/><text x="945" y="214" font-size="21" font-weight="700" fill="#184d83">绝对位置</text><text x="945" y="244" font-size="17" fill="#425a70">经度 / 纬度 / 高度</text>
+<circle cx="900" cy="320" r="28" fill="#e7f7ee"/><path d="M884 330 l16-28 16 28z" fill="none" stroke="#2a8a52" stroke-width="4"/><text x="945" y="314" font-size="21" font-weight="700" fill="#25633f">室外强项</text><text x="945" y="344" font-size="17" fill="#425a70">开阔天空下长期稳定</text>
+<circle cx="900" cy="420" r="28" fill="#fff0ec"/><rect x="887" y="402" width="26" height="32" fill="#e4775e"/><path d="M884 438 h32" stroke="#b74030" stroke-width="4"/><text x="945" y="414" font-size="21" font-weight="700" fill="#8d3529">遮挡弱项</text><text x="945" y="444" font-size="17" fill="#425a70">室内 / 城市峡谷性能下降</text>
+<circle cx="900" cy="520" r="28" fill="#f2efff"/><path d="M883 520 q17-23 34 0 M889 528 q11-14 22 0" fill="none" stroke="#7352b4" stroke-width="4"/><text x="945" y="514" font-size="21" font-weight="700" fill="#5a408d">误差来源</text><text x="945" y="544" font-size="17" fill="#425a70">多路径 / 电离层 / 卫星几何</text>
+</g></svg>

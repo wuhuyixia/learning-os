@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+<title id="title">激光点云运动畸变</title><desc id="desc">比较静止扫描与运动扫描，并展示使用 IMU 或里程计统一到参考时刻的校正过程。</desc>
+<defs><linearGradient id="h" x1="0" x2="1"><stop stop-color="#0f5bab"/><stop offset="1" stop-color="#58afea"/></linearGradient></defs>
+<rect width="1200" height="650" fill="#f8fbff"/><text x="52" y="66" font-family="system-ui,sans-serif" font-size="38" font-weight="750" fill="#123b78">激光点云运动畸变：为什么需要去畸变？</text>
+<g font-family="system-ui,sans-serif">
+<rect x="50" y="105" width="515" height="470" rx="28" fill="white" stroke="#bfdfff"/><rect x="635" y="105" width="515" height="470" rx="28" fill="white" stroke="#bfdfff"/>
+<rect x="50" y="105" width="515" height="55" rx="28" fill="url(#h)"/><text x="80" y="142" fill="white" font-size="26" font-weight="700">静止扫描：一帧点云对应同一位姿</text>
+<rect x="635" y="105" width="515" height="55" rx="28" fill="url(#h)"/><text x="665" y="142" fill="white" font-size="26" font-weight="700">运动扫描：扫描期间位姿持续变化</text>
+<g transform="translate(305 350)"><circle r="35" fill="#184d83"/><ellipse cy="-25" rx="35" ry="10" fill="#8fd0ff"/><text x="0" y="65" text-anchor="middle" font-size="18" fill="#324b62">LiDAR</text></g>
+<g fill="none" stroke="#62a5e8" stroke-width="2" stroke-dasharray="7 7"><circle cx="305" cy="350" r="90"/><circle cx="305" cy="350" r="145"/><circle cx="305" cy="350" r="200"/></g>
+<rect x="268" y="170" width="74" height="55" fill="#b6c2cc"/><text x="305" y="192" text-anchor="middle" font-size="17" fill="#263d56">静止物体</text><line x1="305" y1="350" x2="305" y2="225" stroke="#2c8bda" stroke-width="4"/><circle cx="305" cy="235" r="7" fill="#2c8bda"/>
+<text x="305" y="535" text-anchor="middle" font-size="20" fill="#31506d">测量时刻不同，但传感器位姿不变 → 无明显畸变</text>
+<g transform="translate(875 390)"><circle r="35" fill="#184d83"/><ellipse cy="-25" rx="35" ry="10" fill="#8fd0ff"/></g>
+<g fill="none" stroke-width="2" stroke-dasharray="7 7"><path d="M720 430 a170 170 0 0 1 320 -40" stroke="#5da6ea"/><path d="M700 470 a220 220 0 0 1 400 -50" stroke="#f0a35c"/></g>
+<rect x="790" y="178" width="78" height="58" fill="#b6c2cc"/><rect x="830" y="190" width="78" height="58" fill="#c6d0d7" opacity=".7"/><rect x="870" y="202" width="78" height="58" fill="#d5dce2" opacity=".55"/>
+<path d="M875 390 L805 236" stroke="#2c8bda" stroke-width="4"/><path d="M875 390 L868 248" stroke="#36a852" stroke-width="4"/><path d="M875 390 L930 260" stroke="#e9473f" stroke-width="4"/>
+<path d="M785 320 h175" stroke="#444" stroke-width="2"/><text x="875" y="310" text-anchor="middle" font-size="18" fill="#3a4d61">平台运动方向 →</text>
+<text x="895" y="535" text-anchor="middle" font-size="20" fill="#9f3431">每个点来自不同位姿 → 同一物体被“拉弯”</text>
+<rect x="250" y="595" width="700" height="42" rx="21" fill="#e2f1ff"/><text x="600" y="622" text-anchor="middle" font-size="20" font-weight="650" fill="#184d83">校正：点时间戳 → 位姿插值 → 统一到参考时刻（常依赖 IMU / 里程计）</text>
+</g></svg>

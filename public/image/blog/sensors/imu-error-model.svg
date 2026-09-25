@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+<title id="title">IMU 误差模型</title><desc id="desc">展示三轴加速度计和陀螺仪，以及噪声、零偏、尺度因数和轴间不对准四类典型误差。</desc>
+<defs><linearGradient id="h" x1="0" x2="1"><stop stop-color="#0f5baa"/><stop offset="1" stop-color="#55a8e6"/></linearGradient></defs>
+<rect width="1200" height="650" fill="#f9fcff"/><text x="52" y="66" font-family="system-ui,sans-serif" font-size="38" font-weight="750" fill="#123b78">IMU：高频运动测量与误差模型</text>
+<g font-family="system-ui,sans-serif">
+<rect x="50" y="105" width="430" height="465" rx="28" fill="white" stroke="#bddfff"/><rect x="510" y="105" width="640" height="465" rx="28" fill="white" stroke="#bddfff"/>
+<rect x="50" y="105" width="430" height="58" rx="28" fill="url(#h)"/><text x="78" y="144" fill="white" font-size="25" font-weight="700">IMU 测量什么？</text>
+<rect x="510" y="105" width="640" height="58" rx="28" fill="url(#h)"/><text x="538" y="144" fill="white" font-size="25" font-weight="700">典型误差来源</text>
+<rect x="125" y="235" width="130" height="95" rx="16" fill="#263d56"/><text x="190" y="289" text-anchor="middle" fill="#d4e7fa" font-size="20">IMU</text>
+<path d="M190 282 v-100 M190 282 h120 M190 282 l-85 70" stroke="#445" stroke-width="5" fill="none"/><path d="M190 182 l-7 12 h14z" fill="#2185e5"/><path d="M310 282 l-12-7 v14z" fill="#e43b38"/><path d="M105 352 l13-4-5-12z" fill="#2da65b"/>
+<text x="198" y="185" font-size="20" fill="#2185e5">Z</text><text x="318" y="289" font-size="20" fill="#e43b38">X</text><text x="86" y="372" font-size="20" fill="#2da65b">Y</text>
+<text x="105" y="420" font-size="20" fill="#2f4b66">加速度计：aₓ, aᵧ, a_z</text><text x="105" y="458" font-size="20" fill="#2f4b66">陀螺仪：ωₓ, ωᵧ, ω_z</text><text x="105" y="505" font-size="18" fill="#56708a">高频、响应快；适合短时状态传播</text>
+<rect x="545" y="205" width="270" height="135" rx="20" fill="#edf6ff"/><circle cx="590" cy="250" r="24" fill="#cce7ff"/><path d="M570 250 q10-25 20 0 t20 0" fill="none" stroke="#2d84d2" stroke-width="4"/><text x="630" y="242" font-size="22" font-weight="700" fill="#183e6a">噪声 Noise</text><text x="630" y="275" font-size="17" fill="#425a70">高频随机扰动</text><text x="630" y="303" font-size="17" fill="#425a70">常近似为零均值随机过程</text>
+<rect x="845" y="205" width="270" height="135" rx="20" fill="#fff3e8"/><circle cx="890" cy="250" r="24" fill="#ffe0bf"/><line x1="875" y1="250" x2="905" y2="250" stroke="#e97b18" stroke-width="5"/><text x="930" y="242" font-size="22" font-weight="700" fill="#7a3f0b">零偏 Bias</text><text x="930" y="275" font-size="17" fill="#5f5145">固定或缓慢变化偏移</text><text x="930" y="303" font-size="17" fill="#5f5145">长期积分会造成明显漂移</text>
+<rect x="545" y="375" width="270" height="135" rx="20" fill="#eefaf2"/><circle cx="590" cy="420" r="24" fill="#d8f2df"/><path d="M578 434 L602 406" stroke="#28a453" stroke-width="5"/><text x="630" y="412" font-size="22" font-weight="700" fill="#1f6c39">尺度因数 Scale</text><text x="630" y="445" font-size="17" fill="#425a70">真实值与输出比例存在误差</text><text x="630" y="473" font-size="17" fill="#425a70">通常可通过标定估计</text>
+<rect x="845" y="375" width="270" height="135" rx="20" fill="#f6efff"/><circle cx="890" cy="420" r="24" fill="#eadbff"/><path d="M890 420 v-18 M890 420 h18 M890 420 l-14 14" stroke="#8252bf" stroke-width="3"/><text x="930" y="412" font-size="22" font-weight="700" fill="#59338c">轴间不对准</text><text x="930" y="445" font-size="17" fill="#425a70">传感器轴与理想机体系不正交</text><text x="930" y="473" font-size="17" fill="#425a70">安装误差也会引入类似问题</text>
+<rect x="220" y="592" width="760" height="42" rx="21" fill="#e2f1ff"/><text x="600" y="620" text-anchor="middle" font-size="20" font-weight="650" fill="#184d83">IMU 强项是“短时高频”，弱点是“积分误差累积”——因此常与视觉、LiDAR、GNSS 融合</text>
+</g></svg>
