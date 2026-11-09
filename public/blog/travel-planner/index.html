@@ -2,9 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="互动旅行计划：按日期查看活动、地图地点与商家预算，支持修改、保存及导出。">
+<meta name="description" content="2026年12月1日至5日南京五日旅行规划，含总统府、中山陵、南京博物院、夫子庙秦淮河、牛首山等行程、地图坐标及人民币预算。">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<title>旅途手帐 · 旅行计划 | embedded.log</title>
+<title>南京五日游 · 12月1日至5日 | 旅途手帐</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
 <style>
 :root{font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#202a35;background:#f5f6f8;font-synthesis:none}
@@ -63,7 +63,7 @@ dialog .helper{font-size:11px;line-height:1.5;color:#819095;margin:0}.toast{posi
 </header>
 <div class="shell">
 <section class="hero">
-<div><div class="eyebrow">YOUR NEXT ADVENTURE / 行程规划</div><h1 id="tripTitle">我的旅行</h1><p>把想去的地方，变成真正走得到的路线。</p><div class="tags"><span class="tag" id="cityLabel">📍 目的地</span><span class="tag" id="dateLabel">📅 日期</span><span class="tag" id="activityLabel">✦ 活动</span><button type="button" id="settingsButton" class="tag" style="color:#fff;cursor:pointer">⚙ 编辑旅行信息</button></div></div><div class="hero-icon" aria-hidden="true">✈</div>
+<div><div class="eyebrow">YOUR NEXT ADVENTURE / 行程规划</div><h1 id="tripTitle">南京五日游 · 金陵古韵</h1><p>把想去的地方，变成真正走得到的路线。</p><div class="tags"><span class="tag" id="cityLabel">📍 目的地</span><span class="tag" id="dateLabel">📅 日期</span><span class="tag" id="activityLabel">✦ 活动</span><button type="button" id="settingsButton" class="tag" style="color:#fff;cursor:pointer">⚙ 编辑旅行信息</button></div></div><div class="hero-icon" aria-hidden="true">✈</div>
 </section>
 <section class="summary" aria-label="预算概览">
 <article><span>整趟预计费用</span><strong id="totalValue">—</strong><small>所有活动合计</small></article>
@@ -107,12 +107,9 @@ dialog .helper{font-size:11px;line-height:1.5;color:#819095;margin:0}.toast{posi
 <script>
 (function(){
 "use strict";
-var key="learning-os-travel-planner-v1";
+var key="learning-os-travel-planner-nanjing-202612-v1";
 var kind={attraction:["景点","#368d80"],food:["餐饮","#e1a04d"],hotel:["住宿","#6379c4"],transport:["交通","#6b91a8"],shopping:["购物","#c37c9e"],other:["其他","#82939a"]};
-var sample={title:"台北三日漫游",city:"台北",currency:"TWD",budgetLimit:9000,days:[
-{date:"2026-11-14",activities:[{id:"a1",time:"09:00",title:"台北101观景",category:"attraction",cost:600,lat:25.03396,lng:121.56447,note:"示例价格，请以实际票价为准"},{id:"a2",time:"12:00",title:"信义商圈午餐",category:"food",cost:350,lat:25.0353,lng:121.5664,note:"商家及预算待自行确认"},{id:"a3",time:"15:00",title:"象山步道",category:"attraction",cost:0,lat:25.0276,lng:121.5766,note:"户外景点，依天气调整"},{id:"a4",time:"19:00",title:"饶河街夜市",category:"food",cost:300,lat:25.0503,lng:121.5776,note:"晚餐及小吃"}]},
-{date:"2026-11-15",activities:[{id:"b1",time:"09:30",title:"故宫博物院",category:"attraction",cost:350,lat:25.1024,lng:121.5485,note:"营业时间需确认"},{id:"b2",time:"13:00",title:"士林附近午餐",category:"food",cost:350,lat:25.0868,lng:121.5243,note:"自行选择店铺"},{id:"b3",time:"16:00",title:"中山商圈",category:"shopping",cost:500,lat:25.0536,lng:121.5209,note:"购物预算"}]},
-{date:"2026-11-16",activities:[{id:"c1",time:"10:00",title:"华山1914文化创意产业园区",category:"attraction",cost:0,lat:25.0441,lng:121.5297,note:"部分展览可能收费"},{id:"c2",time:"12:30",title:"附近午餐",category:"food",cost:320,lat:25.0452,lng:121.5312,note:"餐厅待选择"},{id:"c3",time:"16:00",title:"机场交通预留",category:"transport",cost:200,lat:25.033,lng:121.565,note:"示例位置，非交通路线"}]}]};
+var sample={"title":"南京五日游 · 金陵古韵","city":"南京","currency":"CNY","budgetLimit":2800,"days":[{"date":"2026-12-01","activities":[{"id":"nj1201-01","time":"09:30","title":"抵达南京南站·市内交通","category":"transport","cost":40,"lat":31.9684,"lng":118.798,"note":"按上午到达南京南站设计；市内交通费用估算，不含来南京的高铁票"},{"id":"nj1201-02","time":"11:00","title":"南京总统府","category":"attraction","cost":35,"lat":32.0424,"lng":118.7926,"note":"长江路292号；冬季08:30—17:00，16:00停止入馆；官方小程序实名分时购票"},{"id":"nj1201-03","time":"13:00","title":"长江路周边午餐","category":"food","cost":65,"lat":32.043,"lng":118.7925,"note":"鸭血粉丝汤、盐水鸭等；一人餐费预估，未指定餐厅"},{"id":"nj1201-04","time":"14:30","title":"六朝博物馆","category":"attraction","cost":30,"lat":32.0423,"lng":118.798,"note":"长江路302号；参观六朝历史文物，建议留足1.5—2小时，需以实际开放安排为准"},{"id":"nj1201-05","time":"17:00","title":"南京1912街区","category":"attraction","cost":0,"lat":32.0452,"lng":118.792,"note":"总统府附近步行逛街拍照，街区免费，商店消费另计"},{"id":"nj1201-06","time":"18:30","title":"新街口晚餐","category":"food","cost":80,"lat":32.04,"lng":118.7785,"note":"新街口商圈；按一人餐费预估"},{"id":"nj1201-07","time":"21:00","title":"新街口周边住宿·第1晚","category":"hotel","cost":280,"lat":32.04,"lng":118.7785,"note":"仅为住宿商圈位置及预算示例，未实际预订酒店"}]},{"date":"2026-12-02","activities":[{"id":"nj1202-01","time":"09:00","title":"中山陵","category":"attraction","cost":0,"lat":32.0525,"lng":118.8495,"note":"免费参观，须提前预约并按时段入陵寝；建议预留约2小时"},{"id":"nj1202-02","time":"11:00","title":"中山陵音乐台","category":"attraction","cost":10,"lat":32.0537,"lng":118.848,"note":"钟山风景区内，参考官方成人票价10元"},{"id":"nj1202-03","time":"12:15","title":"钟山景区午餐","category":"food","cost":60,"lat":32.0525,"lng":118.846,"note":"景区内餐饮按一人预估；景区观光车费用另计"},{"id":"nj1202-04","time":"13:30","title":"明孝陵·神道及陵宫","category":"attraction","cost":70,"lat":32.0498,"lng":118.8356,"note":"世界文化遗产；单景点参考成人票70元，可考虑景区联票"},{"id":"nj1202-05","time":"16:00","title":"美龄宫","category":"attraction","cost":30,"lat":32.0434,"lng":118.8422,"note":"景区单景点参考成人票30元；注意冬季闭园时间"},{"id":"nj1202-06","time":"18:30","title":"苜蓿园附近晚餐","category":"food","cost":75,"lat":32.0413,"lng":118.8327,"note":"一人餐费预估，视实际返程路线选择"},{"id":"nj1202-07","time":"21:00","title":"新街口周边住宿·第2晚","category":"hotel","cost":280,"lat":32.04,"lng":118.7785,"note":"住宿参考位置，与第一晚同一商圈；未实际预订"}]},{"date":"2026-12-03","activities":[{"id":"nj1203-01","time":"09:15","title":"南京博物院","category":"attraction","cost":0,"lat":32.0435,"lng":118.8259,"note":"免费，需提前通过官方渠道预约；周二至周日09:00—17:00，16:00停止检票"},{"id":"nj1203-02","time":"12:30","title":"明故宫附近午餐","category":"food","cost":65,"lat":32.0429,"lng":118.8229,"note":"南京博物院西侧周边餐饮，一人餐费预估"},{"id":"nj1203-03","time":"14:30","title":"古鸡鸣寺","category":"attraction","cost":10,"lat":32.0597,"lng":118.7904,"note":"寺院门票按约10元预留，实际票价以现场为准"},{"id":"nj1203-04","time":"15:45","title":"明城墙·台城段","category":"attraction","cost":30,"lat":32.0607,"lng":118.7923,"note":"解放门附近登城，可远眺玄武湖；成人参考票价30元"},{"id":"nj1203-05","time":"17:00","title":"玄武湖畔散步","category":"attraction","cost":0,"lat":32.06,"lng":118.7921,"note":"靠近解放门的湖岸免费漫步；12月日落较早，按天气调整"},{"id":"nj1203-06","time":"18:30","title":"湖南路周边晚餐","category":"food","cost":75,"lat":32.0677,"lng":118.7799,"note":"一人餐费预估，尝尝当地小吃"},{"id":"nj1203-07","time":"21:00","title":"新街口周边住宿·第3晚","category":"hotel","cost":280,"lat":32.04,"lng":118.7785,"note":"同一酒店商圈示例，未实际预订"}]},{"date":"2026-12-04","activities":[{"id":"nj1204-01","time":"09:00","title":"侵华日军南京大屠杀遇难同胞纪念馆","category":"attraction","cost":0,"lat":32.0312,"lng":118.7412,"note":"免费，须官方微信公众号实名预约；08:30—17:30开放，16:30停止入馆；请保持肃穆"},{"id":"nj1204-02","time":"12:00","title":"云锦路附近午餐","category":"food","cost":65,"lat":32.0321,"lng":118.7427,"note":"纪念馆附近就餐；一人餐费预估"},{"id":"nj1204-03","time":"14:00","title":"中华门城堡·南城墙","category":"attraction","cost":50,"lat":32.0066,"lng":118.7729,"note":"中华门瓮城与南城墙，参考成人票价50元；预留1.5小时"},{"id":"nj1204-04","time":"15:45","title":"老门东历史街区","category":"attraction","cost":0,"lat":32.0094,"lng":118.7828,"note":"传统街巷与文创店散步，免费；消费自选"},{"id":"nj1204-05","time":"18:00","title":"夫子庙秦淮风光带晚餐","category":"food","cost":85,"lat":32.0184,"lng":118.7841,"note":"按一人餐费预估；秦淮小吃或当地南京菜"},{"id":"nj1204-06","time":"19:15","title":"秦淮河画舫夜游","category":"attraction","cost":80,"lat":32.0179,"lng":118.7851,"note":"夫子庙泮池附近上船，价格80元为预估；需确认当晚开航与实际票价"},{"id":"nj1204-07","time":"21:00","title":"新街口周边住宿·第4晚","category":"hotel","cost":280,"lat":32.04,"lng":118.7785,"note":"住宿参考位置，不代表已预订"}]},{"date":"2026-12-05","activities":[{"id":"nj1205-01","time":"08:30","title":"前往牛首山·交通预算","category":"transport","cost":60,"lat":31.916,"lng":118.738,"note":"建议从市区提前出发，交通费为单人估算；以实际出行方式为准"},{"id":"nj1205-02","time":"09:30","title":"牛首山·佛顶宫","category":"attraction","cost":160,"lat":31.91518,"lng":118.73637,"note":"景区全价门票160元；08:30—17:30开放，16:30停止检票；请提前预约"},{"id":"nj1205-03","time":"12:30","title":"牛首山景区午餐","category":"food","cost":65,"lat":31.915,"lng":118.738,"note":"一人餐费预估，景区内餐饮选择需视现场情况"},{"id":"nj1205-04","time":"13:30","title":"牛首山·佛顶寺与园区步道","category":"attraction","cost":0,"lat":31.9112,"lng":118.7397,"note":"门票已计入佛顶宫一项，园区观光车可能单独收费"},{"id":"nj1205-05","time":"15:30","title":"前往南京南站·返程","category":"transport","cost":60,"lat":31.9684,"lng":118.798,"note":"建议高铁安排在17:30或更晚，留足进站安检时间；不含城际高铁票"}]}]};
 var $=function(id){return document.getElementById(id)};
 var copy=function(x){return JSON.parse(JSON.stringify(x))};
 var trip=copy(sample),active=sample.days[0].date,picked=null,markers={},map=null,layer=null,picking=false;
@@ -193,7 +190,7 @@ markers[a.id]=m;pts.push([a.lat,a.lng]);m.on("click",function(){picked=a.id;});
 if(pts.length>1)L.polyline(pts,{color:"#268a7a",weight:3,dashArray:"6,8"}).addTo(layer);
 if(pts.length>1)map.fitBounds(L.latLngBounds(pts).pad(.2),{maxZoom:15});
 else if(pts.length===1)map.setView(pts[0],14);
-else map.setView([25.03396,121.56447],12);
+else map.setView([32.040,118.785],12);
 if(picked&&markers[picked])markers[picked].openPopup();
 setTimeout(function(){map.invalidateSize()},60);
 }
@@ -219,7 +216,7 @@ $("settingsDialog").showModal();
 function newId(){return (window.crypto&&crypto.randomUUID)?crypto.randomUUID():"item-"+Date.now()+"-"+Math.random().toString(36).slice(2)}
 function initMap(){
 if(typeof L==="undefined"){$("mapfailure").style.display="flex";$("mapnotice").textContent="地图不可用，仍可输入经纬度";return}
-map=L.map("map",{scrollWheelZoom:false}).setView([25.03396,121.56447],12);
+map=L.map("map",{scrollWheelZoom:false}).setView([32.040,118.785],12);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"&copy; OpenStreetMap contributors",maxZoom:19}).addTo(map);
 layer=L.layerGroup().addTo(map);
 map.on("click",function(e){
